@@ -10,8 +10,11 @@
   --f-display:'Fredoka','Baloo 2','Trebuchet MS',system-ui,sans-serif;
   --f-body:'Nunito',system-ui,-apple-system,'Segoe UI',sans-serif;
 }
-html,body{height:100%}
-body{background:var(--night);color:var(--cream);font-family:var(--f-body);overflow:hidden;margin:0}
+html,body{min-height:100%}
+body{background:var(--night);color:var(--cream);font-family:var(--f-body);margin:0}
+/* a world takes the whole screen */
+html.in-world,html.in-world body{height:100%;overflow:hidden}
+.world-root:empty::after{content:'Chargement…';position:fixed;inset:0;display:grid;place-items:center;font-family:var(--f-display);font-size:22px;color:#c9d0e8}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 button{font:inherit;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;border:0;background:none;padding:0}
@@ -38,7 +41,7 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
 .hud>*{pointer-events:auto}
 .hud>.grow{flex:1;pointer-events:none}
 .top{display:flex;align-items:center;gap:8px}
-.brand{display:flex;color:inherit;text-decoration:none;align-items:center;gap:8px;font-family:var(--f-display);font-weight:700;font-size:22px;letter-spacing:.01em;pointer-events:none}
+.brand{display:flex;color:inherit;text-decoration:none;align-items:center;gap:8px;font-family:var(--f-display);font-weight:700;font-size:22px;letter-spacing:.01em}
 .brand svg{width:28px;height:28px}
 .pill{display:flex;align-items:center;gap:6px;height:44px;padding:0 16px 0 12px;border-radius:999px;background:var(--hud);border:1.5px solid var(--hud-line);
   font-family:var(--f-display);font-weight:600;font-size:16px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
@@ -106,3 +109,22 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
 }
 @media (max-width:380px){ .brand span{display:none} .sheet h2{font-size:24px} .go{font-size:21px} }
 @media (prefers-reduced-motion:reduce){ .play .disc{animation:none} }
+
+/* ---------- home ---------- */
+.hub{max-width:880px;margin:0 auto;padding-block:calc(env(safe-area-inset-top,0px) + 48px) 48px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:28px}
+html:not(.in-world) body{background:radial-gradient(ellipse at 50% 0%,#24306a 0%,var(--night) 60%) var(--night)}
+.hub h1{margin:0;font-family:var(--f-display);font-weight:700;font-size:clamp(56px,14vw,112px);line-height:.9;letter-spacing:-.02em}
+.hub h1 span{color:var(--sun)}
+.hub .lead{margin:0;font-size:18px;font-weight:700;color:#c9d0e8;max-width:34ch;text-wrap:balance}
+.hub .worlds{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.hub a.world{display:flex;flex-direction:column;gap:6px;background:var(--card);color:var(--card-ink);text-decoration:none;border-radius:24px;padding:16px 18px 20px;
+  box-shadow:0 6px 0 rgba(0,0,0,.35);transition:transform .15s}
+.hub a.world:hover,.hub a.world:focus-visible{transform:translateY(-4px)}
+.hub a.world:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
+.hub .world svg{width:100%;height:auto;max-height:120px}
+.hub .world h2{margin:0;font-family:var(--f-display);font-weight:700;font-size:28px}
+.hub .world p{margin:0;font-weight:600;color:var(--card-muted);line-height:1.4}
+.hub .world b{margin-top:8px;align-self:flex-start;background:var(--sun);color:var(--sun-ink);font-family:var(--f-display);font-weight:700;font-size:18px;padding:8px 18px;border-radius:999px;box-shadow:0 4px 0 var(--sun-d)}
+.hub footer{font-size:13px;color:#8d96b8}
+.hub footer a{color:inherit}

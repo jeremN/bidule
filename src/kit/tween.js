@@ -31,6 +31,9 @@ export function pop(o, dur) {
   return tw(dur || 0.6, (k) => o.scale.setScalar(Math.max(0.01, k)), easeBack);
 }
 
+/** Drop every running tween (their promises never resolve, so leftover actions just stop). */
+export function clearTweens() { tweens.length = 0; }
+
 export function updateTweens(dt) {
   for (let i = tweens.length - 1; i >= 0; i--) {
     const t = tweens[i];

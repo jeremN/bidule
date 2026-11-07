@@ -1,8 +1,8 @@
 // The stage: DOM shell, renderer + "technicolour" post pass, painterly island, camera, UI and main loop.
 // A world module describes its machines; createStage() does everything else.
 import * as THREE from 'three';
-import { V3, rad, clamp, rnd, pick, reduceMotion, $ } from './util.js';
-import { updateTweens, tw, lin } from './tween.js';
+import { V3, rad, clamp, rnd, pick, reduceMotion } from './util.js';
+import { updateTweens, clearTweens, tw, lin } from './tween.js';
 import { audio, say, stopVoice, initAudio, pickVoice, engineOff, hornSound, beep } from './audio.js';
 import { C, ICO, mat, add, grp, instanced, shadows } from './geo.js';
 
@@ -11,13 +11,12 @@ const ICON_MUTE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 const ICON_HORN = '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13v6h5l11 7V6L9 13H4z"/><path d="M24 11l4-3M24 16h5M24 21l4 3"/></svg>';
 const ICON_PLAY = '<svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8z" fill="currentColor"/></svg>';
 
-function shell(world) {
-  document.title = 'Bidule · ' + world.title;
-  document.body.insertAdjacentHTML('beforeend', `
+function shell(world, root, homeHref) {
+  root.innerHTML = `
 <div class="stage" id="stage"><canvas id="c" aria-label="${world.title} en 3D. Glisse le doigt pour tourner autour."></canvas><div class="tags" id="tags"></div></div>
 <div class="hud" id="hud">
   <header class="top" id="top">
-    <a class="brand" id="brand" href="${world.home || './index.html'}">${world.brandIcon || ''}<span>${world.title}</span></a>
+    <a class="brand" id="brand" href="${homeHref}">${world.brandIcon || ''}<span>${world.title}</span></a>
     <button class="pill" id="back" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>${world.backLabel || 'Tout voir'}</button>
     <span class="spacer"></span>
     <button class="icon-btn" id="again" aria-label="Réécouter">${ICON_AGAIN}</button>
@@ -36,7 +35,7 @@ function shell(world) {
   <h1>${world.titleHtml || world.title}</h1>
   <p>${world.subtitle}</p>
   <button class="play" id="play" aria-label="Jouer"><span class="disc"><svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8z" fill="#2a1704"/></svg></span><b>Jouer</b></button>
-</div>`);
+</div>`;
 }
 
 const POST_FRAG = `precision highp float;uniform sampler2D tDiffuse;uniform float uDpr;uniform float uTime;varying vec2 vUv;
@@ -65,15 +64,20 @@ function segDist(px, pz, ax, az, bx, bz) {
   return Math.hypot(px - (ax + dx * t), pz - (az + dz * t));
 }
 
-export function createStage(world) {
-  shell(world);
+/**
+ * Mount a world inside `root`. Returns a dispose() that stops the loop and frees the GPU.
+ * opts.onHome: called when the brand link is used (client-side navigation).
+ */
+export function createStage(world, root, opts = {}) {
+  const $ = (s) => root.querySelector(s);
+  shell(world, root, opts.homeHref || import.meta.env.BASE_URL || '/');
   const stageEl = $('#stage'), canvas = $('#c');
   let renderer = null;
   try { renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' }); } catch (e) { renderer = null; }
   if (!renderer) {
     const d = document.createElement('div'); d.className = 'nogl';
     d.textContent = "Le monde en 3D ne peut pas s'afficher sur cet appareil. Essaie avec un autre navigateur.";
-    document.body.appendChild(d); $('#start').hidden = true; $('#hud').hidden = true; return;
+    root.appendChild(d); $('#start').hidden = true; $('#hud').hidden = true; return () => { root.innerHTML = ''; };
   }
   const DPR = Math.min(2, window.devicePixelRatio || 1);
   renderer.setPixelRatio(DPR);
@@ -277,6 +281,7 @@ export function createStage(world) {
   goBtn.addEventListener('click', runAction);
   $('#horn').addEventListener('click', () => { initAudio(); if (current) { hornSound(current.horn); hop(current); } });
   $('#back').addEventListener('click', overview);
+  $('#brand').addEventListener('click', (e) => { if (opts.onHome) { e.preventDefault(); opts.onHome(); } });
   $('#again').addEventListener('click', () => { initAudio(); if (audio.lastLine) say(audio.lastLine); });
   $('#mute').addEventListener('click', (e) => {
     audio.muted = !audio.muted; const b = e.currentTarget;
@@ -314,7 +319,7 @@ export function createStage(world) {
     });
   }
 
-  let last = performance.now(), fc = 0;
+  let last = performance.now(), fc = 0, raf = 0, alive = true, ro = null;
   const maxDt = /[?&]fast/.test(location.search) ? 0.4 : 0.05; // ?fast: big steps for slow headless tests
   function frame(now) {
     const dt = Math.min(maxDt, (now - last) / 1000); last = now; fc++;
@@ -331,11 +336,23 @@ export function createStage(world) {
     postMat.uniforms.uTime.value = now / 1000;
     renderer.setRenderTarget(rt); renderer.render(scene, cam); renderer.setRenderTarget(null); renderer.render(postScene, postCam);
     placeTags();
-    requestAnimationFrame(frame);
+    if (alive) raf = requestAnimationFrame(frame);
   }
   resize();
-  try { new ResizeObserver(resize).observe(stageEl); } catch (e) { window.addEventListener('resize', resize); }
+  try { ro = new ResizeObserver(resize); ro.observe(stageEl); } catch (e) { window.addEventListener('resize', resize); }
   V = VT; fx = fxT; fy = fyT; focus.copy(focusT);
-  requestAnimationFrame(frame);
-  return ctx;
+  raf = requestAnimationFrame(frame);
+
+  return function dispose() {
+    alive = false; cancelAnimationFrame(raf);
+    if (ro) ro.disconnect(); else window.removeEventListener('resize', resize);
+    clearTweens(); stopVoice(); engineOff();
+    scene.traverse((o) => {
+      if (o.geometry && !o.geometry.parameters?.shared) o.geometry.dispose?.();
+      const ms = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
+      ms.forEach((m) => { if (m.map) m.map.dispose(); m.dispose?.(); });
+    });
+    rt.dispose(); postMat.dispose(); renderer.dispose(); renderer.forceContextLoss();
+    root.innerHTML = '';
+  };
 }
