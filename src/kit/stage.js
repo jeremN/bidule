@@ -272,9 +272,16 @@ export function createStage(world, root, opts = {}) {
     b.innerHTML = `<svg class="ic" viewBox="0 0 120 80" aria-hidden="true">${world.icons[id]}</svg><b>${st.short}</b>`;
     b.addEventListener('click', () => select(st)); dockEl.appendChild(b); st.card = b;
     const t = document.createElement('button'); t.className = 'tag name'; t.textContent = st.short; t.addEventListener('click', () => select(st)); tagsEl.appendChild(t); st.nameTag = t;
-    st.partTags = st.parts.map((p) => { const el = document.createElement('div'); el.className = 'tag part'; el.textContent = p.label; tagsEl.appendChild(el); return { p, el }; });
+    st.partTags = st.parts.map((p) => {
+      // a dot on the part, the label offset to the side with a short leader line, so the part stays visible
+      const el = document.createElement('div'); el.className = 'tag part'; el.innerHTML = `<i></i><s></s><span>${p.label}</span>`;
+      tagsEl.appendChild(el); return { p, el };
+    });
   });
-  function hop(st) { const m = st.m; return tw(0.5, (k) => (m.position.y = Math.sin(k * Math.PI) * 0.3), lin); }
+  function hop(st) {
+    const m = st.m; if (st.hopping) return; st.hopping = true; const y0 = m.position.y;
+    return tw(0.5, (k) => (m.position.y = y0 + Math.sin(k * Math.PI) * 0.3), lin).then(() => { m.position.y = y0; st.hopping = false; });
+  }
   function select(st) {
     initAudio();
     if (busy || !startEl.hidden) return;
@@ -333,10 +340,15 @@ export function createStage(world, root, opts = {}) {
       const showName = !current && startEl.hidden;
       st.nameTag.classList.toggle('show', showName);
       if (showName) { st.tagAt.getWorldPosition(pv).project(cam); st.nameTag.style.transform = `translate(${((pv.x + 1) / 2) * SW}px,${((1 - pv.y) / 2) * SH}px)`; }
+      let cx = SW * fx;
+      if (current === st) { (st.focusAt || st.tagAt).getWorldPosition(pv).project(cam); cx = ((pv.x + 1) / 2) * SW; }
       st.partTags.forEach(({ p, el }) => {
         const on = current === st && activeKey === p.key, show = current === st && (on || (p.idle && !activeKey));
         el.classList.toggle('show', show); el.classList.toggle('on', on);
-        if (show) { p.obj.getWorldPosition(pv).project(cam); el.style.transform = `translate(${((pv.x + 1) / 2) * SW}px,${((1 - pv.y) / 2) * SH}px)`; }
+        if (show) {
+          p.obj.getWorldPosition(pv).project(cam); const x = ((pv.x + 1) / 2) * SW, y = ((1 - pv.y) / 2) * SH;
+          el.style.transform = `translate(${x}px,${y}px)`; el.classList.toggle('left', x < cx);
+        }
       });
     });
   }

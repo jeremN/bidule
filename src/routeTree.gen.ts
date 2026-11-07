@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ChantierRouteImport } from './routes/chantier'
 import { Route as EspaceRouteImport } from './routes/espace'
 import { Route as FermeRouteImport } from './routes/ferme'
+import { Route as VilleRouteImport } from './routes/ville'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -34,18 +35,25 @@ const FermeRoute = FermeRouteImport.update({
   path: '/ferme',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VilleRoute = VilleRouteImport.update({
+  id: '/ville',
+  path: '/ville',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/chantier': typeof ChantierRoute
   '/espace': typeof EspaceRoute
   '/ferme': typeof FermeRoute
+  '/ville': typeof VilleRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/chantier': typeof ChantierRoute
   '/espace': typeof EspaceRoute
   '/ferme': typeof FermeRoute
+  '/ville': typeof VilleRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,13 +61,14 @@ export interface FileRoutesById {
   '/chantier': typeof ChantierRoute
   '/espace': typeof EspaceRoute
   '/ferme': typeof FermeRoute
+  '/ville': typeof VilleRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/chantier' | '/espace' | '/ferme'
+  fullPaths: '/' | '/chantier' | '/espace' | '/ferme' | '/ville'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/chantier' | '/espace' | '/ferme'
-  id: '__root__' | '/' | '/chantier' | '/espace' | '/ferme'
+  to: '/' | '/chantier' | '/espace' | '/ferme' | '/ville'
+  id: '__root__' | '/' | '/chantier' | '/espace' | '/ferme' | '/ville'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -67,6 +76,7 @@ export interface RootRouteChildren {
   ChantierRoute: typeof ChantierRoute
   EspaceRoute: typeof EspaceRoute
   FermeRoute: typeof FermeRoute
+  VilleRoute: typeof VilleRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -99,6 +109,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FermeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/ville': {
+      id: '/ville'
+      path: '/ville'
+      fullPath: '/ville'
+      preLoaderRoute: typeof VilleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -107,6 +124,7 @@ const rootRouteChildren: RootRouteChildren = {
   ChantierRoute: ChantierRoute,
   EspaceRoute: EspaceRoute,
   FermeRoute: FermeRoute,
+  VilleRoute: VilleRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

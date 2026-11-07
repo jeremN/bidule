@@ -63,6 +63,20 @@ const worlds = [
         <rect x="40" y="24" width="6" height="80" fill="#e5452c" /><rect x="46" y="44" width="40" height="5" fill="#e5452c" />
       </svg>
     )
+  },
+  {
+    to: '/ville' as const,
+    title: 'La Ville',
+    text: 'La voiture, le car, le tramway, le métro, le Shinkansen et le téléphérique, dans une ville japonaise.',
+    art: (
+      <svg viewBox="0 0 240 110" aria-hidden="true">
+        <path d="M8 104H232" stroke="#d3d8ea" strokeWidth="4" strokeLinecap="round" />
+        <path d="M150 104l40-70 44 70z" fill="#5a6aa8" /><path d="M178 54l12-20 13 20-6 4-7-5-6 5z" fill="#f4f6fb" />
+        <rect x="24" y="34" width="6" height="56" fill="#d8402a" /><rect x="66" y="34" width="6" height="56" fill="#d8402a" /><path d="M14 28h68l-4 8H18z" fill="#3a2a22" /><rect x="20" y="40" width="56" height="5" fill="#d8402a" />
+        <path d="M84 84V70h70q26 0 40 14z" fill="#f4f5f8" stroke="#c9ccd8" strokeWidth="2" /><rect x="84" y="80" width="104" height="3" fill="#1f4fb8" /><rect x="90" y="73" width="50" height="4" rx="2" fill="#2a3f58" />
+        <circle cx="120" cy="22" r="4" fill="#f4b2cc" /><circle cx="128" cy="18" r="5" fill="#f7c6d8" /><circle cx="136" cy="24" r="4" fill="#e99ab8" />
+      </svg>
+    )
   }
 ];
 

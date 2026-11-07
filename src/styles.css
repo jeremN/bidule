@@ -29,11 +29,17 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
   padding:5px 13px;border-radius:999px;box-shadow:0 4px 0 rgba(0,0,0,.35)}
 .tag.name::after{content:"";position:absolute;left:50%;bottom:-6px;translate:-50% 0;border:6px solid transparent;border-bottom:0;border-top-color:var(--card)}
 .tag.name.show{pointer-events:auto}
-.tag.part{translate:-50% -50%;background:rgba(11,18,34,.8);color:var(--cream);font-weight:800;font-size:13px;padding:4px 11px 4px 9px;border-radius:999px;display:flex;align-items:center;gap:6px;border:1.5px solid var(--hud-line)}
-.tag.part::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--sun)}
-.tag.part.show{opacity:.8}
-.tag.part.on{opacity:1;background:var(--sun);color:var(--sun-ink);border-color:var(--sun);scale:1.15}
-.tag.part.on::before{background:var(--sun-ink)}
+.tag.part{width:0;height:0}
+.tag.part i{position:absolute;left:-5px;top:-5px;width:10px;height:10px;border-radius:50%;background:var(--sun);box-shadow:0 0 0 2px rgba(11,18,34,.85)}
+.tag.part s{position:absolute;left:0;top:0;width:26px;height:2px;background:rgba(247,241,227,.85);transform-origin:0 50%;transform:rotate(-48deg)}
+.tag.part span{position:absolute;left:16px;bottom:16px;background:rgba(11,18,34,.84);color:var(--cream);font-weight:800;font-size:12.5px;line-height:1;
+  padding:5px 10px;border-radius:999px;border:1.5px solid var(--hud-line);white-space:nowrap;transition:background-color .25s,color .25s,scale .25s;transform-origin:0 100%}
+.tag.part.left s{transform:rotate(-132deg)}
+.tag.part.left span{left:auto;right:16px;transform-origin:100% 100%}
+.tag.part.show{opacity:.92}
+.tag.part.on{opacity:1}
+.tag.part.on span{background:var(--sun);color:var(--sun-ink);border-color:var(--sun);scale:1.12}
+.tag.part.on i{box-shadow:0 0 0 2px var(--sun-ink),0 0 0 6px rgba(255,181,71,.35)}
 
 .hud{position:fixed;inset:0;pointer-events:none;display:flex;flex-direction:column;gap:10px;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
