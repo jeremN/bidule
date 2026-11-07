@@ -41,11 +41,18 @@ const DATA = {
     how: 'Ses six roues grimpent sur les rochers. Il a une caméra pour voir et un bras pour percer.' },
   module: { short: 'Le module lunaire', full: 'Le module lunaire', verb: 'Alunir', horn: 'bell',
     use: 'Il pose les astronautes sur la Lune.',
-    how: 'Ses moteurs freinent la descente, et ses grandes pattes amortissent l’atterrissage.' }
+    how: 'Ses moteurs freinent la descente, et ses grandes pattes amortissent l’atterrissage.' },
+  station: { short: 'La station', full: 'La station spatiale', verb: 'Rejoindre', horn: 'bell',
+    use: "C'est une maison dans l'espace, où vivent des astronautes.",
+    how: "Elle tourne autour de la Terre. Ses grands panneaux solaires lui donnent l'électricité, et des capsules lui amènent les astronautes." }
 };
-const ORDER = ['fusee', 'navette', 'transporteur', 'rover', 'module'];
+const ORDER = ['fusee', 'navette', 'transporteur', 'rover', 'module', 'station'];
 const GND = '<path class="gnd" d="M4 75H116"/>';
 const ICONS = {
+  station: `<rect class="s" x="8" y="36" width="104" height="5" rx="2"/>
+  <rect class="b" x="10" y="12" width="14" height="22"/><rect class="b" x="10" y="43" width="14" height="22"/><rect class="b" x="28" y="12" width="14" height="22"/><rect class="b" x="28" y="43" width="14" height="22"/>
+  <rect class="b" x="78" y="12" width="14" height="22"/><rect class="b" x="78" y="43" width="14" height="22"/><rect class="b" x="96" y="12" width="14" height="22"/><rect class="b" x="96" y="43" width="14" height="22"/>
+  <rect class="w" x="46" y="44" width="28" height="11" rx="5"/><rect class="w" x="56" y="30" width="9" height="26" rx="3"/><path class="w" d="M74 45h8l6 4-6 4h-8z"/>`,
   fusee: GND + `<rect class="c" x="34" y="66" width="52" height="8"/><rect class="w" x="52" y="20" width="16" height="46" rx="2"/><path class="w" d="M52 20q8-16 16 0z"/>
     <rect class="w" x="42" y="36" width="9" height="30" rx="2"/><rect class="w" x="69" y="36" width="9" height="30" rx="2"/><path class="w" d="M42 36q4.5-9 9 0zM69 36q4.5-9 9 0z"/>
     <rect class="k" x="52" y="40" width="16" height="3"/><rect class="r" x="20" y="10" width="4" height="56"/><rect class="r" x="24" y="30" width="28" height="3"/>`,
@@ -61,7 +68,8 @@ const ICONS = {
 };
 const CFG = {
   fusee: { x: -6, z: -22, yaw: YAW }, navette: { x: -20, z: -2, yaw: YAW }, transporteur: { x: 22, z: -14, yaw: YAW + Math.PI },
-  rover: { x: -10, z: 17, yaw: YAW }, module: { x: 16, z: 12, yaw: YAW }
+  rover: { x: -10, z: 17, yaw: YAW }, module: { x: 16, z: 12, yaw: YAW },
+  station: { x: -24, z: 8, yaw: YAW }
 };
 
 /** Generic two-booster rocket. Origin = bottom of the core stage. */
@@ -89,18 +97,22 @@ function buildRocket(p, s = 1) {
   const nozzles = [anchor(core, 0, -0.9, 0), ...boosters.map((b) => anchor(b, 0, -0.6, 0))];
   return { g, core, upper, sat, panels, fair, boosters, nozzles };
 }
-function astronaut(p, x, y, z) {
-  const g = grp(p, x, y, z);
-  [0.1, -0.1].forEach((s) => rbox(g, 0.16, 0.5, 0.16, 0.06, SM.suit, 0, 0.27, s));
-  rbox(g, 0.3, 0.5, 0.44, 0.12, SM.suit, 0, 0.75, 0); rbox(g, 0.18, 0.42, 0.36, 0.06, SM.off, -0.22, 0.78, 0);
-  [0.27, -0.27].forEach((s) => rbox(g, 0.13, 0.42, 0.13, 0.05, SM.suit, 0.02, 0.72, s));
-  sph(g, 0.2, SM.suit, 0, 1.18, 0); const v = sph(g, 0.15, SM.visor, 0.08, 1.18, 0); v.scale.set(0.12, 0.13, 0.15);
-  return g;
+// astronaut, facing +x; ~1.4 tall at s = 1. g.userData.arms = [right (+z), left (-z)] pivot at the shoulders
+function astronaut(p, x, y, z, s = 1) {
+  const g = grp(p, x, y, z); g.scale.setScalar(s);
+  [0.1, -0.1].forEach((sd) => { rbox(g, 0.18, 0.46, 0.18, 0.06, SM.suit, 0, 0.32, sd); rbox(g, 0.26, 0.12, 0.2, 0.04, SM.grey, 0.03, 0.06, sd); });
+  rbox(g, 0.34, 0.52, 0.48, 0.12, SM.suit, 0, 0.8, 0);
+  rbox(g, 0.06, 0.16, 0.24, 0.02, SM.grey, 0.19, 0.78, 0); box(g, 0.02, 0.08, 0.1, SM.red, 0.17, 0.95, 0.15); box(g, 0.02, 0.08, 0.1, SM.panel, 0.17, 0.95, -0.15);
+  rbox(g, 0.24, 0.56, 0.44, 0.06, SM.off, -0.28, 0.84, 0);
+  const arms = [1, -1].map((sd) => { const a = grp(g, 0.02, 1.0, sd * 0.3); rbox(a, 0.14, 0.44, 0.14, 0.05, SM.suit, 0, -0.2, 0); sph(a, 0.085, SM.off, 0, -0.45, 0); return a; });
+  cylY(g, 0.15, 0.08, SM.grey, 0, 1.08, 0, 14);
+  sph(g, 0.25, SM.suit, 0, 1.3, 0); const v = sph(g, 0.2, SM.visor, 0.11, 1.31, 0); v.scale.set(0.15, 0.165, 0.18);
+  g.userData.arms = arms; return g;
 }
 
 export default {
   id: 'espace', title: "L'Espace", titleHtml: "L'<span>Espace</span>",
-  subtitle: 'Des fusées, une navette, un rover sur Mars et un module sur la Lune. Touche-les pour les faire décoller !',
+  subtitle: 'Des fusées, une navette, une station spatiale, un rover sur Mars et un module sur la Lune. Touche-les pour les faire décoller !',
   welcome: "Bienvenue dans l'espace ! Touche un engin pour le faire décoller.",
   hint: 'Touche un engin pour le découvrir.', backLabel: 'Toute la base',
   brandIcon: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3c5 4 6 10 4 17h-8C10 13 11 7 16 3z"/><path d="M12 20l-4 5h5M20 20l4 5h-5M14 24l2 5 2-5"/><circle cx="16" cy="12" r="2"/></svg>',
@@ -141,6 +153,9 @@ export default {
     const dish = grp(scene, 10, 0, -16); { cylY(dish, 0.3, 2.5, SM.grey, 0, 1.25, 0, 10); const hd = grp(dish, 0, 2.7, 0); const d = add(hd, new THREE.SphereGeometry(2, 20, 10, 0, Math.PI * 2, 0, Math.PI / 3.2), SM.white); d.material = SM.white.clone(); d.material.side = THREE.DoubleSide; d.rotation.x = -0.9; rod(hd, new V3(0, 0, 0), new V3(0, 1.2, 0.9), 0.04, SM.grey); shadows(dish); onUpdate((dt) => (hd.rotation.y += dt * 0.15)); }
     [[-14, -14], [-11.5, -15.5]].forEach(([x, z]) => { const g = grp(scene, x, 0, z); sph(g, 1.1, SM.white, 0, 1.9, 0); [0, 1, 2, 3].forEach((k) => rod(g, new V3(Math.cos(k * 1.57) * 0.7, 0, Math.sin(k * 1.57) * 0.7), new V3(Math.cos(k * 1.57) * 0.6, 1.5, Math.sin(k * 1.57) * 0.6), 0.06, SM.grey)); shadows(g); });
     lamp(scene, -2, -14, 1); lamp(scene, -14, 4, 0.4); lamp(scene, 8, -2, 2);
+    // the crew, waving in front of the control tower
+    const crew = [[5.6, 4.2], [6.6, 3.0], [4.4, 5.3]].map(([x, z]) => { const a = astronaut(scene, x, 0, z, 1.1); a.rotation.y = -Math.PI / 4; shadows(a); return a; });
+    { let T = 0; onUpdate((dt) => { T += dt; crew.forEach((a, i) => { const [r, l] = a.userData.arms; r.rotation.x = -(1.9 + Math.sin(T * 6 + i * 2) * 0.5) * (i === 1 ? 0.15 : 1); l.rotation.x = i === 1 ? 2.2 + Math.sin(T * 6) * 0.5 : 0.15; }); }); }
 
     /* ---- fusée ---- */
     (function () {
@@ -349,6 +364,91 @@ export default {
         await Promise.all([step('Il envoie la photo vers la Terre !', 'antenne'), to(dishG.rotation, 'z', 0.7, 1),
           ...rings.map((r, i) => sleep(i * 0.5).then(() => { const p = S.worldToLocal(wp(dishG, 0.3)); r.position.copy(p); return tw(1.6, (k) => { r.position.y = p.y + k * 4; r.scale.setScalar(1 + k * 3); r.material.opacity = 0.9 * (1 - k); }, lin); }))]);
         dishG.rotation.z = 0; chime(); st.done = true;
+      };
+    })();
+
+    /* ---- station spatiale ---- */
+    (function () {
+      const st = makeStation('station'), S = st.g, H = 11;
+      const iss = grp(S, 0, H, 0); st.m = iss;
+      // long truss along x, with lattice
+      rbox(iss, 11.4, 0.36, 0.36, 0.04, SM.grey, 0, 0, 0, 0.01);
+      for (let x = -5.4; x < 5.5; x += 0.6) { rod(iss, new V3(x, -0.19, 0.19), new V3(x + 0.6, 0.19, 0.19), 0.025, SM.silver, 4); rod(iss, new V3(x, 0.19, -0.19), new V3(x + 0.6, -0.19, -0.19), 0.025, SM.silver, 4); }
+      // solar wings: each pivots around the truss (x axis)
+      const wings = [-4.9, -3.6, 3.6, 4.9].map((x) => {
+        const w = grp(iss, x, 0, 0); cylX(w, 0.22, 0.4, SM.silver, 0, 0, 0, 12);
+        [1, -1].forEach((sd) => { rod(w, new V3(0, 0, sd * 0.2), new V3(0, 0, sd * 3.6), 0.03, SM.silver, 4); rbox(w, 0.95, 0.04, 3.2, 0.01, SM.panel, 0, 0, sd * 2.0, 0.005); box(w, 0.97, 0.05, 0.04, SM.gold, 0, 0, sd * 0.4); box(w, 0.97, 0.05, 0.04, SM.gold, 0, 0, sd * 3.6); });
+        return w;
+      });
+      // radiators
+      [-1.6, 1.6].forEach((x) => { const r = grp(iss, x, 0, -0.2); rbox(r, 0.7, 0.04, 2.2, 0.01, SM.white, 0, 0, -1.3, 0.005); });
+      // pressurised modules under the truss: where the astronauts live
+      const mod = grp(iss, 0, -1.25, 0);
+      rod(iss, new V3(0, -0.2, 0), new V3(0, -0.7, 0), 0.14, SM.off, 10);
+      [[-3.3, -2.0, 0.42, SM.white], [-2.0, -0.6, 0.55, SM.off], [-0.6, 0.6, 0.6, SM.white], [0.6, 2.3, 0.55, SM.off], [2.3, 3.1, 0.45, SM.white]].forEach(([a, b, r, mm]) => {
+        cylX(mod, r, b - a - 0.04, mm, (a + b) / 2, 0, 0, 20); cylX(mod, r + 0.02, 0.06, SM.grey, a + 0.03, 0, 0, 20);
+      });
+      [[-3.3, 1], [-3.3, -1]].forEach(([x, sd]) => rbox(mod, 0.6, 0.03, 1.6, 0.01, SM.panel, x + 0.3, 0, sd * 1.25, 0.005));
+      const cupola = grp(mod, -1.3, -0.55, 0); cylY(cupola, 0.28, 0.2, SM.off, 0, 0, 0, 8); cylY(cupola, 0.2, 0.06, MT.glassD || SM.black, 0, -0.12, 0, 8);
+      for (let x = -1.8; x <= 1.8; x += 0.9) cylZ(mod, 0.08, 0.05, SM.black, x, 0.1, 0.6, 10);
+      // docking port at +x, airlock hatch on the front of the white node
+      const port = cylX(mod, 0.3, 0.3, SM.grey, 3.25, 0, 0, 16);
+      const lock = grp(mod, -0.1, 0, 0.6); cylZ(lock, 0.3, 0.12, SM.grey, 0, 0, 0, 16);
+      const hatch = grp(lock, -0.27, 0, 0.07); const hd = cylZ(hatch, 0.26, 0.05, SM.white, 0.27, 0, 0, 16);
+      // capsule (nose towards the station, along -x)
+      const cap = grp(S, 14, H - 1.25, 0); const capB = grp(cap); capB.rotation.z = Math.PI / 2;
+      add(capB, new THREE.CylinderGeometry(0.38, 0.75, 1.0, 20), SM.white, 0, 0.5, 0); cylY(capB, 0.75, 0.9, SM.black, 0, -0.45, 0, 20);
+      [1, -1].forEach((sd) => rbox(capB, 0.03, 0.8, 0.5, 0.01, SM.panel, sd * 0.76, -0.45, 0, 0.005));
+      cylY(capB, 0.22, 0.14, SM.grey, 0, 1.06, 0, 14); [[0.55, 0.3], [0.55, -0.3]].forEach(([y, z]) => cylZ(capB, 0.08, 0.04, SM.black, 0.62 - (y - 0.55) * 0.3, y, z * 0.7, 10));
+      const capJet = anchor(cap, 0.7, 0, 0);
+      // the space-walker and his tether
+      const walker = astronaut(mod, 0, 0, 0, 0.7); walker.visible = false;
+      const tetherPts = Array.from({ length: 14 }, () => new V3());
+      const tether = new THREE.Line(new THREE.BufferGeometry().setFromPoints(tetherPts), new THREE.LineBasicMaterial({ color: 0xffe28a })); mod.add(tether); tether.visible = false;
+      const lockPt = new V3(-0.1, 0, 0.75), belt = new V3();
+      const updTether = () => {
+        belt.set(-0.18, 0.45, 0).multiplyScalar(0.7).applyEuler(walker.rotation).add(walker.position);
+        tetherPts.forEach((q, i) => { const k = i / (tetherPts.length - 1); q.lerpVectors(lockPt, belt, k); q.y -= Math.sin(k * Math.PI) * 0.35; q.z += Math.sin(k * Math.PI) * 0.15; });
+        tether.geometry.setFromPoints(tetherPts);
+      };
+      const saved = save([cap, walker]);
+      part(st, 'panneaux', 'les panneaux solaires', anchor(wings[3], 0, 0, 3.4), true);
+      part(st, 'modules', 'les modules', anchor(mod, -1.3, 0.6, 0.4), true);
+      part(st, 'capsule', 'la capsule', anchor(cap, 0.2, 0.7, 0), false);
+      part(st, 'sas', 'le sas', anchor(lock, 0, 0.3, 0.1), false);
+      part(st, 'astronaute', "l'astronaute", anchor(walker, 0, 1.7, 0), false);
+      part(st, 'cable', 'le câble', anchor(mod, -0.4, -0.5, 0.9), false);
+      st.focusAt = anchor(iss, 1.5, -0.6, 0); st.size = { w: 16, h: 9 }; st.tagAt = anchor(iss, 0, 4, 0);
+      let T = 0;
+      st.update = (dt) => {
+        T += dt; iss.position.y = H + Math.sin(T * 0.8) * 0.12; cap.position.y = iss.position.y - 1.25;
+        if (walker.visible) updTether();
+        if (st.jets) { const p = wp(capJet); fx.smoke(p, new V3(rnd(1, 2), rnd(-0.3, 0.3), rnd(-0.3, 0.3)), 0.25, 0xffffff, 0.5); }
+      };
+      const floatTo = (x, y, z, d) => Promise.all([to(walker.position, 'x', x, d, easeSine), to(walker.position, 'y', y, d, easeSine), to(walker.position, 'z', z, d, easeSine)]);
+      st.action = async function () {
+        if (st.done) {
+          st.jets = true;
+          await Promise.all([step("La capsule ramène l'équipage sur Terre.", 'capsule'), to(cap.position, 'x', 14, 3.5, easeIn)]);
+          st.jets = false; restore(saved); walker.visible = false; wings.forEach((w) => (w.rotation.x = 0)); st.done = false;
+        }
+                await Promise.all([step("La station tourne autour de la Terre. Des astronautes vivent dedans !", 'modules'), sleep(0.4)]);
+        await Promise.all([step('Ses panneaux solaires se tournent vers le Soleil, pour faire de l’électricité.', 'panneaux'), ...wings.map((w) => to(w.rotation, 'x', 0.9, 2.0))]);
+        engineOn(110); st.jets = true;
+        await Promise.all([step('Une capsule arrive avec de nouveaux astronautes.', 'capsule'), to(cap.position, 'x', 4.15, 5, (k) => 1 - Math.pow(1 - k, 2.5))]);
+        st.jets = false; engineOff(); thud();
+        await Promise.all([step('Elle s’accroche tout doucement à la station : c’est l’amarrage.', 'capsule'), sleep(0.6)]);
+        await Promise.all([step('Un astronaute sort par le sas.', 'sas'), to(hatch.rotation, 'y', -1.9, 1.2)]);
+        walker.position.set(-0.1, -0.35, 0.8); walker.rotation.set(0, -Math.PI / 2, 0); walker.visible = true; updTether(); tether.visible = true; pop(walker, 0.4);
+        await Promise.all([step('Il est attaché par un câble, pour ne pas s’envoler !', 'cable'), floatTo(-0.6, 0.3, 1.5, 2.4), to(walker.rotation, 'z', 0.5, 2.4)]);
+        await Promise.all([step("Dans l'espace, on flotte : il se tire avec les mains.", 'astronaute'), floatTo(-2.4, 0.9, 1.1, 3.0), to(walker.rotation, 'y', -Math.PI / 4, 3.0)]);
+        const [ra] = walker.userData.arms; let n = 0;
+        await Promise.all([step('Il répare un appareil avec ses outils.', 'astronaute'), tw(2.4, (k) => { ra.rotation.z = 1.4 + Math.sin(k * 30) * 0.25; if (++n % 5 === 0) fx.fire(wp(ra, 0.0), new V3(0, 1, 0), 2, 1.5, 0.08); }, lin)]);
+        ra.rotation.z = 0;
+        await Promise.all([step('Puis il rentre dans la station.', 'sas'), floatTo(-0.1, -0.35, 0.8, 3.0), to(walker.rotation, 'z', 0, 3.0), to(walker.rotation, 'y', -Math.PI / 2, 3.0)]);
+        walker.visible = false; tether.visible = false;
+        await to(hatch.rotation, 'y', 0, 0.8);
+        chime(); st.done = true;
       };
     })();
 
