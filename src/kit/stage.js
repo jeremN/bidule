@@ -231,24 +231,28 @@ export function createStage(world, root, opts = {}) {
   /* ---------- camera ---------- */
   const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 400);
   const ELEV = rad(34);
-  let az = Math.PI / 4, azT = az, V = 40, VT = 40, fx = 0.5, fxT = 0.5, fy = 0.5, fyT = 0.5, SW = 1, SH = 1;
+  const OVAZ = (world.overview && world.overview.az) != null ? world.overview.az : Math.PI / 4;
+  // the camera turns to see each machine from the side: azimuth = the station's yaw (or st.az)
+  const nearAz = (a) => a + Math.round((az - a) / (Math.PI * 2)) * Math.PI * 2;
+  let az = OVAZ, azT = az, V = 40, VT = 40, fx = 0.5, fxT = 0.5, fy = 0.5, fyT = 0.5, SW = 1, SH = 1;
   const ov = world.overview || { w: 44, h: 31, focus: [1.5, 2, 2.5] };
   const focus = new V3(...ov.focus), focusT = focus.clone();
   function computeView() {
     const topB = $('#top').getBoundingClientRect().bottom, dockT = dockEl.getBoundingClientRect().top;
     let L = 0, R = SW, T, B;
-    if (!startEl.hidden) { VT = Math.max(34 * SK, (46 * SK * SH) / SW); fxT = 0.5; fyT = 0.5; focusT.set(...ov.focus); return; }
+    if (!startEl.hidden) { VT = Math.max(34 * SK, (46 * SK * SH) / SW); fxT = 0.5; fyT = 0.5; focusT.set(...ov.focus); azT = nearAz(OVAZ); return; }
     if (current) {
       T = topB + 70; const sr = sheetEl.getBoundingClientRect();
       if (SW >= 760 && SW > SH) { L = sr.right + 8; B = dockT - 8; } else B = sr.top - 8;
       const fw = Math.max(80, R - L), fh = Math.max(80, B - T);
       VT = Math.max((current.size.h * SH) / fh, (current.size.w * SH) / fw);
+      azT = nearAz(current.az != null ? current.az : current.g.rotation.y);
       if (current.focusAt) current.focusAt.getWorldPosition(focusT); // follows a moving machine
       else focusT.copy(current.g.localToWorld(current.focus.clone()));
     } else {
       T = (captionEl.hidden ? topB : captionEl.getBoundingClientRect().bottom) + 6; B = dockT - 6;
       const fw = Math.max(80, R - L), fh = Math.max(80, B - T);
-      VT = Math.max((ov.h * SH) / fh, (ov.w * SH) / fw); focusT.set(...ov.focus);
+      VT = Math.max((ov.h * SH) / fh, (ov.w * SH) / fw); focusT.set(...ov.focus); azT = nearAz(OVAZ);
     }
     fxT = (L + R) / 2 / SW; fyT = (T + B) / 2 / SH;
   }
@@ -258,7 +262,7 @@ export function createStage(world, root, opts = {}) {
   }
   function updateCam(dt) {
     const k = 1 - Math.exp(-dt * 3.2);
-    focus.lerp(focusT, k); V += (VT - V) * k; fx += (fxT - fx) * k; fy += (fyT - fy) * k; az += (azT - az) * (1 - Math.exp(-dt * 8));
+    focus.lerp(focusT, k); V += (VT - V) * k; fx += (fxT - fx) * k; fy += (fyT - fy) * k; az += (azT - az) * (1 - Math.exp(-dt * 2.6));
     const a = SW / SH;
     cam.left = -fx * V * a; cam.right = (1 - fx) * V * a; cam.top = fy * V; cam.bottom = -(1 - fy) * V; cam.updateProjectionMatrix();
     cam.position.set(focus.x + Math.sin(az) * Math.cos(ELEV) * 120, focus.y + Math.sin(ELEV) * 120, focus.z + Math.cos(az) * Math.cos(ELEV) * 120);
