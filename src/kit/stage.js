@@ -9,6 +9,7 @@ import { C, ICO, mat, add, grp, instanced, shadows } from './geo.js';
 const ICON_AGAIN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a8.5 8.5 0 0 1 0 12"/></svg>';
 const ICON_MUTE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path id="muteX" d="M17 9l5 6M22 9l-5 6" opacity="0"/></svg>';
 const ICON_HORN = '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13v6h5l11 7V6L9 13H4z"/><path d="M24 11l4-3M24 16h5M24 21l4 3"/></svg>';
+const ICON_HOME = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>';
 const ICON_PLAY = '<svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8z" fill="currentColor"/></svg>';
 
 function shell(world, root, homeHref) {
@@ -16,6 +17,7 @@ function shell(world, root, homeHref) {
 <div class="stage" id="stage"><canvas id="c" aria-label="${world.title} en 3D. Glisse le doigt pour tourner autour."></canvas><div class="tags" id="tags"></div></div>
 <div class="hud" id="hud">
   <header class="top" id="top">
+    <a class="icon-btn home" data-home href="${homeHref}" aria-label="Accueil" title="Accueil">${ICON_HOME}</a>
     <a class="brand" id="brand" href="${homeHref}">${world.brandIcon || ''}<span>${world.title}</span></a>
     <button class="pill" id="back" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>${world.backLabel || 'Tout voir'}</button>
     <span class="spacer"></span>
@@ -31,6 +33,7 @@ function shell(world, root, homeHref) {
   <nav class="dock" id="dock" aria-label="Les engins"></nav>
 </div>
 <div class="start" id="start">
+  <a class="pill start-home" data-home href="${homeHref}">${ICON_HOME}Accueil</a>
   <p class="kicker">Bidule</p>
   <h1>${world.titleHtml || world.title}</h1>
   <p>${world.subtitle}</p>
@@ -281,7 +284,7 @@ export function createStage(world, root, opts = {}) {
   goBtn.addEventListener('click', runAction);
   $('#horn').addEventListener('click', () => { initAudio(); if (current) { hornSound(current.horn); hop(current); } });
   $('#back').addEventListener('click', overview);
-  $('#brand').addEventListener('click', (e) => { if (opts.onHome) { e.preventDefault(); opts.onHome(); } });
+  root.querySelectorAll('#brand,[data-home]').forEach((a) => a.addEventListener('click', (e) => { if (opts.onHome) { e.preventDefault(); opts.onHome(); } }));
   $('#again').addEventListener('click', () => { initAudio(); if (audio.lastLine) say(audio.lastLine); });
   $('#mute').addEventListener('click', (e) => {
     audio.muted = !audio.muted; const b = e.currentTarget;
