@@ -1,0 +1,507 @@
+// Le Chantier — six construction machines.
+import * as THREE from 'three';
+import { V3, rad, clamp, rnd, pick } from '../kit/util.js';
+import { tw, to, sleep, pop, easeIn, easeSine, easeBack, lin } from '../kit/tween.js';
+import { engineOn, thud, ding } from '../kit/audio.js';
+import { C, MT, UB, ICO, dummy, tmpCol, mat, std, add, box, grp, cylGeo, cylY, cylZ, cylX, rod, rail, sph, rbox, ext, extY, arc, anchor, pile, wp, shadows } from '../kit/geo.js';
+import { trackUnit, tire, fender, hydraulic, telescopic, strut, beacon, operator, worker, truckCab } from '../kit/parts.js';
+import { autumnTree, lamp, cone, barrier, office, stringLights, pipes } from '../kit/props.js';
+
+const DATA={
+  pelleteuse:{short:'La pelleteuse',full:'La pelleteuse',verb:'Creuser',horn:'horn',
+    use:'Elle creuse des trous dans la terre.',
+    how:"Des vérins poussent son bras, comme tes muscles. Au bout, le godet est une grosse cuillère."},
+  camion:{short:'Le camion-benne',full:'Le camion-benne',verb:'Vider',horn:'horn',
+    use:'Il transporte la terre et les cailloux.',
+    how:"Pour le vider, un grand vérin s'allonge et lève la benne. La porte s'ouvre toute seule."},
+  bulldozer:{short:'Le bulldozer',full:'Le bulldozer',verb:'Pousser',horn:'horn',
+    use:'Il pousse la terre pour rendre le sol tout plat.',
+    how:"Sa grande lame pousse devant lui. Ses chenilles l'empêchent de glisser."},
+  grue:{short:'La grue',full:'La grue',verb:'Soulever',horn:'bell',
+    use:'Elle soulève des choses très lourdes, tout là-haut.',
+    how:'Le crochet descend, attrape, puis remonte. Elle aide à construire les maisons.'},
+  toupie:{short:'La toupie',full:'Le camion toupie',verb:'Verser',horn:'horn',
+    use:'Il apporte le béton pour faire les murs et le sol.',
+    how:'Sa grosse toupie tourne tout le temps, pour que le béton reste mou.'},
+  rouleau:{short:'Le rouleau',full:'Le rouleau compresseur',verb:'Rouler',horn:'horn',
+    use:'Il écrase les cailloux pour faire une route bien plate.',
+    how:'Son gros rouleau en métal est très lourd, et il vibre.'}
+};
+
+const ORDER=['pelleteuse','camion','bulldozer','grue','toupie','rouleau'];
+const GND='<path class="gnd" d="M4 75H116"/>';
+const ICONS={
+ pelleteuse:GND+`<rect class="k" x="8" y="58" width="58" height="15" rx="7.5"/><circle class="s" cx="17" cy="65.5" r="4"/><circle class="s" cx="37" cy="65.5" r="4"/><circle class="s" cx="57" cy="65.5" r="4"/>
+  <rect class="y" x="10" y="38" width="52" height="19" rx="3"/><rect class="yd" x="6" y="40" width="10" height="16" rx="2"/>
+  <rect class="y" x="36" y="18" width="22" height="22" rx="3"/><rect class="g" x="41" y="22" width="13" height="12" rx="1.5"/>
+  <path class="arm" d="M58 42L84 14L102 42"/><path class="yd" d="M95 40h16l-3 14h-11z"/>`,
+ camion:GND+`<rect class="k" x="8" y="52" width="100" height="6" rx="2"/><path class="d" d="M14 26q12-12 26-5 14-9 30 5z"/><path class="o" d="M10 24h64v28H16z"/>
+  <rect class="b" x="78" y="28" width="30" height="26" rx="3"/><rect class="g" x="92" y="32" width="12" height="11" rx="1.5"/>
+  <circle class="k" cx="24" cy="62" r="10"/><circle class="s" cx="24" cy="62" r="4"/><circle class="k" cx="46" cy="62" r="10"/><circle class="s" cx="46" cy="62" r="4"/><circle class="k" cx="94" cy="62" r="10"/><circle class="s" cx="94" cy="62" r="4"/>`,
+ bulldozer:GND+`<rect class="k" x="14" y="58" width="62" height="15" rx="7.5"/><circle class="s" cx="23" cy="65.5" r="4"/><circle class="s" cx="45" cy="65.5" r="4"/><circle class="s" cx="67" cy="65.5" r="4"/>
+  <rect class="y" x="18" y="38" width="56" height="20" rx="3"/><rect class="y" x="20" y="16" width="26" height="24" rx="3"/><rect class="g" x="25" y="21" width="16" height="12" rx="1.5"/>
+  <rect class="k" x="58" y="24" width="4" height="14"/><rect class="k" x="72" y="50" width="22" height="5"/><path class="yd" d="M92 30q12 16 0 44h9q5-22 0-44z"/>`,
+ grue:GND+`<rect class="c" x="20" y="66" width="24" height="9"/><path class="lat" d="M28 66V12M36 66V12M28 66l8-8-8-8 8-8-8-8 8-8-8-8"/>
+  <path class="lat" d="M8 10H112M8 17H112M14 17l6-7 6 7 6-7 6 7 6-7 6 7 6-7 6 7 6-7 6 7 6-7 6 7 6-7 6 7 6-7"/>
+  <rect class="c" x="8" y="17" width="12" height="9"/><rect class="w" x="38" y="17" width="9" height="8"/>
+  <rect class="k" x="84" y="17" width="9" height="4"/><path class="ln" d="M88.5 21V48"/><rect class="y" x="84" y="47" width="9" height="6" rx="1"/>
+  <rect class="br" x="76" y="56" width="25" height="16"/><path d="M76 61h25M76 66h25M84 56v5M93 61v5M84 66v6" stroke="#fff" stroke-width="1.2" fill="none" opacity=".6"/>`,
+ toupie:GND+`<rect class="k" x="8" y="52" width="102" height="6" rx="2"/><rect class="w" x="82" y="28" width="26" height="26" rx="3"/><rect class="g" x="94" y="32" width="10" height="11"/><rect class="o" x="82" y="45" width="26" height="4"/>
+  <g transform="rotate(-8 44 36)"><ellipse class="o" cx="44" cy="36" rx="34" ry="15"/><path class="st" d="M24 25L34 48M40 22L52 49M58 24L68 46"/></g>
+  <path class="s" d="M3 33h12l-4 9H0z"/>
+  <circle class="k" cx="24" cy="62" r="10"/><circle class="s" cx="24" cy="62" r="4"/><circle class="k" cx="46" cy="62" r="10"/><circle class="s" cx="46" cy="62" r="4"/><circle class="k" cx="96" cy="62" r="10"/><circle class="s" cx="96" cy="62" r="4"/>`,
+ rouleau:GND+`<circle class="s" cx="90" cy="57" r="17"/><circle class="k" cx="90" cy="57" r="6"/><rect class="y" x="76" y="34" width="28" height="8" rx="2"/><rect class="y" x="98" y="38" width="5" height="16"/>
+  <rect class="y" x="16" y="38" width="58" height="22" rx="3"/><rect class="k" x="24" y="16" width="3" height="22"/><rect class="k" x="52" y="16" width="3" height="22"/><rect class="k" x="20" y="12" width="40" height="5" rx="2"/>
+  <circle class="k" cx="32" cy="62" r="12"/><circle class="s" cx="32" cy="62" r="5"/>`
+};
+
+
+const CFG={
+  pelleteuse:{x:-10,z:1,yaw:.98}, grue:{x:2,z:-9,yaw:.6}, camion:{x:-5,z:8,yaw:.785},
+  bulldozer:{x:4,z:4,yaw:.98}, toupie:{x:14,z:-2,yaw:.785}, rouleau:{x:3,z:14,yaw:.785}
+};
+
+export default {
+  id:'chantier', title:'Le Chantier', titleHtml:'Le <span>Chantier</span>',
+  subtitle:'Six engins au travail. Touche-les pour voir comment ils marchent.',
+  welcome:'Bienvenue sur le chantier ! Touche un engin pour voir comment il marche.',
+  hint:'Touche un engin pour le découvrir.', backLabel:'Tout le chantier',
+  brandIcon:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 29V5M13 29V5M9 9l4 4-4 4 4 4-4 4M3 5h27M23 5v9"/><rect x="20" y="14" width="6" height="5" rx="1"/></svg>',
+  data:DATA, order:ORDER, icons:ICONS, cfg:CFG,
+  zones:[[-10,1,6.5],[-15.1,3.4,2.4],[-7.2,-3.2,2.2],[-5,8,5.5],[-8.8,11.8,2.6],[14,-2,4.6],[10.7,1.3,2.4],[2,-9,2.2],[-1.3,-3.1,2.2],[5.3,-14.9,3.2],[-16,8,3.6],[-6,-12,2.4]],
+  segs:[[2.9,5.7,7.6,-1.4,2.6],[-1.8,18.8,8,9,2.8]],
+  ground:{
+    base:['#7c79c6','#5d5ea8','#3f427f'],
+    paths:[{pts:[[-17,10],[-6,9],[2,6],[8,1],[15,-2]],w:7,col:'#c79a92',al:.5},{pts:[[-11,1],[-3,-1],[2,-7],[6,-14]],w:6,col:'#c79a92',al:.45},{pts:[[-17,10],[-6,9],[2,6],[8,1],[15,-2]],w:3.2,col:'#e3b6a0',al:.35}],
+    blobs:[[-10,1,8,'rgba(255,196,140,.5)'],[-5,8,7,'rgba(255,196,140,.5)'],[4,4,8,'rgba(255,196,140,.5)'],[14,-2,7,'rgba(255,196,140,.5)'],[2,-9,8,'rgba(255,196,140,.5)'],[3,14,7,'rgba(255,196,140,.5)'],
+      [-7.2,-3.2,3.4,'rgba(140,82,50,.75)'],[-15.1,3.4,3,'rgba(150,92,58,.6)'],[-8.8,11.8,3,'rgba(150,92,58,.55)'],[7,0,4.5,'rgba(160,104,68,.5)'],[10.7,1.3,2.6,'rgba(170,170,190,.35)']]
+  },
+  build(ctx){
+    const { scene, makeStation, part, roll, step, throwClod } = ctx;
+    [[-18,-8],[-13,-16],[12,-16],[19,7],[-19,14],[17,-11],[-21,3]].forEach(([x,z],i)=>autumnTree(scene,x,z,i%2?[0xf2b21c,0xe8901e,0xf6cf3a]:[0xe8721e,0xd13f1f,0xf2a12a]));
+    office(scene,-16,8,.5);
+    lamp(scene,-12,4.5,.4);lamp(scene,9,-8,2.4);lamp(scene,11,10,-.6);lamp(scene,-3,-6,1.8);
+    stringLights(scene,new V3(-14.6,2.6,9.2),new V3(-11.2,3.95,4.8));
+    [[9.4,4.6],[9.9,3.4],[-2.6,19.6],[8.9,8.2],[-4.5,-5.6],[-5,-1.2]].forEach(([x,z])=>cone(scene,x,z));
+    barrier(scene,-9.6,-5.6,.98);barrier(scene,-4.2,-2.6,2.5);barrier(scene,13.2,-7.4,.4);
+    pipes(scene,-6,-12,.4);
+/* ---- pelleteuse ---- */
+(function(){
+  const st=makeStation('pelleteuse'),S=st.g,m=grp(S);st.m=m;
+  st.tracks=[trackUnit(m,{len:4.1,r:.42,w:.62,z:1.18,guard:true}),trackUnit(m,{len:4.1,r:.42,w:.62,z:-1.18,guard:true})];
+  rbox(m,1.9,.42,1.7,.08,MT.dark,0,.64,0);cylY(m,.55,.3,MT.dark,0,.9,0,20);
+  const tur=grp(m,0,1.04,0);st.tur=tur;
+  cylY(tur,1.05,.16,MT.black,0,.08,0,28);
+  rbox(tur,3.45,.26,2.42,.06,MT.dark,-.47,.29,0);
+  extY(tur,[[-1.38,-1.2],[-1.38,1.2],[-2.0,1.2],[-2.42,.75],[-2.5,0],[-2.42,-.75],[-2.0,-1.2]],.32,1.05,MT.yel,0,.95,0);
+  rbox(tur,.04,.22,1.2,.02,MT.stripes,-2.52,.75,0,.01);
+  [.62,-.62].forEach(z=>rbox(tur,.04,.1,.2,.02,MT.tail,-2.48,1.2,z,.01));
+  rbox(tur,1.6,.64,2.3,.14,MT.yel,-.58,.74,0);
+  [1,-1].forEach(s=>{for(let k=0;k<7;k++)box(tur,.045,.36,.02,MT.black,-1.18+k*.13,.72,s*1.155);});
+  rbox(tur,.9,.04,.9,.02,MT.black,-.75,1.07,-.4,.01);
+  cylY(tur,.07,.62,MT.black,-.95,1.35,-.62,10);const cap=cylY(tur,.085,.03,MT.black,-.97,1.67,-.62,10);cap.rotation.z=.4;
+  rbox(tur,1.1,.72,.92,.1,MT.yel,.62,.8,-.73);
+  rail(tur,[[.15,1.16,-1.12],[.15,1.5,-1.12],[1.1,1.5,-1.12],[1.1,1.16,-1.12]],.025,MT.yel);
+  rail(tur,[[-1.3,1.06,-1.12],[-1.3,1.36,-1.12],[-.1,1.36,-1.12]],.025,MT.yel);
+  const cab=grp(tur,.62,.42,.72);
+  rbox(cab,1.3,.1,1.0,.03,MT.dark,0,.05,0);rbox(cab,.1,1.45,1.0,.04,MT.yel,-.6,.77,0);rbox(cab,.08,.45,1.0,.03,MT.yel,.6,.3,0);
+  [.47,-.47].forEach(z=>{rod(cab,new V3(.6,.1,z),new V3(.48,1.48,z),.035,MT.yel);rod(cab,new V3(-.06,.1,z),new V3(-.06,1.48,z),.03,MT.yel);rbox(cab,1.15,.2,.04,.02,MT.yel,0,.2,z,.01);});
+  rbox(cab,1.36,.1,1.08,.05,MT.yel,-.02,1.52,0);
+  const wsh=box(cab,.02,1.32,.9,MT.glass,.55,.8,0);wsh.rotation.z=.088;
+  box(cab,1.1,1.22,.02,MT.glass,0,.85,.48);box(cab,1.1,1.22,.02,MT.glass,0,.85,-.48);
+  rod(cab,new V3(.6,.35,.1),new V3(.55,.95,-.18),.012,MT.black);
+  rbox(cab,.1,.03,.03,.01,MT.chrome,-.15,.78,.5,.008);
+  rod(cab,new V3(.5,1.25,.48),new V3(.78,1.38,.62),.02,MT.black);rbox(cab,.04,.24,.15,.03,MT.black,.8,1.36,.64);
+  [.32,-.32].forEach(z=>rbox(cab,.08,.09,.14,.02,MT.lamp,.62,1.6,z,.01));
+  beacon(st,cab,-.42,1.57,.28);
+  operator(cab,-.15,.12,0);cylY(cab,.025,.25,MT.black,.18,.35,.3,6);cylY(cab,.025,.25,MT.black,.18,.35,-.3,6);
+  const boom=grp(tur,1.05,.84,-.02);
+  ext(boom,[[-.06,.22],[1.71,.69],[3.3,.19],[3.2,-.19],[1.69,.2],[.06,-.22]],[.15,.25,.15,.15,.25,.15],.44,MT.yel,0,0,0,.03);
+  cylZ(boom,.11,.62,MT.chrome,0,0,0,12);cylZ(boom,.1,.6,MT.chrome,3.25,0,0,12);
+  rbox(boom,.3,.16,.36,.04,MT.yelD,1.92,.75,0);
+  [.13,-.13].forEach(z=>{rod(boom,new V3(.4,.36,z),new V3(1.7,.76,z),.022,MT.black);rod(boom,new V3(1.7,.76,z),new V3(3.0,.34,z),.022,MT.black);});
+  const stick=grp(boom,3.25,0,0);
+  ext(stick,[[-.62,.3],[-.32,.38],[2.45,.15],[2.58,0],[2.45,-.15],[0,-.2],[-.52,-.1]],.08,.36,MT.yel,0,0,0,.03);
+  cylZ(stick,.08,.48,MT.chrome,2.48,0,0,12);
+  [.12,-.12].forEach(z=>rod(stick,new V3(-.3,.4,z),new V3(2.2,.2,z),.02,MT.black));
+  const bucket=grp(stick,2.48,0,0);
+  const outer=arc(.4,-.3,.62,118,-60,14),inner=arc(.4,-.3,.54,-60,118,14);
+  ext(bucket,outer.concat(inner),0,.9,MT.yelD,0,0,0,.015);
+  ext(bucket,outer.concat([[.4,-.3]]),0,.05,MT.yelD,0,0,.44,.01);ext(bucket,outer.concat([[.4,-.3]]),0,.05,MT.yelD,0,0,-.44,.01);
+  const TOOTH=new THREE.ConeGeometry(.055,.22,4);TOOTH.translate(0,.11,0);
+  for(let i=-2;i<=2;i++){const t=add(bucket,TOOTH,MT.steel,.7,-.83,i*.18);t.rotation.z=rad(120);}
+  rbox(bucket,.1,.06,.92,.02,MT.steel,.68,-.8,0);
+  [.25,-.25].forEach(z=>ext(bucket,[[-.12,.12],[-.2,.36],[-.06,.42],[.22,.3],[.16,.08]],.05,.05,MT.yelD,0,0,z,.01));
+  cylZ(bucket,.06,.56,MT.chrome,-.14,.32,0,10);cylZ(bucket,.07,.56,MT.chrome,0,0,0,10);
+  const ball=add(bucket,ICO,C.dirt,.42,-.32,0);ball.scale.setScalar(.4);ball.visible=false;
+  Object.assign(st,{boom,stick,bucket,ball});
+  st.links=[
+    hydraulic(tur,anchor(tur,1.0,.42,.15),anchor(boom,1.35,-.08,.17),{barrel:1.0,rb:.1}),
+    hydraulic(tur,anchor(tur,1.0,.42,-.19),anchor(boom,1.35,-.08,-.17),{barrel:1.0,rb:.1}),
+    hydraulic(boom,anchor(boom,1.95,.78,0),anchor(stick,-.55,.32,0),{barrel:1.15,rb:.1}),
+    hydraulic(stick,anchor(stick,.25,.38,0),anchor(bucket,-.14,.32,0),{barrel:1.3,rb:.085})];
+  const REST={boom:35,stick:-105,bucket:-50};
+  const setPose=p=>{boom.rotation.z=rad(p.boom);stick.rotation.z=rad(p.stick);bucket.rotation.z=rad(p.bucket);};
+  const poseTo=(p,dur)=>{const f={b:boom.rotation.z,s:stick.rotation.z,k:bucket.rotation.z};const t={b:p.boom!=null?rad(p.boom):f.b,s:p.stick!=null?rad(p.stick):f.s,k:p.bucket!=null?rad(p.bucket):f.k};
+    return tw(dur,k=>{boom.rotation.z=f.b+(t.b-f.b)*k;stick.rotation.z=f.s+(t.s-f.s)*k;bucket.rotation.z=f.k+(t.k-f.k)*k;});};
+  setPose(REST);
+  const hole=grp(S,5.1,0,0);
+  const ho=add(hole,new THREE.CircleGeometry(1,20),0x8a5634,0,.03,0);ho.rotation.x=-Math.PI/2;
+  const hi=add(hole,new THREE.CircleGeometry(.68,18),0x24160f,0,.045,0);hi.rotation.x=-Math.PI/2;
+  hole.scale.setScalar(.5);
+  const DUMP=2.6;const pl=pile(S,Math.cos(DUMP)*5.6,-Math.sin(DUMP)*5.6,.35);
+  part(st,'bras','le bras',anchor(boom,1.7,.8,0),true);
+  part(st,'verins','les vérins',anchor(boom,1.1,-.25,.3),true);
+  part(st,'godet','le godet',anchor(bucket,.5,-.2,0),true);
+  part(st,'cabine','la cabine',anchor(cab,0,1.75,0),true);
+  part(st,'chenilles','les chenilles',anchor(st.tracks[0].g,0,.5,.5),true);
+  st.focus=new V3(2.2,1.7,-1.4);st.size={w:12,h:7.5};st.tagAt=anchor(S,0,5,0);
+  st.update=dt=>roll(st,dt);
+  st.action=async function(){
+    engineOn(52);
+    await Promise.all([step('Les vérins font descendre le bras.','verins'),poseTo({boom:-5,stick:-55,bucket:-20},1.7)]);
+    const hs=Math.min(1.4,hole.scale.x+.15);
+    await Promise.all([step('Le godet gratte la terre, comme une grosse cuillère.','godet'),poseTo({boom:10,stick:-120,bucket:-95},1.7),
+      to(hole.scale,'x',hs,1.2),to(hole.scale,'z',hs,1.2),
+      sleep(.55).then(()=>{ball.visible=true;const h=wp(hole,.2);for(let i=0;i<5;i++)throwClod(h,h.clone().add(new V3(rnd(-1,1),0,rnd(-1,1))));})]);
+    await Promise.all([step('Les vérins poussent, et le bras remonte.','verins'),poseTo({boom:38,stick:-110,bucket:-95},1.2)]);
+    await Promise.all([step('La cabine tourne sur elle-même.','cabine'),to(tur.rotation,'y',DUMP,2.1)]);
+    await poseTo({boom:20,stick:-75,bucket:-95},.7);
+    await Promise.all([step('Et hop ! On vide le godet.','godet'),poseTo({bucket:25},.6).then(()=>{
+      const from=wp(ball),target=wp(pl,.3);ball.visible=false;thud();for(let i=0;i<12;i++)throwClod(from,target);
+      const s0=pl.scale.x,s1=Math.min(1.35,s0+.14);return tw(.9,k=>pl.scale.setScalar(s0+(s1-s0)*k));})]);
+    await Promise.all([poseTo(REST,1.5),to(tur.rotation,'y',0,2.1)]);
+  };
+})();
+
+/* ---- camion-benne ---- */
+(function(){
+  const st=makeStation('camion'),S=st.g,m=grp(S);st.m=m;
+  [.42,-.42].forEach(z=>rbox(m,5.85,.3,.16,.03,MT.black,0,.97,z));
+  for(let x=-2.4;x<2.6;x+=1.2)box(m,.12,.2,.8,MT.black,x,.97,0);
+  const cab=truckCab(m,MT.blue,1.45);
+  cylX(m,.27,1.0,MT.chrome,.55,.72,.78,18);[.2,.9].forEach(x=>cylX(m,.285,.05,MT.black,x,.72,.78,18));
+  cylX(m,.17,.8,MT.dark,.55,.72,-.72,14);rbox(m,.5,.4,.35,.04,MT.black,.0,.75,-.72);
+  [1,-1].forEach(s=>{rail(m,[[-.55,.45,s*1.1],[.05,.45,s*1.1]],.03,MT.grey);rail(m,[[-.55,.7,s*1.1],[.05,.7,s*1.1]],.03,MT.grey);
+    rbox(m,.06,.45,.6,.02,MT.black,-2.65,.6,s*.95);rbox(m,.9,.05,.62,.02,MT.black,-1.5,1.17,s*.92);});
+  rbox(m,.12,.22,2.1,.03,MT.stripes,-2.9,.72,0,.01);[.85,-.85].forEach(z=>rbox(m,.05,.12,.22,.02,MT.tail,-2.97,.92,z,.01));
+  st.wheels=[];
+  [1,-1].forEach(s=>{st.wheels.push(tire(m,.55,.4,2.3,.55,s*.9,MT.grey));st.wheels.push(tire(m,.55,.3,-1.0,.55,s*.82,MT.grey,s),tire(m,.55,.3,-1.0,.55,s*1.13,MT.grey,s));
+    st.wheels.push(tire(m,.55,.3,-2.05,.55,s*.82,MT.grey,s),tire(m,.55,.3,-2.05,.55,s*1.13,MT.grey,s));
+    fender(m,.66,.48,2.3,.55,s*.92,MT.black);});
+  const bed=grp(m,-2.6,1.38,0);
+  rbox(bed,3.7,.14,2.2,.03,MT.orange,1.85,0,0);
+  [.4,-.4].forEach(z=>rbox(bed,3.6,.14,.14,.02,MT.orangeD,1.85,-.13,z));
+  [1.05,-1.05].forEach(z=>{ext(bed,[[0,.06],[3.7,.06],[3.7,1.18],[.15,1.02]],.04,.1,MT.orange,0,0,z,.02);
+    [.55,1.3,2.05,2.8].forEach(x=>rbox(bed,.1,1.0,.07,.02,MT.orangeD,x,.56,z*1.06,.01));
+    rbox(bed,3.75,.1,.14,.03,MT.orangeD,1.85,1.12,z);});
+  rbox(bed,.14,1.48,2.2,.03,MT.orange,3.65,.76,0);rbox(bed,.75,.1,2.2,.03,MT.orange,4.0,1.5,0);
+  rbox(bed,.3,.25,.4,.04,MT.dark,3.85,1.05,0);
+  const gate=grp(bed,-.02,1.08,0);rbox(gate,.1,1.02,2.12,.03,MT.orange,-.04,-.52,0);[.6,0,-.6].forEach(z=>rbox(gate,.05,.95,.07,.01,MT.orangeD,-.1,-.5,z,.01));
+  cylZ(bed,.05,2.3,MT.chrome,-.02,1.08,0,8);
+  const dirt=grp(bed,0,0,0);
+  box(dirt,3.3,.55,1.85,C.dirt,1.9,.36,0);
+  [[1.1,.72,.35,.55],[2.1,.78,-.3,.6],[2.9,.7,.25,.45]].forEach(([x,y,z,s])=>{const l=add(dirt,ICO,C.dirtD,x,y,z);l.scale.set(s,s*.6,s);});
+  st.links=[telescopic(m,anchor(m,1.28,1.05,0),anchor(bed,3.88,1.05,0),{n:5,stage:1.1,r:.15})];
+  const pl=pile(S,-5.9,0,.35);
+  part(st,'cabine','la cabine',anchor(cab,.8,2.05,0),true);
+  part(st,'benne','la benne',anchor(bed,1.8,1.3,0),true);
+  part(st,'verin','le vérin',anchor(m,1.28,1.9,.3),true);
+  part(st,'porte','la porte',anchor(gate,-.1,-.5,.6),false);
+  st.focus=new V3(-1.6,1.7,0);st.size={w:12,h:7.2};st.tagAt=anchor(S,0,4.5,0);
+  const rear=anchor(bed,.1,.5,0);
+  st.update=dt=>{roll(st,dt);gate.rotation.z=-bed.rotation.z*.92;st.A.verin.position.y=1.5+bed.rotation.z*1.6;};
+  st.action=async function(){
+    engineOn(60);
+    st.reversing=true;st.beepT=0;
+    await Promise.all([step('Bip, bip ! Le camion recule.','cabine'),to(m.position,'x',-1.6,2.4)]);
+    st.reversing=false;
+    await Promise.all([step('Le grand vérin s\'allonge, et la benne se lève.','verin'),to(bed.rotation,'z',.95,2.4)]);
+    let sent=0;const target=wp(pl,.3);
+    await Promise.all([step('La porte s\'ouvre, et la terre glisse.','porte'),
+      tw(1.5,k=>{dirt.position.x=-3.4*k;const want=Math.floor(k*16);while(sent<want){throwClod(wp(rear),target);sent++;}},easeIn),
+      (()=>{const s0=pl.scale.x,s1=Math.min(1.35,s0+.16);return sleep(.5).then(()=>{thud();return tw(1.2,k=>pl.scale.setScalar(s0+(s1-s0)*k));});})()]);
+    dirt.visible=false;
+    await Promise.all([step('Le vérin rentre, et la benne redescend.','verin'),to(bed.rotation,'z',0,1.8)]);
+    await to(m.position,'x',0,2.0);
+    dirt.position.x=0;pop(dirt,.5);
+  };
+})();
+
+/* ---- bulldozer ---- */
+(function(){
+  const st=makeStation('bulldozer'),S=st.g,m=grp(S);st.m=m;
+  st.tracks=[trackUnit(m,{len:3.7,r:.4,w:.6,z:1.06}),trackUnit(m,{len:3.7,r:.4,w:.6,z:-1.06})];
+  rbox(m,3.2,.5,1.45,.06,MT.dark,0,.78,0);
+  ext(m,[[-.5,.98],[1.5,.98],[1.6,1.55],[1.42,1.86],[-.5,1.92]],[.05,.05,.12,.12,.05],1.46,MT.yel,0,0,0,.03);
+  rbox(m,.08,.66,1.22,.03,MT.black,1.6,1.28,0);for(let i=0;i<6;i++)box(m,.03,.035,1.12,MT.dark,1.66,1.02+i*.1,0);
+  rail(m,[[1.62,.98,.66],[1.66,1.62,.66],[1.66,1.62,-.66],[1.62,.98,-.66]],.035,MT.yelD);
+  [1,-1].forEach(s=>{for(let k=0;k<6;k++)box(m,.05,.4,.02,MT.black,.15+k*.17,1.42,s*.745);
+    rail(m,[[-.35,1.92,s*.66],[-.35,2.18,s*.66],[1.2,2.18,s*.66],[1.2,1.88,s*.66]],.025,MT.yel);
+    rbox(m,.08,.12,.16,.03,MT.lamp,1.45,1.9,s*.5,.01);});
+  cylY(m,.07,.75,MT.black,.95,2.25,-.35,10);const ec=cylY(m,.085,.03,MT.black,.97,2.63,-.35,10);ec.rotation.z=.4;
+  cylY(m,.11,.4,MT.dark,.95,2.1,.32,12);sph(m,.13,MT.black,.95,2.36,.32);
+  rbox(m,1.05,1.05,1.72,.12,MT.yel,-1.35,1.42,0);rbox(m,.04,.22,1.2,.02,MT.stripes,-1.89,1.2,0,.01);
+  [.65,-.65].forEach(z=>rbox(m,.04,.1,.18,.02,MT.tail,-1.89,1.65,z,.01));
+  const cab=grp(m,-.75,1.95,0);
+  rbox(cab,1.35,.1,1.62,.03,MT.dark,0,.05,0);
+  [[.62,.78],[.62,-.78],[-.62,.78],[-.62,-.78]].forEach(([x,z])=>rbox(cab,.09,1.48,.09,.03,MT.yel,x,.8,z,.01));
+  rbox(cab,1.45,.14,1.75,.06,MT.yel,0,1.58,0);rbox(cab,1.25,.35,.05,.02,MT.yel,0,.25,.78,.01);rbox(cab,1.25,.35,.05,.02,MT.yel,0,.25,-.78,.01);
+  box(cab,.02,1.1,1.48,MT.glass,.62,.95,0);box(cab,.02,1.1,1.48,MT.glass,-.62,.95,0);box(cab,1.15,1.1,.02,MT.glass,0,.95,.78);box(cab,1.15,1.1,.02,MT.glass,0,.95,-.78);
+  rbox(cab,.1,.03,.03,.01,MT.chrome,-.1,.75,.8,.008);
+  [.5,-.5].forEach(z=>rbox(cab,.08,.09,.15,.02,MT.lamp,.66,1.6,z,.01));
+  rod(cab,new V3(.6,1.25,.8),new V3(.82,1.35,.95),.02,MT.black);rbox(cab,.04,.24,.15,.03,MT.black,.84,1.33,.97);
+  beacon(st,cab,-.45,1.65,-.4);
+  operator(cab,-.15,.1,0);
+  const blade=grp(m,2.25,0,0);
+  const bo=arc(.9,.75,1.07,140,220,12),bi=arc(.9,.75,.95,220,140,12);
+  ext(blade,bo.concat(bi),0,3.6,MT.yel,0,0,0,.02);
+  rbox(blade,.12,.14,3.62,.02,MT.steel,.2,.12,0);rbox(blade,.2,.12,3.6,.03,MT.yelD,.1,1.4,0);
+  [1.78,-1.78].forEach(z=>{ext(blade,[[.17,.06],[-.18,.28],[-.18,1.2],[.12,1.42]],.04,.07,MT.yelD,0,0,z,.01);rbox(blade,.16,.3,.08,.02,MT.steel,.22,.2,z*1.01,.01);});
+  [1.2,0,-1.2].forEach(z=>rbox(blade,.18,1.0,.1,.02,MT.yelD,-.12,.75,z,.01));
+  const bladeAnch={pa:anchor(blade,-.18,.35,1.35),pb:anchor(blade,-.18,.35,-1.35),la:anchor(blade,-.18,1.15,.55),lb:anchor(blade,-.18,1.15,-.55)};
+  st.links=[strut(m,anchor(m,-.1,.55,1.42),bladeAnch.pa,.16,MT.yelD),strut(m,anchor(m,-.1,.55,-1.42),bladeAnch.pb,.16,MT.yelD),
+    hydraulic(m,anchor(m,1.35,1.75,.6),bladeAnch.la,{barrel:.75,rb:.085}),hydraulic(m,anchor(m,1.35,1.75,-.6),bladeAnch.lb,{barrel:.75,rb:.085})];
+  rbox(m,.25,.25,1.5,.05,MT.dark,-2.05,1.0,0);
+  ext(m,[[0,0],[.16,0],[.12,-.85],[-.02,-1.05],[-.08,-.8]],.03,.12,MT.dark,-2.25,.98,0,.02);
+  const rt=add(m,new THREE.ConeGeometry(.06,.2,4),MT.steel,-2.27,.0,0);rt.rotation.z=rad(160);
+  [.5,-.5].forEach(z=>{rod(m,new V3(-1.88,1.55,z),new V3(-2.15,1.02,z),.06,MT.yel);rod(m,new V3(-1.95,1.42,z),new V3(-2.08,1.15,z),.035,MT.chrome);});
+  const SG=new THREE.BoxGeometry(1,.04,3.3);SG.translate(.5,0,0);
+  const strip=add(S,SG,0xc89270,2.45,.025,0);strip.scale.x=.001;
+  const chunks=[];
+  for(let i=0;i<18;i++){const a=Math.random()*Math.PI*2,r=Math.sqrt(Math.random())*1.3,s=rnd(.32,.55);
+    const b={x:4.75+Math.cos(a)*r,z:Math.sin(a)*r*1.15,y:s*.5+(1-r/1.3)*.75,s};const mm=add(S,ICO,i%3?C.dirt:C.dirtD,b.x,b.y,b.z);mm.scale.setScalar(s);mm.rotation.set(rnd(0,3),rnd(0,3),0);chunks.push({m:mm,b});}
+  part(st,'lame','la lame',anchor(blade,.2,1.5,1.2),true);
+  part(st,'verins','les vérins',anchor(m,1.8,1.6,.75),true);
+  part(st,'chenilles','les chenilles',anchor(st.tracks[0].g,0,.5,.5),true);
+  part(st,'cabine','la cabine',anchor(cab,0,1.8,0),true);
+  part(st,'sol','le sol plat',anchor(S,4.4,.4,0),false);
+  st.focus=new V3(2.6,1.3,0);st.size={w:13,h:7};st.tagAt=anchor(S,0,4.6,0);
+  st.update=dt=>{roll(st,dt);
+    if(st.pushing){const front=m.position.x+2.5;strip.scale.x=Math.max(.001,front-2.45);
+      chunks.forEach(c=>{const p=c.m.position,r=c.b.s;if(p.x<front+r*.7){p.x=front+r*.7+Math.random()*.02;p.y+=(r*.45-p.y)*Math.min(1,dt*4);p.z=clamp(p.z*(1-dt*.25),-1.6,1.6);c.m.rotation.z-=dt*3;}});}};
+  st.action=async function(){
+    engineOn(48);
+    await Promise.all([step('Les vérins baissent la grande lame.','verins'),to(blade.position,'y',-.1,.9)]);
+    st.pushing=true;
+    await Promise.all([to(m.position,'x',4.4,4.6,easeSine),(async()=>{await step('Le bulldozer avance et pousse la terre.','lame');await step("Ses chenilles l'empêchent de glisser.",'chenilles');})()]);
+    st.pushing=false;
+    await Promise.all([step('Et voilà, le sol est tout plat !','sol'),to(blade.position,'y',.05,.6)]);
+    st.reversing=true;st.beepT=0;await to(m.position,'x',0,2.6);st.reversing=false;blade.position.y=0;
+    await tw(.4,k=>chunks.forEach(c=>c.m.scale.setScalar(Math.max(.01,c.b.s*(1-k)))));
+    chunks.forEach(c=>c.m.position.set(c.b.x,c.b.y,c.b.z));
+    await Promise.all([tw(.5,k=>strip.scale.x=Math.max(.001,strip.scale.x*(1-k))),tw(.7,k=>chunks.forEach(c=>c.m.scale.setScalar(Math.max(.01,c.b.s*k))),easeBack)]);
+  };
+})();
+
+/* ---- grue ---- */
+(function(){
+  const st=makeStation('grue'),S=st.g,m=grp(S);st.m=m;
+  const H=12,w=.45,RED=MT.red;
+  rbox(m,3.2,.25,.6,.04,MT.dark,0,.12,0);rbox(m,.6,.25,3.2,.04,MT.dark,0,.12,0);
+  [[1,1],[1,-1],[-1,1],[-1,-1]].forEach(([a,b])=>{rbox(m,.9,.5,.9,.06,MT.concrete,a*1.05,.45,b*1.05);rbox(m,.9,.4,.9,.06,MT.concrete,a*1.05,.9,b*1.05);});
+  [[w,w],[w,-w],[-w,w],[-w,-w]].forEach(([x,z])=>rod(m,new V3(x,.25,z),new V3(x,H,z),.06,RED,8));
+  for(let y=.6;y<=H+.01;y+=1.14){
+    rod(m,new V3(-w,y,w),new V3(w,y,w),.03,RED,6);rod(m,new V3(-w,y,-w),new V3(w,y,-w),.03,RED,6);rod(m,new V3(w,y,-w),new V3(w,y,w),.03,RED,6);rod(m,new V3(-w,y,-w),new V3(-w,y,w),.03,RED,6);
+    if(y+1.14<=H+.01){const y2=y+1.14;rod(m,new V3(-w,y,w),new V3(w,y2,w),.025,RED,6);rod(m,new V3(w,y,-w),new V3(w,y2,w),.025,RED,6);rod(m,new V3(w,y,-w),new V3(-w,y2,-w),.025,RED,6);rod(m,new V3(-w,y,w),new V3(-w,y2,-w),.025,RED,6);}}
+  for(let y=.8;y<H;y+=.35)box(m,.3,.025,.025,MT.grey,0,y,0);rod(m,new V3(-.15,.6,0),new V3(-.15,H,0),.015,MT.grey);rod(m,new V3(.15,.6,0),new V3(.15,H,0),.015,MT.grey);
+  const slew=grp(m,0,H,0);st.slew=slew;
+  cylY(slew,.7,.22,MT.dark,0,.11,0,20);rbox(slew,1.8,.18,1.6,.04,MT.dark,0,.3,0);
+  rail(slew,[[-.9,.39,.8],[-.9,.85,.8],[.9,.85,.8]],.02,MT.yel);
+  const cab=grp(slew,.4,-.05,1.15);
+  rbox(cab,1.1,.1,.95,.03,MT.white,0,-.55,0);rbox(cab,.1,1.0,.95,.03,MT.white,-.52,-.05,0);rbox(cab,1.15,.1,1.0,.04,MT.white,0,.47,0);
+  [[.52,.45],[.52,-.45]].forEach(([x,z])=>rbox(cab,.06,1.0,.06,.02,MT.white,x,-.05,z,.01));
+  box(cab,.02,.9,.86,MT.glass,.53,-.05,0);box(cab,1.0,.9,.02,MT.glass,0,-.05,.47);box(cab,1.0,.9,.02,MT.glass,0,-.05,-.47);
+  operator(cab,-.15,-.5,0).scale.setScalar(.95);
+  const A=new V3(0,3.0,0);[[.5,.5],[.5,-.5],[-.5,.5],[-.5,-.5]].forEach(([x,z])=>rod(slew,new V3(x,.4,z),A,.07,RED,8));
+  sph(slew,.12,MT.tail,0,3.1,0);
+  const Lj=10;
+  [.35,-.35].forEach(z=>rod(slew,new V3(.5,.32,z),new V3(Lj,.32,z),.06,RED,8));rod(slew,new V3(.5,1.2,0),new V3(Lj,.5,0),.06,RED,8);
+  for(let x=.6;x<Lj-.4;x+=1){const yt=1.2-(x+.5)/Lj*.7;[.35,-.35].forEach(z=>{rod(slew,new V3(x,.32,z),new V3(x+.5,yt,0),.025,RED,6);rod(slew,new V3(x+.5,yt,0),new V3(x+1,.32,z),.025,RED,6);});rod(slew,new V3(x,.32,.35),new V3(x,.32,-.35),.025,RED,6);}
+  rbox(slew,Lj-.6,.04,.4,.01,MT.dark,Lj/2+.2,.26,0,.01);
+  sph(slew,.1,MT.tail,Lj,.6,0);
+  rbox(slew,4.6,.16,1.1,.04,MT.dark,-2.5,.3,0);rail(slew,[[-.5,.38,.55],[-4.7,.38,.55]],.02,MT.yel);rail(slew,[[-.5,.75,.55],[-4.7,.75,.55]],.02,MT.yel);
+  for(let i=0;i<3;i++)rbox(slew,.42,1.3,1.05,.04,MT.concrete,-4.45+i*.46,-.35,0);
+  cylZ(slew,.3,.7,MT.dark,-2.0,.65,0,16);rbox(slew,.6,.5,.4,.05,MT.grey,-2.0,.65,.55);rbox(slew,.5,.7,.3,.04,MT.white,-1.1,.73,-.4);
+  rod(slew,A,new V3(6.5,1.0,.15),.025,MT.dark,6);rod(slew,A,new V3(6.5,1.0,-.15),.025,MT.dark,6);rod(slew,A,new V3(-4.6,.4,.3),.025,MT.dark,6);rod(slew,A,new V3(-4.6,.4,-.3),.025,MT.dark,6);
+  const trolley=grp(slew,6,.2,0);rbox(trolley,.75,.18,.85,.03,MT.dark,0,0,0);[.4,-.4].forEach(z=>{cylZ(trolley,.08,.06,MT.steel,.25,.1,z,10);cylZ(trolley,.08,.06,MT.steel,-.25,.1,z,10);});
+  cylZ(trolley,.12,.12,MT.steel,.15,-.14,0,12);cylZ(trolley,.12,.12,MT.steel,-.15,-.14,0,12);
+  const cables=[0,1,2,3].map(()=>add(trolley,cylGeo(5),MT.black));
+  const hook=grp(trolley,0,-3,0);
+  rbox(hook,.5,.42,.32,.06,MT.yel,0,.16,0);rbox(hook,.52,.14,.34,.04,MT.stripes,0,.04,0,.01);cylZ(hook,.14,.2,MT.steel,0,.32,0,12);
+  cylY(hook,.04,.15,MT.steel,0,-.1,0,8);
+  const hc=new THREE.CatmullRomCurve3([new V3(0,-.17,0),new V3(0,-.38,0),new V3(.1,-.5,0),new V3(.2,-.42,0),new V3(.2,-.32,0)]);
+  add(hook,new THREE.TubeGeometry(hc,16,.035,8),MT.steel);
+  st.L=3.5;
+  const polar=(x,z)=>({a:Math.atan2(-z,x),r:Math.hypot(x,z)});
+  const P1={x:-6,z:3},P2={x:6,z:-3};
+  slew.rotation.y=polar(P1.x,P1.z).a+.6;trolley.position.x=6;
+  const load=grp(S,P1.x,0,P1.z);
+  [.45,0,-.45].forEach(z=>rbox(load,1.5,.1,.14,.02,MT.wood,0,.05,z,.01));[.6,0,-.6].forEach(x=>rbox(load,.14,.08,1.1,.02,MT.wood,x,.14,0,.01));
+  rbox(load,1.4,.8,1.0,.02,MT.brick,0,.58,0,.01);
+  [[.6,.4],[.6,-.4],[-.6,.4],[-.6,-.4]].forEach(([x,z])=>rod(load,new V3(x,.98,z),new V3(0,1.72,0),.018,MT.black,5));
+  const bld=grp(S,P2.x,0,P2.z);rbox(bld,3.8,.3,3.8,.04,MT.concrete,0,.15,0);
+  st.floors=[];
+  function addFloor(instant){const i=st.floors.length;const f=grp(bld,0,.3+i*1.3,0);
+    [[1,1],[1,-1],[-1,1],[-1,-1]].forEach(([a,b])=>rbox(f,.3,1.1,.3,.02,MT.concrete,a*1.4,.55,b*1.4,.01));
+    rbox(f,3.5,.2,3.5,.03,MT.grey,0,1.2,0,.01);
+    rbox(f,2.5,.95,.16,.01,MT.brick,0,.5,1.42,.005);rbox(f,.16,.95,2.5,.01,MT.brick,1.42,.5,0,.005);
+    rbox(f,.85,.55,.06,.02,MT.white,0,.55,1.5,.01);box(f,.7,.42,.03,MT.glassD,0,.55,1.53);
+    rbox(f,.06,.55,.85,.02,MT.white,1.5,.55,0,.01);box(f,.03,.42,.7,MT.glassD,1.53,.55,0);
+    shadows(f);st.floors.push(f);if(!instant){f.scale.set(1,.01,1);return tw(.6,k=>f.scale.y=Math.max(.01,k),easeBack);}}
+  addFloor(true);
+  part(st,'fleche','la flèche',anchor(slew,5,1.5,0),true);
+  part(st,'chariot','le chariot',anchor(trolley,0,.45,0),false);
+  part(st,'crochet','le crochet',anchor(hook,0,.7,0),true);
+  part(st,'mat','le mât',anchor(m,0,6,0),true);
+  part(st,'maison','la maison',anchor(bld,0,1,0),false);
+  st.focus=new V3(0,5.8,0);st.size={w:17,h:16.5};st.tagAt=anchor(S,0,16,0);
+  st.update=dt=>{const L=st.L;cables.forEach((c,i)=>{c.scale.set(.018,L+.2,.018);c.position.set(i<2?-.1:.1,-(L+.2)/2-.05,i%2?.05:-.05);});hook.position.y=-L-.2;};
+  function slewTo(a,dur){const from=slew.rotation.y;let d=((a-from)%(Math.PI*2)+Math.PI*3)%(Math.PI*2)-Math.PI;return tw(dur,k=>slew.rotation.y=from+d*k);}
+  st.action=async function(){
+    if(st.floors.length>=5){
+      await Promise.all([step('La maison est finie ! On en commence une nouvelle.','maison'),
+        tw(.8,k=>st.floors.slice(1).forEach(f=>f.scale.y=Math.max(.01,1-k)))]);
+      st.floors.slice(1).forEach(f=>bld.remove(f));st.floors.length=1;
+    }
+    engineOn(95);
+    const p1=polar(P1.x,P1.z),p2=polar(P2.x,P2.z);
+    await Promise.all([step('La grue tourne, et le chariot roule sur la flèche.','chariot'),slewTo(p1.a,2.4),to(trolley.position,'x',p1.r,2.4),to(st,'L',3,2.4)]);
+    await Promise.all([step('Le crochet descend.','crochet'),to(st,'L',H-.2-1.72+.05,2.4)]);
+    st.m.updateMatrixWorld(true);hook.attach(load);ding();
+    await Promise.all([step('Il attrape les briques.','crochet'),sleep(.5)]);
+    await Promise.all([step('Et ça monte, tout là-haut !','crochet'),to(st,'L',2.4,2.6)]);
+    await Promise.all([step('La grue tourne vers la maison.','fleche'),slewTo(p2.a,2.6),to(trolley.position,'x',p2.r,2.6)]);
+    const top=.3+st.floors.length*1.3;
+    await to(st,'L',H-.2-(top+1.72)+.05,2.0);
+    S.attach(load);load.visible=false;thud();
+    await Promise.all([step('On pose les briques. La maison grandit !','maison'),addFloor(false),to(st,'L',3,1.8)]);
+    load.position.set(P1.x,0,P1.z);load.rotation.set(0,0,0);pop(load,.6);
+  };
+})();
+
+/* ---- toupie ---- */
+(function(){
+  const st=makeStation('toupie'),S=st.g,m=grp(S);st.m=m;
+  [.42,-.42].forEach(z=>rbox(m,6.0,.3,.16,.03,MT.black,-.1,.97,z));
+  const cab=truckCab(m,MT.white,1.45);
+  [1.11,-1.11].forEach(z=>rbox(cab,1.62,.14,.02,.01,MT.orange,.8,.75,z,.005));
+  const sc=document.createElement('canvas');sc.width=256;sc.height=64;const sx=sc.getContext('2d');sx.fillStyle='#f3efe8';sx.fillRect(0,0,256,64);sx.fillStyle='#f06a2a';
+  for(let i=-2;i<6;i++){sx.beginPath();sx.moveTo(i*64,64);sx.lineTo(i*64+32,64);sx.lineTo(i*64+72,0);sx.lineTo(i*64+40,0);sx.closePath();sx.fill();}
+  const stex=new THREE.CanvasTexture(sc);stex.wrapS=stex.wrapT=THREE.RepeatWrapping;stex.repeat.set(2,1);
+  const prof=[[.4,-2.3],[.48,-2.15],[.52,-2.05],[.86,-1.5],[1.15,-.6],[1.22,.25],[1.12,1.1],[.75,1.75],[.3,2.0],[.01,2.04]].map(([r,y])=>new THREE.Vector2(r,y));
+  const lg=new THREE.LatheGeometry(prof,40);lg.rotateZ(-Math.PI/2);
+  const tilt=grp(m,-.75,2.48,0);tilt.rotation.z=-.15;
+  const drum=grp(tilt,0,0,0);add(drum,lg,std(0xffffff,.35,.15,{map:stex,side:THREE.DoubleSide}));
+  const ring=add(drum,new THREE.TorusGeometry(.98,.07,8,32),MT.steel,-1.2,0,0);ring.rotation.y=Math.PI/2;
+  cylX(tilt,.42,.3,MT.dark,2.15,0,0,16);cylX(tilt,.22,.3,MT.black,2.42,0,0,12);
+  rbox(m,.35,1.0,1.3,.05,MT.dark,1.12,1.6,0);rbox(m,.35,.75,1.5,.05,MT.dark,-2.05,1.42,0);
+  [.5,-.5].forEach(z=>cylZ(m,.13,.18,MT.steel,-1.95,1.88,z,12));
+  const fun=new THREE.CylinderGeometry(.62,.25,.7,12,1,true);const hop=add(m,fun,std(0xee6a26,.45,.2,{side:THREE.DoubleSide}),-3.08,3.38,0);hop.rotation.z=.2;
+  rbox(m,.9,.08,1.2,.02,MT.dark,-3.0,2.75,0);rail(m,[[-3.4,2.8,.6],[-3.4,3.3,.6],[-2.6,3.3,.6]],.025,MT.yel);
+  [.28,-.28].forEach(z=>rod(m,new V3(-3.35,.25,z),new V3(-3.25,2.75,z),.03,MT.grey,6));for(let y=.45;y<2.7;y+=.32)rod(m,new V3(-3.34,y,.28),new V3(-3.34,y,-.28),.022,MT.grey,6);
+  rbox(m,.5,.35,.6,.04,MT.steel,-3.15,2.02,0);
+  const chute=grp(m,-3.28,1.68,0);
+  ext(chute,[[0,0],[-1.6,0],[-1.6,.18],[0,.18]],.03,.5,MT.steel,0,-.09,0,.01);box(chute,1.6,.04,.4,MT.dark,-.8,.02,0);
+  chute.rotation.z=-1.1;
+  st.wheels=[];
+  [1,-1].forEach(s=>{st.wheels.push(tire(m,.55,.4,2.3,.55,s*.9,MT.grey));
+    [-.95,-2.05].forEach(x=>{st.wheels.push(tire(m,.55,.3,x,.55,s*.82,MT.grey,s),tire(m,.55,.3,x,.55,s*1.13,MT.grey,s));});
+    fender(m,.66,.48,2.3,.55,s*.92,MT.black);rbox(m,1.9,.05,.62,.02,MT.black,-1.5,1.17,s*.92);
+    rail(m,[[-.55,.5,s*1.1],[.6,.5,s*1.1]],.03,MT.grey);});
+  cylX(m,.25,.9,MT.white,.55,.72,.78,16);
+  rbox(m,.12,.22,2.1,.03,MT.stripes,-2.98,.72,0,.01);[.85,-.85].forEach(z=>rbox(m,.05,.12,.22,.02,MT.tail,-3.05,.92,z,.01));
+  const FX=-4.95;
+  rbox(S,2.7,.6,.12,.02,MT.wood,FX,.3,1.2);rbox(S,2.7,.6,.12,.02,MT.wood,FX,.3,-1.2);rbox(S,.12,.6,2.4,.02,MT.wood,FX-1.29,.3,0);rbox(S,.12,.6,2.4,.02,MT.wood,FX+1.29,.3,0);
+  [1.35,-1.35].forEach(z=>[-.9,.9].forEach(x=>{const st2=rod(S,new V3(FX+x,0,z*1.08),new V3(FX+x,.45,z),.03,MT.wood,5);}));
+  const FG=new THREE.BoxGeometry(2.46,1,2.28);FG.translate(0,.5,0);
+  const fillMat=new THREE.MeshLambertMaterial({color:C.wet});const fill=add(S,FG,fillMat,FX,0,0);fill.scale.y=.01;
+  const SG=new THREE.CylinderGeometry(.15,.2,1,10);SG.translate(0,-.5,0);
+  const stream=add(S,SG,C.wet,-4.72,.98,0);stream.visible=false;
+  st.spin=1.2;st.fill=0;st.flow=0;
+  part(st,'toupie','la toupie',anchor(tilt,0,1.45,0),true);
+  part(st,'goulotte','la goulotte',anchor(chute,-1.1,.35,0),true);
+  part(st,'moule','le moule',anchor(S,FX,.9,0),true);
+  part(st,'cabine','la cabine',anchor(cab,.8,2.05,0),true);
+  st.focus=new V3(-1.4,1.7,0);st.size={w:13,h:7.2};st.tagAt=anchor(S,0,4.8,0);
+  st.update=dt=>{roll(st,dt);drum.rotation.x+=st.spin*dt;fill.scale.y=Math.max(.01,st.fill);
+    stream.visible=st.flow>.01;if(stream.visible)stream.scale.y=Math.max(.01,(.98-st.fill)*st.flow);};
+  st.action=async function(){
+    if(st.fill>=.5){await Promise.all([step('Le moule est plein. On en prend un nouveau !','moule'),to(st,'fill',0,1.2)]);fillMat.color.setHex(C.wet);}
+    engineOn(58);
+    await Promise.all([step('La toupie tourne vite, pour que le béton reste mou.','toupie'),to(st,'spin',7,1.6)]);
+    await Promise.all([step('La goulotte se déplie.','goulotte'),to(chute.rotation,'z',.45,1.2)]);
+    fillMat.color.setHex(C.wet);
+    await Promise.all([step('Le béton coule dans le moule.','moule'),to(st,'flow',1,.35).then(()=>to(st,'fill',Math.min(.52,st.fill+.18),2.8,lin)).then(()=>to(st,'flow',0,.3))]);
+    const c0=new THREE.Color(C.wet),c1=new THREE.Color(0xc4c6cf);
+    await Promise.all([step('Il va sécher, et devenir dur comme un caillou.','moule'),to(chute.rotation,'z',-1.1,1.2),to(st,'spin',1.2,1.8),tw(2.4,k=>fillMat.color.copy(c0).lerp(c1,k))]);
+  };
+})();
+
+/* ---- rouleau ---- */
+(function(){
+  const st=makeStation('rouleau'),S=st.g;
+  const X0=-6.5,X1=6.8,RW=2.8,START=-6.6,END=5.4;
+  box(S,X1-X0,.06,RW,0x8a7765,(X0+X1)/2,.03,0);
+  const AG=new THREE.BoxGeometry(1,.07,RW);AG.translate(.5,0,0);
+  const asphalt=add(S,AG,C.asphalt,X0,.07,0);asphalt.scale.x=.001;
+  const dashes=[];for(let x=X0+.6;x<X1-.3;x+=1.3){const d=box(S,.7,.02,.14,0xf3efe2,x,.115,0);d.visible=false;dashes.push(d);}
+  const N=240,stones=[];
+  const gm=new THREE.InstancedMesh(ICO,new THREE.MeshLambertMaterial({color:0xffffff}),N);gm.castShadow=true;gm.receiveShadow=true;S.add(gm);
+  for(let i=0;i<N;i++){const s={x:rnd(X0+.1,X1-.1),z:rnd(-RW/2+.1,RW/2-.1),s:rnd(.1,.2),r:[rnd(0,3),rnd(0,3),rnd(0,3)],flat:false};stones.push(s);gm.setColorAt(i,tmpCol.setHex(pick([0x9a8e80,0x7d7368,0xb3a796,0x6f655c,0xa39a8c])));}
+  function writeStones(k){stones.forEach((s,i)=>{const sc=s.flat?.001:s.s*k;dummy.position.set(s.x,.09,s.z);dummy.rotation.set(s.r[0],s.r[1],s.r[2]);dummy.scale.set(sc,sc*.8,sc);dummy.updateMatrix();gm.setMatrixAt(i,dummy.matrix);});gm.instanceMatrix.needsUpdate=true;}
+  writeStones(1);
+  const m=grp(S,START,0,0);st.m=m;st.lastX=START;
+  const drum=grp(m,1.6,.82,0);cylZ(drum,.8,2.1,MT.steel,0,0,0,28);
+  [1.07,-1.07].forEach(z=>{cylZ(drum,.82,.06,MT.dark,0,0,z,28);cylZ(drum,.4,.08,MT.yelD,0,0,z*1.03,16);box(drum,.75,.1,.1,MT.dark,0,0,z*1.06);});
+  drum.userData.r=.8;
+  [1.2,-1.2].forEach(z=>ext(m,[[.7,.35],[2.45,.35],[2.55,1.0],[2.1,1.75],[.7,1.75]],[.05,.15,.3,.2,.05],.12,MT.yel,0,0,z,.02));
+  rbox(m,1.6,.3,2.5,.06,MT.yel,1.6,1.82,0);rbox(m,.08,.08,2.25,.02,MT.dark,2.48,.55,0);rbox(m,.08,.08,2.25,.02,MT.dark,.72,.6,0);
+  [.6,-.6].forEach(z=>rbox(m,.1,.12,.18,.02,MT.lamp,2.47,1.6,z,.01));
+  rbox(m,.6,.55,.85,.06,MT.dark,.45,1.15,0);cylY(m,.1,.75,MT.chrome,.45,1.15,0,10);
+  [.35,-.35].forEach(z=>rod(m,new V3(-.1,1.05,z),new V3(.85,1.05,z*1.2),.05,MT.chrome));
+  ext(m,[[-2.55,.62],[.05,.62],[.05,1.85],[-1.9,1.85],[-2.55,1.45]],[.05,.05,.1,.25,.2],1.75,MT.yel,0,0,0,.04);
+  [1,-1].forEach(s=>{for(let k=0;k<5;k++)box(m,.05,.35,.02,MT.black,-2.15+k*.14,1.35,s*.885);});
+  rbox(m,.04,.2,1.2,.02,MT.stripes,-2.58,.9,0,.01);[.65,-.65].forEach(z=>rbox(m,.04,.1,.18,.02,MT.tail,-2.58,1.25,z,.01));
+  const cab=grp(m,-.75,1.85,0);
+  rbox(cab,1.35,.08,1.5,.03,MT.dark,0,.04,0);
+  [[.6,.72],[.6,-.72],[-.6,.72],[-.6,-.72]].forEach(([x,z])=>rbox(cab,.08,1.42,.08,.03,MT.yel,x,.75,z,.01));
+  rbox(cab,1.45,.12,1.65,.05,MT.yel,0,1.5,0);
+  box(cab,.02,1.2,1.38,MT.glass,.6,.8,0);box(cab,.02,1.2,1.38,MT.glass,-.6,.8,0);box(cab,1.15,1.2,.02,MT.glass,0,.8,.72);box(cab,1.15,1.2,.02,MT.glass,0,.8,-.72);
+  rod(cab,new V3(.55,1.2,.72),new V3(.78,1.3,.88),.02,MT.black);rbox(cab,.04,.24,.15,.03,MT.black,.8,1.28,.9);
+  [.5,-.5].forEach(z=>rbox(cab,.08,.09,.14,.02,MT.lamp,.65,1.52,z,.01));
+  beacon(st,cab,-.4,1.56,.4);
+  operator(cab,-.15,.08,0);
+  const swh=add(cab,new THREE.TorusGeometry(.17,.025,6,16),MT.black,.32,.6,0);swh.rotation.y=Math.PI/2;swh.rotation.z=.6;rod(cab,new V3(.42,.1,0),new V3(.32,.58,0),.03,MT.black);
+  cylY(m,.07,.6,MT.black,-1.9,2.1,-.5,10);
+  st.wheels=[tire(m,.78,.62,-1.55,.78,.92,MT.yel),tire(m,.78,.62,-1.55,.78,-.92,MT.yel),drum];
+  [1,-1].forEach(s=>fender(m,.86,.68,-1.55,.78,s*.92,MT.yelD));
+  part(st,'rouleau','le rouleau',anchor(drum,0,1.25,0),true);
+  part(st,'cabine','la cabine',anchor(m,-.75,3.6,0),true);
+  part(st,'cailloux','les cailloux',anchor(S,2.5,.5,0),false);
+  part(st,'route','la route',anchor(S,0,.4,0),false);
+  st.focus=new V3(0,1.1,0);st.size={w:15,h:6.5};st.tagAt=anchor(S,0,4.6,0);
+  let T=0;
+  st.update=dt=>{T+=dt;roll(st,dt);const front=m.position.x+1.6;
+    if(st.rolling){let dirty=false;stones.forEach(s=>{if(!s.flat&&s.x<front){s.flat=true;dirty=true;}});if(dirty)writeStones(1);
+      const len=clamp(front-X0,.001,X1-X0);asphalt.scale.x=len;dashes.forEach(d=>d.visible=d.position.x<X0+len-.4);
+      drum.position.y=.82+Math.sin(T*70)*.025;}else drum.position.y=.82;};
+  st.action=async function(){
+    if(st.done){
+      engineOn(52);st.reversing=true;st.beepT=0;
+      stones.forEach(s=>s.flat=false);asphalt.scale.x=.001;dashes.forEach(d=>d.visible=false);
+      await Promise.all([step('On remet des cailloux pour une nouvelle route.','cailloux'),to(m.position,'x',START,2.6),tw(1,k=>writeStones(Math.max(.01,k)),easeBack)]);
+      st.reversing=false;st.done=false;
+    }
+    engineOn(52);st.rolling=true;
+    await Promise.all([to(m.position,'x',END,5.6,easeSine),(async()=>{await step('Le gros rouleau roule sur les cailloux.','rouleau');await step('Il vibre très fort pour bien les écraser.','rouleau');})()]);
+    st.rolling=false;
+    await step('Voilà une route toute lisse !','route');
+    st.done=true;
+  };
+})();
+
+worker(scene,-12.6,10.5,-.4);worker(scene,.6,-1.4,2.2);worker(scene,10.8,7.6,2.6);
+
+  }
+};
