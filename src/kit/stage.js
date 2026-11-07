@@ -97,11 +97,14 @@ export function createStage(world, root, opts = {}) {
   postScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), postMat));
 
   /* ---------- scene ---------- */
-  const scene = new THREE.Scene(); scene.background = new THREE.Color(0x0b1222);
-  scene.add(new THREE.HemisphereLight(0x9fb6ff, 0x3b2d60, 0.9));
-  const sun = new THREE.DirectionalLight(0xffd29a, 1.1); sun.position.set(-24, 30, 16); sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048);
-  Object.assign(sun.shadow.camera, { left: -34, right: 34, top: 34, bottom: -34, near: 1, far: 100 });
+  const RAD = world.radius || 26, SK = RAD / 26; // island radius; SK scales the scenery
+  const L = world.lights || {};
+  const scene = new THREE.Scene(); scene.background = new THREE.Color(world.sky || 0x0b1222);
+  scene.add(new THREE.HemisphereLight(...(L.hemi || [0x9fb6ff, 0x3b2d60, 0.9])));
+  const sun = new THREE.DirectionalLight(...(L.sun || [0xffd29a, 1.1])); sun.position.set(-24 * SK, 30 * SK, 16 * SK); sun.castShadow = true;
+  sun.shadow.mapSize.set(RAD > 30 ? 4096 : 2048, RAD > 30 ? 4096 : 2048);
+  const SC = RAD + 8;
+  Object.assign(sun.shadow.camera, { left: -SC, right: SC, top: SC, bottom: -SC, near: 1, far: 100 * SK + 40 });
   sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.03; scene.add(sun); scene.add(sun.target);
 
   const zones = world.zones || [], segs = world.segs || [];
@@ -110,7 +113,7 @@ export function createStage(world, root, opts = {}) {
   // painted ground
   const G = world.ground;
   const gtex = (() => {
-    const S = 1024, R = 26, cv = document.createElement('canvas'); cv.width = cv.height = S; const x = cv.getContext('2d');
+    const S = RAD > 30 ? 2048 : 1024, R = RAD, cv = document.createElement('canvas'); cv.width = cv.height = S; const x = cv.getContext('2d');
     const P = (wx, wz) => [((wx / R + 1) / 2) * S, ((wz / R + 1) / 2) * S], U = (w) => (w / (2 * R)) * S;
     const g = x.createRadialGradient(S * 0.48, S * 0.5, S * 0.04, S / 2, S / 2, S * 0.5);
     g.addColorStop(0, G.base[0]); g.addColorStop(0.7, G.base[1]); g.addColorStop(1, G.base[2]);
@@ -131,36 +134,50 @@ export function createStage(world, root, opts = {}) {
       const [a, b] = P(wx, wz); const gg = x.createRadialGradient(a, b, 0, a, b, U(r));
       gg.addColorStop(0, col); gg.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = gg; x.beginPath(); x.arc(a, b, U(r), 0, 7); x.fill();
     });
-    for (let i = 0; i < 14000; i++) {
+    for (let i = 0; i < 14000 * SK * SK; i++) {
       x.fillStyle = Math.random() < 0.5 ? 'rgba(20,16,50,.12)' : 'rgba(255,230,210,.08)'; x.fillRect(Math.random() * S, Math.random() * S, 2, 2);
     }
     const t = new THREE.CanvasTexture(cv); t.anisotropy = renderer.capabilities.getMaxAnisotropy(); return t;
   })();
-  const ground = new THREE.Mesh(new THREE.CircleGeometry(26, 64), new THREE.MeshLambertMaterial({ map: gtex }));
+  const ground = new THREE.Mesh(new THREE.CircleGeometry(RAD, 96), new THREE.MeshLambertMaterial({ map: gtex }));
   ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
-  const outer = new THREE.Mesh(new THREE.CircleGeometry(90, 48), mat(world.outerColor || 0x0e1d22));
-  outer.rotation.x = -Math.PI / 2; outer.position.y = -0.04; outer.receiveShadow = true; scene.add(outer);
+  if (world.floating) {
+    // a floating island: rocky underside, stars all around
+    const rim = new THREE.Mesh(new THREE.CylinderGeometry(RAD, RAD * 0.55, 6, 72, 3, true), new THREE.MeshLambertMaterial({ color: world.rimColor || 0x4a4560 }));
+    rim.position.y = -3.02; scene.add(rim);
+    const bottom = new THREE.Mesh(new THREE.ConeGeometry(RAD * 0.55, 9, 40), mat(world.rimColor || 0x4a4560)); bottom.rotation.x = Math.PI; bottom.position.y = -10.5; scene.add(bottom);
+    const sp = new Float32Array(2400 * 3);
+    for (let i = 0; i < 2400; i++) {
+      const u = Math.random() * 2 - 1, a = Math.random() * Math.PI * 2, r = rnd(150, 260), q = Math.sqrt(1 - u * u);
+      sp.set([Math.cos(a) * q * r, u * r, Math.sin(a) * q * r], i * 3);
+    }
+    const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(sp, 3));
+    scene.add(new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xffffff, size: 1.6, sizeAttenuation: false })));
+  } else {
+    const outer = new THREE.Mesh(new THREE.CircleGeometry(90 * SK, 48), mat(world.outerColor || 0x0e1d22));
+    outer.rotation.x = -Math.PI / 2; outer.position.y = -0.04; outer.receiveShadow = true; scene.add(outer);
+  }
 
   const F = world.forest || {};
-  instanced(scene, ICO, 300, (i, d) => {
-    const a = Math.random() * Math.PI * 2, r = 23.5 + Math.pow(Math.random(), 0.7) * 15, s = rnd(1.7, 3.4);
+  if (world.forest !== false) instanced(scene, ICO, Math.round(300 * SK), (i, d) => {
+    const a = Math.random() * Math.PI * 2, r = RAD - 2.5 + Math.pow(Math.random(), 0.7) * 15, s = rnd(1.7, 3.4);
     d.position.set(Math.cos(a) * r, s * 0.5, Math.sin(a) * r); d.rotation.set(rnd(0, 3), rnd(0, 3), 0); d.scale.set(s, s * rnd(0.8, 1.3), s);
     return pick(F.dark || [0x10302a, 0x153a30, 0x0d2526, 0x1b4433, 0x0f2a33]);
   });
-  instanced(scene, ICO, 170, (i, d) => {
-    const a = Math.random() * Math.PI * 2, r = rnd(20.5, 23.8), s = rnd(0.6, 1.3);
+  if (world.forest !== false) instanced(scene, ICO, Math.round(170 * SK), (i, d) => {
+    const a = Math.random() * Math.PI * 2, r = rnd(RAD - 5.5, RAD - 2.2), s = rnd(0.6, 1.3);
     d.position.set(Math.cos(a) * r, s * 0.45, Math.sin(a) * r); d.rotation.set(rnd(0, 3), rnd(0, 3), 0); d.scale.set(s, s * rnd(0.7, 1.1), s);
     return pick(F.bush || [0x3557d6, 0x2a46b8, 0x4a6ef0, 0x5a7dff]);
   });
   const TUFT = new THREE.ConeGeometry(0.13, 0.85, 4); TUFT.translate(0, 0.42, 0);
   const tufts = [];
-  for (let c = 0; c < 70 && tufts.length < 640; c++) {
-    const a = Math.random() * Math.PI * 2, r = rnd(3, 21), cx = Math.cos(a) * r, cz = Math.sin(a) * r;
+  for (let c = 0; c < 70 * SK * SK && tufts.length < 640 * SK * SK; c++) {
+    const a = Math.random() * Math.PI * 2, r = rnd(3, RAD - 5), cx = Math.cos(a) * r, cz = Math.sin(a) * r;
     if (!isClear(cx, cz)) continue;
     const n = 8 + Math.floor(Math.random() * 9);
     for (let k = 0; k < n; k++) { const x = cx + rnd(-1.3, 1.3), z = cz + rnd(-1.3, 1.3); if (isClear(x, z)) tufts.push([x, z]); }
   }
-  if (tufts.length) instanced(scene, TUFT, tufts.length, (i, d) => {
+  if (tufts.length && world.tufts !== false) instanced(scene, TUFT, tufts.length, (i, d) => {
     const [x, z] = tufts[i]; d.position.set(x, 0, z); d.rotation.set(rnd(-0.35, 0.35), rnd(0, 3), rnd(-0.35, 0.35));
     const s = rnd(0.7, 1.4); d.scale.set(s, s * rnd(0.8, 1.4), s);
     return pick(world.tuftColors || [0x4c78ff, 0x355fe0, 0x6a8fff, 0x2c4fc4, 0x82a2ff]);
@@ -168,7 +185,7 @@ export function createStage(world, root, opts = {}) {
 
   /* clods (dirt, grain, straw particles) */
   const clods = [];
-  for (let i = 0; i < 90; i++) { const m = new THREE.Mesh(ICO, mat(i % 2 ? C.dirt : C.dirtD)); m.visible = false; m.castShadow = true; scene.add(m); clods.push({ m, on: false }); }
+  for (let i = 0; i < 140; i++) { const m = new THREE.Mesh(ICO, mat(i % 2 ? C.dirt : C.dirtD)); m.visible = false; m.castShadow = true; scene.add(m); clods.push({ m, on: false }); }
   function throwClod(from, toP, size, color) {
     const c = clods.find((c) => !c.on); if (!c) return;
     c.on = true; c.t = 0; c.T = rnd(0.45, 0.75); c.s = size || rnd(0.12, 0.26);
@@ -206,7 +223,8 @@ export function createStage(world, root, opts = {}) {
   let current = null, busy = false, activeKey = null;
   function step(text, key) { captionEl.textContent = text; captionEl.hidden = false; activeKey = key || null; return say(text); }
 
-  const ctx = { THREE, scene, renderer, makeStation, part, roll, step, throwClod, isClear, stations };
+  const updaters = [];
+  const ctx = { THREE, scene, renderer, makeStation, part, roll, step, throwClod, isClear, stations, radius: RAD, onUpdate: (fn) => updaters.push(fn) };
   world.build(ctx);
   stations.forEach((st) => shadows(st.g));
 
@@ -219,7 +237,7 @@ export function createStage(world, root, opts = {}) {
   function computeView() {
     const topB = $('#top').getBoundingClientRect().bottom, dockT = dockEl.getBoundingClientRect().top;
     let L = 0, R = SW, T, B;
-    if (!startEl.hidden) { VT = Math.max(34, (46 * SH) / SW); fxT = 0.5; fyT = 0.5; focusT.set(...ov.focus); return; }
+    if (!startEl.hidden) { VT = Math.max(34 * SK, (46 * SK * SH) / SW); fxT = 0.5; fyT = 0.5; focusT.set(...ov.focus); return; }
     if (current) {
       T = topB + 70; const sr = sheetEl.getBoundingClientRect();
       if (SW >= 760 && SW > SH) { L = sr.right + 8; B = dockT - 8; } else B = sr.top - 8;
@@ -291,7 +309,8 @@ export function createStage(world, root, opts = {}) {
     b.setAttribute('aria-pressed', String(audio.muted)); b.setAttribute('aria-label', audio.muted ? 'Remettre le son' : 'Couper le son');
     $('#muteX').setAttribute('opacity', audio.muted ? '1' : '0'); if (audio.muted) { stopVoice(); engineOff(); }
   });
-  $('#play').addEventListener('click', () => { initAudio(); pickVoice(); startEl.hidden = true; computeView(); say(world.welcome); });
+  root.classList.add('at-start');
+  $('#play').addEventListener('click', () => { initAudio(); pickVoice(); startEl.hidden = true; root.classList.remove('at-start'); computeView(); say(world.welcome); });
 
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(); let drag = null;
   canvas.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY, moved: 0 }; try { canvas.setPointerCapture(e.pointerId); } catch (_) { /* */ } });
@@ -333,6 +352,7 @@ export function createStage(world, root, opts = {}) {
       (st.beacons || []).forEach((b) => (b.emissiveIntensity = busy && current === st ? 0.25 + 1.6 * Math.max(0, Math.sin((now / 1000) * 11)) : 0.35));
     });
     updateClods(dt);
+    updaters.forEach((fn) => fn(dt, now / 1000));
     if (!startEl.hidden && !reduceMotion && !drag) azT += dt * 0.07;
     if (fc % (busy ? 6 : 20) === 0) computeView();
     updateCam(dt);

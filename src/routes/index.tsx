@@ -47,6 +47,22 @@ const worlds = [
         <path d="M10 92l18-24h22l-8 24z" fill="#9aa4b6" />
       </svg>
     )
+  },
+  {
+    to: '/espace' as const,
+    title: "L'Espace",
+    text: 'La fusée, la navette spatiale, le transporteur, le rover sur Mars et le module sur la Lune.',
+    art: (
+      <svg viewBox="0 0 240 110" aria-hidden="true">
+        <path d="M8 104H232" stroke="#d3d8ea" strokeWidth="4" strokeLinecap="round" />
+        <g fill="#f5d27a"><circle cx="30" cy="20" r="2" /><circle cx="60" cy="40" r="1.5" /><circle cx="200" cy="18" r="2" /><circle cx="170" cy="50" r="1.5" /><circle cx="216" cy="70" r="1.5" /></g>
+        <circle cx="190" cy="34" r="16" fill="#3a7bd8" /><path d="M180 28q8-6 14 2t-4 12q-10-2-10-14z" fill="#5aa85a" />
+        <rect x="104" y="30" width="22" height="64" rx="3" fill="#f4f5f8" stroke="#c9ccd8" strokeWidth="2" /><path d="M104 30q11-26 22 0z" fill="#f4f5f8" stroke="#c9ccd8" strokeWidth="2" />
+        <rect x="90" y="54" width="12" height="40" rx="3" fill="#f4f5f8" stroke="#c9ccd8" strokeWidth="2" /><rect x="128" y="54" width="12" height="40" rx="3" fill="#f4f5f8" stroke="#c9ccd8" strokeWidth="2" />
+        <rect x="104" y="58" width="22" height="5" fill="#1b1d24" /><path d="M108 96l7 8 7-8z" fill="#ffb547" />
+        <rect x="40" y="24" width="6" height="80" fill="#e5452c" /><rect x="46" y="44" width="40" height="5" fill="#e5452c" />
+      </svg>
+    )
   }
 ];
 
