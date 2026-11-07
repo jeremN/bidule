@@ -127,12 +127,17 @@ html:not(.in-world) body{background:radial-gradient(ellipse at 50% 0%,#24306a 0%
 .hub h1{margin:0;font-family:var(--f-display);font-weight:700;font-size:clamp(56px,14vw,112px);line-height:.9;letter-spacing:-.02em}
 .hub h1 span{color:var(--sun)}
 .hub .lead{margin:0;font-size:18px;font-weight:700;color:#c9d0e8;max-width:34ch;text-wrap:balance}
-.hub .worlds{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.hub .worlds{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
 .hub a.world{display:flex;flex-direction:column;gap:6px;background:var(--card);color:var(--card-ink);text-decoration:none;border-radius:24px;padding:16px 18px 20px;
   box-shadow:0 6px 0 rgba(0,0,0,.35);transition:transform .15s}
 .hub a.world:hover,.hub a.world:focus-visible{transform:translateY(-4px)}
 .hub a.world:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
-.hub .world svg{width:100%;height:auto;max-height:120px}
+.hub .world .art{display:block;margin:-16px -18px 8px;border-radius:24px 24px 0 0;overflow:hidden;line-height:0;border-bottom:3px solid #2a2440}
+.hub .world svg{display:block;width:100%;height:auto}
+.hub .world .bob{transform-box:fill-box;transform-origin:50% 100%}
+.hub a.world:hover .bob,.hub a.world:focus-visible .bob{animation:bob .45s ease-in-out infinite alternate}
+@keyframes bob{from{transform:translateY(0) rotate(0)}to{transform:translateY(-3px) rotate(-1.5deg)}}
+@media (prefers-reduced-motion:reduce){.hub a.world .bob{animation:none!important}}
 .hub .world h2{margin:0;font-family:var(--f-display);font-weight:700;font-size:28px}
 .hub .world p{margin:0;font-weight:600;color:var(--card-muted);line-height:1.4}
 .hub .world b{margin-top:8px;align-self:flex-start;background:var(--sun);color:var(--sun-ink);font-family:var(--f-display);font-weight:700;font-size:18px;padding:8px 18px;border-radius:999px;box-shadow:0 4px 0 var(--sun-d)}

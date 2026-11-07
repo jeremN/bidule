@@ -4,22 +4,54 @@ export const Route = createFileRoute('/')({
   component: Home
 });
 
+const INK = '#2a2440';
+// shared outline for every drawn shape (sky and ground stay flat)
+const ol = { stroke: INK, strokeWidth: 2.5, strokeLinejoin: 'round' as const, strokeLinecap: 'round' as const };
+
 const worlds = [
   {
     to: '/chantier' as const,
     title: 'Le Chantier',
     text: 'La pelleteuse, le camion-benne, le bulldozer, la grue, la toupie et le rouleau.',
     art: (
-      <svg viewBox="0 0 240 110" aria-hidden="true">
-        <path d="M8 104H232" stroke="#d3d8ea" strokeWidth="4" strokeLinecap="round" />
-        <rect x="20" y="78" width="96" height="22" rx="11" fill="#2b3040" />
-        <rect x="24" y="48" width="84" height="30" rx="5" fill="#f4b42a" />
-        <rect x="62" y="20" width="34" height="30" rx="4" fill="#f4b42a" />
-        <rect x="69" y="26" width="20" height="16" fill="#7fcdee" />
-        <path d="M104 52L148 14L180 58" fill="none" stroke="#f4b42a" strokeWidth="11" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M168 56h26l-5 22h-18z" fill="#d88f14" />
-        <rect x="196" y="20" width="6" height="84" fill="#e5452c" />
-        <rect x="150" y="16" width="86" height="6" fill="#e5452c" />
+      <svg viewBox="0 0 240 150" aria-hidden="true">
+        <defs>
+          <linearGradient id="ch-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#ffe3a8" /><stop offset="1" stopColor="#ffb98f" /></linearGradient>
+        </defs>
+        <rect width="240" height="150" fill="url(#ch-sky)" />
+        <circle cx="38" cy="34" r="17" fill="#fff4d2" />
+        <g fill="#fff" opacity=".85"><ellipse cx="96" cy="26" rx="18" ry="7" /><ellipse cx="110" cy="21" rx="12" ry="8" /></g>
+        {/* tower crane in the back */}
+        <g {...ol} fill="none" stroke="#e5452c" strokeWidth="3">
+          <path d="M204 118V22M216 118V22M204 30l12 12-12 12 12 12-12 12 12 12-12 12 12 12" />
+          <path d="M150 22H238M150 28H238" />
+        </g>
+        <path d="M168 28v28" stroke={INK} strokeWidth="2" />
+        <rect {...ol} x="161" y="56" width="14" height="10" rx="2" fill="#7fcdee" />
+        <rect {...ol} x="222" y="28" width="14" height="12" rx="2" fill="#9aa4b6" />
+        <path d="M0 118Q60 106 120 114T240 110V150H0Z" fill="#d79a66" />
+        <path d="M0 132Q80 124 160 132T240 128V150H0Z" fill="#c4834f" />
+        {/* dirt pile */}
+        <path {...ol} d="M146 120Q176 82 214 120Z" fill="#b8733f" />
+        <g fill="#8d5530"><circle cx="170" cy="108" r="2.5" /><circle cx="186" cy="112" r="2" /><circle cx="178" cy="100" r="2" /></g>
+        <g className="bob">
+          <rect {...ol} x="34" y="106" width="86" height="20" rx="10" fill="#3a3550" />
+          <g fill="#9b96b8" {...ol} strokeWidth="2"><circle cx="46" cy="116" r="5" /><circle cx="65" cy="116" r="5" /><circle cx="84" cy="116" r="5" /><circle cx="103" cy="116" r="5" /></g>
+          <rect {...ol} x="34" y="84" width="16" height="20" rx="5" fill="#e09a10" />
+          <rect {...ol} x="44" y="80" width="68" height="26" rx="7" fill="#f6b81f" />
+          <rect {...ol} x="74" y="48" width="34" height="34" rx="6" fill="#f6b81f" />
+          <rect {...ol} x="80" y="54" width="22" height="19" rx="4" fill="#9fe0ff" />
+          <path d="M85 58l8 10" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
+          <circle cx="56" cy="92" r="3" fill={INK} />
+          <path d="M106 88L138 50L168 84" fill="none" stroke={INK} strokeWidth="14" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M106 88L138 50L168 84" fill="none" stroke="#f6b81f" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" />
+          <path {...ol} d="M158 82h22l-3 18q-10 7-19-2z" fill="#e09a10" />
+          <rect {...ol} x="92" y="40" width="6" height="8" rx="2" fill="#ff7a2e" />
+        </g>
+        <g {...ol}>
+          <path d="M10 130l7-20 7 20z" fill="#ff7a2e" /><path d="M13 121h8" stroke="#fff" strokeWidth="3" />
+          <path d="M218 134l7-20 7 20z" fill="#ff7a2e" /><path d="M221 125h8" stroke="#fff" strokeWidth="3" />
+        </g>
       </svg>
     )
   },
@@ -28,39 +60,92 @@ const worlds = [
     title: 'La Ferme',
     text: 'Le tracteur, le semoir, le pulvérisateur, la moissonneuse, la presse et le télescopique.',
     art: (
-      <svg viewBox="0 0 240 110" aria-hidden="true">
-        <path d="M8 104H232" stroke="#d3d8ea" strokeWidth="4" strokeLinecap="round" />
-        <rect x="88" y="54" width="70" height="24" rx="4" fill="#c8322a" />
-        <rect x="58" y="14" width="40" height="44" rx="3" fill="#2b3040" />
-        <rect x="64" y="20" width="28" height="28" fill="#7fcdee" />
-        <rect x="54" y="10" width="48" height="7" rx="3" fill="#c8322a" />
-        <circle cx="78" cy="78" r="26" fill="#2b3040" />
-        <circle cx="78" cy="78" r="10" fill="#f4b42a" />
-        <circle cx="144" cy="90" r="14" fill="#2b3040" />
-        <circle cx="144" cy="90" r="5" fill="#f4b42a" />
-        <g fill="#e9b52f">
-          <rect x="176" y="40" width="5" height="64" />
-          <rect x="190" y="34" width="5" height="70" />
-          <rect x="204" y="44" width="5" height="60" />
-          <rect x="218" y="38" width="5" height="66" />
+      <svg viewBox="0 0 240 150" aria-hidden="true">
+        <defs>
+          <linearGradient id="fe-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#a9dcff" /><stop offset="1" stopColor="#e6f6ff" /></linearGradient>
+        </defs>
+        <rect width="240" height="150" fill="url(#fe-sky)" />
+        <circle cx="206" cy="28" r="15" fill="#ffd65a" />
+        <g fill="#fff"><ellipse cx="44" cy="28" rx="20" ry="8" /><ellipse cx="58" cy="22" rx="12" ry="9" /><ellipse cx="140" cy="20" rx="14" ry="6" /></g>
+        <path d="M0 92Q60 70 130 88T240 80V150H0Z" fill="#a6db7a" />
+        <path d="M0 112Q120 96 240 108V150H0Z" fill="#f2c84b" />
+        <g stroke="#dca935" strokeWidth="2.5" strokeLinecap="round"><path d="M0 120Q120 106 240 116" fill="none" /><path d="M0 130Q120 118 240 126" fill="none" /><path d="M0 140Q120 130 240 136" fill="none" /></g>
+        {/* barn */}
+        <g {...ol}>
+          <rect x="178" y="68" width="52" height="48" fill="#d8473b" />
+          <path d="M172 72L204 46L236 72Z" fill="#a8322c" />
+          <rect x="193" y="86" width="22" height="30" fill="#fff" />
+          <path d="M193 86l22 30M215 86l-22 30" />
+          <circle cx="204" cy="62" r="5" fill="#fff4d2" />
         </g>
-        <path d="M10 92l18-24h22l-8 24z" fill="#9aa4b6" />
+        <g {...ol}><circle cx="22" cy="124" r="11" fill="#f2c84b" /><path d="M22 124m-5 0a5 5 0 1 0 5-5" fill="none" strokeWidth="2" /></g>
+        <g className="bob">
+          <circle cx="132" cy="54" r="5" fill="#fff" opacity=".9" /><circle cx="140" cy="42" r="7" fill="#fff" opacity=".8" />
+          <rect {...ol} x="124" y="60" width="6" height="26" rx="2" fill="#3a3550" />
+          <rect {...ol} x="94" y="82" width="58" height="26" rx="7" fill="#e8423a" />
+          <rect {...ol} x="146" y="88" width="8" height="16" rx="2" fill="#b52c25" />
+          <rect {...ol} x="56" y="50" width="42" height="48" rx="4" fill="#9fe0ff" />
+          <path d="M66 56l12 16" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
+          <path {...ol} d="M77 50v48" />
+          <rect {...ol} x="50" y="42" width="54" height="10" rx="5" fill="#e8423a" />
+          <circle {...ol} cx="76" cy="112" r="25" fill="#3a3550" />
+          <circle {...ol} cx="76" cy="112" r="10" fill="#ffd23f" />
+          <path d="M46 104a30 30 0 0 1 60 0" fill="none" stroke={INK} strokeWidth="11" strokeLinecap="round" />
+          <path d="M46 104a30 30 0 0 1 60 0" fill="none" stroke="#e8423a" strokeWidth="6" strokeLinecap="round" />
+          <circle {...ol} cx="138" cy="120" r="14" fill="#3a3550" />
+          <circle {...ol} cx="138" cy="120" r="5" fill="#ffd23f" />
+        </g>
       </svg>
     )
   },
   {
     to: '/espace' as const,
     title: "L'Espace",
-    text: 'La fusée, la navette spatiale, le transporteur, le rover sur Mars et le module sur la Lune.',
+    text: 'La fusée, la navette, la station spatiale, le transporteur, le rover sur Mars et le module sur la Lune.',
     art: (
-      <svg viewBox="0 0 240 110" aria-hidden="true">
-        <path d="M8 104H232" stroke="#d3d8ea" strokeWidth="4" strokeLinecap="round" />
-        <g fill="#f5d27a"><circle cx="30" cy="20" r="2" /><circle cx="60" cy="40" r="1.5" /><circle cx="200" cy="18" r="2" /><circle cx="170" cy="50" r="1.5" /><circle cx="216" cy="70" r="1.5" /></g>
-        <circle cx="190" cy="34" r="16" fill="#3a7bd8" /><path d="M180 28q8-6 14 2t-4 12q-10-2-10-14z" fill="#5aa85a" />
-        <rect x="104" y="30" width="22" height="64" rx="3" fill="#f4f5f8" stroke="#c9ccd8" strokeWidth="2" /><path d="M104 30q11-26 22 0z" fill="#f4f5f8" stroke="#c9ccd8" strokeWidth="2" />
-        <rect x="90" y="54" width="12" height="40" rx="3" fill="#f4f5f8" stroke="#c9ccd8" strokeWidth="2" /><rect x="128" y="54" width="12" height="40" rx="3" fill="#f4f5f8" stroke="#c9ccd8" strokeWidth="2" />
-        <rect x="104" y="58" width="22" height="5" fill="#1b1d24" /><path d="M108 96l7 8 7-8z" fill="#ffb547" />
-        <rect x="40" y="24" width="6" height="80" fill="#e5452c" /><rect x="46" y="44" width="40" height="5" fill="#e5452c" />
+      <svg viewBox="0 0 240 150" aria-hidden="true">
+        <defs>
+          <linearGradient id="es-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#17194a" /><stop offset="1" stopColor="#4a3a92" /></linearGradient>
+        </defs>
+        <rect width="240" height="150" fill="url(#es-sky)" />
+        <g fill="#fff4c2">
+          <circle cx="20" cy="18" r="1.6" /><circle cx="58" cy="40" r="1.2" /><circle cx="90" cy="14" r="1.8" /><circle cx="150" cy="30" r="1.3" />
+          <circle cx="172" cy="70" r="1.2" /><circle cx="226" cy="84" r="1.6" /><circle cx="30" cy="70" r="1.3" /><circle cx="76" cy="84" r="1" />
+          <path d="M160 10l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" />
+        </g>
+        <g {...ol}>
+          <circle cx="200" cy="40" r="18" fill="#ff9b6a" />
+          <path d="M184 34q6-4 12 0" fill="none" stroke="#e0744a" strokeWidth="3" />
+          <ellipse cx="200" cy="40" rx="30" ry="7" fill="none" stroke="#ffd65a" strokeWidth="3" transform="rotate(-14 200 40)" />
+        </g>
+        <path d="M0 122Q120 106 240 124V150H0Z" fill="#cfcbef" />
+        <g fill="#aba6d8"><ellipse cx="190" cy="134" rx="14" ry="4" /><ellipse cx="40" cy="138" rx="10" ry="3" /><ellipse cx="150" cy="142" rx="7" ry="2" /></g>
+        <g className="bob">
+          <g fill="#fff" opacity=".9"><circle cx="102" cy="128" r="9" /><circle cx="138" cy="128" r="9" /><circle cx="120" cy="134" r="10" /></g>
+          <path d="M112 102Q120 138 128 102Z" fill="#ffb347" />
+          <path d="M116 102Q120 124 124 102Z" fill="#fff07a" />
+          <g {...ol}>
+            <path d="M108 78L92 102L108 96Z" fill="#ff5a4e" />
+            <path d="M132 78L148 102L132 96Z" fill="#ff5a4e" />
+            <path d="M108 98V56Q108 30 120 16Q132 30 132 56V98Z" fill="#f4f5fb" />
+            <path d="M110.5 40Q113 26 120 16Q127 26 129.5 40Z" fill="#ff5a4e" />
+            <circle cx="120" cy="60" r="7.5" fill="#7fd0ff" />
+            <rect x="113" y="98" width="14" height="6" rx="2" fill="#6a6890" />
+          </g>
+          <path d="M116.5 57l4 4" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
+        </g>
+        {/* astronaut waving */}
+        <g {...ol}>
+          <path d="M60 96V132" fill="none" />
+          <path d="M60 96h20l-4 7 4 7H60Z" fill="#ffd65a" />
+          <rect x="30" y="104" width="22" height="22" rx="7" fill="#f4f5fb" />
+          <rect x="24" y="106" width="8" height="16" rx="3" fill="#cfd2e2" />
+          <path d="M50 108l9-12" fill="none" stroke={INK} strokeWidth="8" />
+          <path d="M50 108l9-12" fill="none" stroke="#f4f5fb" strokeWidth="4" />
+          <rect x="33" y="124" width="7" height="10" rx="3" fill="#f4f5fb" /><rect x="43" y="124" width="7" height="10" rx="3" fill="#f4f5fb" />
+          <circle cx="41" cy="96" r="11" fill="#f4f5fb" />
+          <rect x="35" y="91" width="13" height="9" rx="4.5" fill="#ffc94a" />
+        </g>
       </svg>
     )
   },
@@ -69,12 +154,42 @@ const worlds = [
     title: 'La Ville',
     text: 'La voiture, le car, le tramway, le métro, le Shinkansen et le téléphérique, dans une ville japonaise.',
     art: (
-      <svg viewBox="0 0 240 110" aria-hidden="true">
-        <path d="M8 104H232" stroke="#d3d8ea" strokeWidth="4" strokeLinecap="round" />
-        <path d="M150 104l40-70 44 70z" fill="#5a6aa8" /><path d="M178 54l12-20 13 20-6 4-7-5-6 5z" fill="#f4f6fb" />
-        <rect x="24" y="34" width="6" height="56" fill="#d8402a" /><rect x="66" y="34" width="6" height="56" fill="#d8402a" /><path d="M14 28h68l-4 8H18z" fill="#3a2a22" /><rect x="20" y="40" width="56" height="5" fill="#d8402a" />
-        <path d="M84 84V70h70q26 0 40 14z" fill="#f4f5f8" stroke="#c9ccd8" strokeWidth="2" /><rect x="84" y="80" width="104" height="3" fill="#1f4fb8" /><rect x="90" y="73" width="50" height="4" rx="2" fill="#2a3f58" />
-        <circle cx="120" cy="22" r="4" fill="#f4b2cc" /><circle cx="128" cy="18" r="5" fill="#f7c6d8" /><circle cx="136" cy="24" r="4" fill="#e99ab8" />
+      <svg viewBox="0 0 240 150" aria-hidden="true">
+        <defs>
+          <linearGradient id="vi-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#ffd3e0" /><stop offset="1" stopColor="#ffefd2" /></linearGradient>
+        </defs>
+        <rect width="240" height="150" fill="url(#vi-sky)" />
+        <circle cx="62" cy="38" r="18" fill="#ff6b5a" />
+        <path d="M120 100L178 30L240 100Z" fill="#8a97da" />
+        <path d="M164 47L178 30L193 47L186 52L179 46L172 52Z" fill="#fff" />
+        <g fill="#c9b6ea">
+          <rect x="6" y="56" width="22" height="46" /><rect x="32" y="66" width="18" height="36" /><rect x="96" y="60" width="20" height="42" />
+        </g>
+        <g fill="#fff" opacity=".6"><rect x="11" y="62" width="4" height="5" /><rect x="19" y="62" width="4" height="5" /><rect x="11" y="72" width="4" height="5" /><rect x="19" y="82" width="4" height="5" /><rect x="101" y="68" width="4" height="5" /><rect x="108" y="78" width="4" height="5" /></g>
+        <path d="M0 126Q120 116 240 128V150H0Z" fill="#9ad17a" />
+        <g {...ol} fill="#d8d3e6">
+          <rect x="-4" y="100" width="248" height="7" />
+          <rect x="30" y="107" width="10" height="24" /><rect x="114" y="107" width="10" height="22" /><rect x="198" y="107" width="10" height="24" />
+        </g>
+        <g className="bob">
+          <path {...ol} d="M8 98V82Q8 76 15 76H150Q192 76 220 95Q222 98 218 98Z" fill="#f6f7fb" />
+          <path d="M9 90H210L214 94H9Z" fill="#2f6fe0" />
+          <g fill="#2a3f78">
+            <rect x="20" y="80" width="10" height="6" rx="2" /><rect x="36" y="80" width="10" height="6" rx="2" /><rect x="52" y="80" width="10" height="6" rx="2" />
+            <rect x="68" y="80" width="10" height="6" rx="2" /><rect x="84" y="80" width="10" height="6" rx="2" /><rect x="100" y="80" width="10" height="6" rx="2" />
+            <rect x="116" y="80" width="10" height="6" rx="2" /><rect x="132" y="80" width="10" height="6" rx="2" />
+            <path d="M164 80Q184 81 200 89L166 89Z" />
+          </g>
+          <path {...ol} d="M60 76v22M120 76v22" fill="none" strokeWidth="1.5" />
+        </g>
+        {/* torii and sakura in front */}
+        <g {...ol}>
+          <rect x="62" y="122" width="4" height="22" fill="#e5452c" /><rect x="84" y="122" width="4" height="22" fill="#e5452c" />
+          <path d="M55 116h40l-3 6H58Z" fill="#3a2a22" /><rect x="59" y="126" width="32" height="3.5" fill="#e5452c" />
+          <path d="M206 140V118" fill="none" stroke="#7a4a3a" strokeWidth="5" />
+        </g>
+        <g {...ol} fill="#f7b6cf"><circle cx="196" cy="112" r="10" /><circle cx="214" cy="110" r="11" /><circle cx="205" cy="100" r="11" /></g>
+        <g fill="#fff" opacity=".8"><circle cx="200" cy="104" r="2" /><circle cx="212" cy="112" r="2" /><circle cx="192" cy="114" r="1.6" /></g>
       </svg>
     )
   }
@@ -90,7 +205,7 @@ function Home() {
       <section className="worlds" aria-label="Les mondes">
         {worlds.map((w) => (
           <Link key={w.to} to={w.to} className="world">
-            {w.art}
+            <span className="art">{w.art}</span>
             <h2>{w.title}</h2>
             <p>{w.text}</p>
             <b>Jouer</b>
