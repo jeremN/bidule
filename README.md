@@ -13,6 +13,7 @@ Chaque « monde » est un petit diorama vivant en 3D, dans un style de dessin an
 | **L'Aéroport** | avion de ligne (décollage), petit avion à hélice (atterrissage), tracteur pushback, passerelle, tapis à bagages, camion avitailleur, camion traiteur, pompiers d'aéroport |
 | **La Base militaire** | char, char poseur de pont, véhicule amphibie, camion de transport, hélicoptère, drone, avion de chasse, avion de transport (sans combat : on montre comment ils roulent, traversent, volent et transportent) |
 | **L'Usine** | pont roulant, presse, robots soudeurs, cabine de peinture, chaîne de montage, robot AGV, chariot élévateur, porte-voitures (on suit une voiture de la bobine d'acier jusqu'au camion) |
+| **La Carrière** | foreuse, brise-roche, grosse pelle, tombereau, concasseur, crible, chargeuse, arroseuse (de la roche au gravier qui part pour le chantier) |
 
 L'idée de départ vient de [os-taxonomy de Marble](https://github.com/withmarbleapp/os-taxonomy), un graphe des notions du primaire avec leurs prérequis. À terme, chaque monde pourra être rattaché aux notions du programme français (maternelle → lycée).
 
@@ -28,7 +29,7 @@ npm run build    # site statique prérendu dans dist/client
 npm run check    # eslint + TypeScript
 ```
 
-L'app est construite avec [TanStack Start](https://tanstack.com/start) (React) en **prérendu statique** : chaque page (`/`, `/chantier`, `/ferme`, `/ville`, `/espace`, `/aeroport`, `/militaire`, `/usine`) est générée en HTML au build, puis la navigation se fait côté client.
+L'app est construite avec [TanStack Start](https://tanstack.com/start) (React) en **prérendu statique** : chaque page (`/`, `/chantier`, `/ferme`, `/ville`, `/espace`, `/aeroport`, `/militaire`, `/usine`, `/carriere`) est générée en HTML au build, puis la navigation se fait côté client.
 Le moteur 3D est chargé uniquement dans le navigateur (import dynamique dans `WorldStage`), il ne tourne jamais pendant le prérendu.
 
 Pour tester vite dans un navigateur lent (rendu logiciel, CI), ajoute `?fast` à l'URL d'un monde : les animations avancent par grands pas. `?noink` coupe les contours, `?debug` expose `window.__bidule` (renderer, scène) pour mesurer.
@@ -67,6 +68,7 @@ src/
     aeroport.js       l'aéroport
     militaire.js      la base militaire
     usine.js          l'usine de voitures
+    carriere.js       la carrière
 ```
 
 ## Ajouter un monde

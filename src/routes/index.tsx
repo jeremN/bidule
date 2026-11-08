@@ -289,6 +289,54 @@ const worlds = [
           </g>
         </svg>
       )
+    },
+  {
+      to: '/carriere' as const,
+      title: 'La Carrière',
+      text: 'La foreuse, le brise-roche, la grosse pelle, le tombereau géant, le concasseur et le crible qui font du gravier…',
+      art: (
+        <svg viewBox="0 0 240 150" aria-hidden="true">
+          <defs>
+            <linearGradient id="ca-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#bfe3f4" /><stop offset="1" stopColor="#fbe9c8" /></linearGradient>
+          </defs>
+          <rect width="240" height="150" fill="url(#ca-sky)" />
+          <circle cx="206" cy="30" r="15" fill="#fff4d2" />
+          <g fill="#fff" opacity=".85"><ellipse cx="60" cy="24" rx="18" ry="6" /><ellipse cx="74" cy="19" rx="11" ry="7" /></g>
+          {/* the stepped quarry walls in the back, trees on the rim */}
+          <g fill="#3f8f3a"><circle cx="14" cy="44" r="9" /><circle cx="30" cy="40" r="10" /><circle cx="196" cy="42" r="10" /><circle cx="214" cy="46" r="9" /><circle cx="230" cy="42" r="9" /></g>
+          <path d="M0 50H240V112H0Z" fill="#cdb894" />
+          <path d="M0 62H22V74H40V86H200V74H218V62H240V112H0Z" fill="#dccaa6" />
+          <path d="M0 50H240M0 62H22V74H40V86H200V74H218V62H240" fill="none" stroke="#a8957a" strokeWidth="2" />
+          <path d="M60 86L104 74H150" fill="none" stroke="#b8a483" strokeWidth="4" strokeLinecap="round" />
+          <path d="M0 106Q120 98 240 108V150H0Z" fill="#c9ab7c" />
+          <path d="M0 126Q120 118 240 128V150H0Z" fill="#b8996a" />
+          {/* the gravel piles and a conveyor */}
+          <g {...ol}>
+            <path d="M168 112L220 88" fill="none" strokeWidth="5" />
+            <path d="M196 120Q214 92 236 120Z" fill="#8e877d" />
+            <path d="M150 122Q166 100 184 122Z" fill="#e0c79a" />
+          </g>
+          <g fill="#6e675e"><circle cx="210" cy="108" r="2.5" /><circle cx="220" cy="114" r="2" /><circle cx="204" cy="116" r="2" /></g>
+          {/* the giant haul truck */}
+          <g className="bob">
+            <g {...ol}>
+              <path d="M22 72h82l8 22H30z" fill="#f6b81f" />
+              <path d="M104 72h24l6 8h-26z" fill="#e09a10" />
+              <path d="M28 70q24-14 52-6 14 4 22 8z" fill="#bdb09a" />
+              <rect x="106" y="82" width="34" height="18" rx="3" fill="#f6b81f" />
+              <rect x="110" y="84" width="14" height="10" rx="2" fill="#9fe0ff" />
+              <rect x="26" y="94" width="104" height="8" rx="2" fill="#3a3550" />
+              <path d="M132 100v-14M140 100v-14" strokeWidth="2" />
+              <circle cx="50" cy="110" r="18" fill="#2a2440" />
+              <circle cx="50" cy="110" r="8" fill="#9b96b8" />
+              <circle cx="116" cy="110" r="18" fill="#2a2440" />
+              <circle cx="116" cy="110" r="8" fill="#9b96b8" />
+            </g>
+            <path d="M113 86l6 6" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
+            <rect {...ol} x="118" y="76" width="6" height="6" rx="2" fill="#ff7a2e" />
+          </g>
+        </svg>
+      )
     }
 ];
 function Home() {

@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AeroportRouteImport } from './routes/aeroport'
+import { Route as CarriereRouteImport } from './routes/carriere'
 import { Route as ChantierRouteImport } from './routes/chantier'
 import { Route as EspaceRouteImport } from './routes/espace'
 import { Route as FermeRouteImport } from './routes/ferme'
@@ -26,6 +27,11 @@ const IndexRoute = IndexRouteImport.update({
 const AeroportRoute = AeroportRouteImport.update({
   id: '/aeroport',
   path: '/aeroport',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CarriereRoute = CarriereRouteImport.update({
+  id: '/carriere',
+  path: '/carriere',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ChantierRoute = ChantierRouteImport.update({
@@ -62,6 +68,7 @@ const VilleRoute = VilleRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/aeroport': typeof AeroportRoute
+  '/carriere': typeof CarriereRoute
   '/chantier': typeof ChantierRoute
   '/espace': typeof EspaceRoute
   '/ferme': typeof FermeRoute
@@ -72,6 +79,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/aeroport': typeof AeroportRoute
+  '/carriere': typeof CarriereRoute
   '/chantier': typeof ChantierRoute
   '/espace': typeof EspaceRoute
   '/ferme': typeof FermeRoute
@@ -83,6 +91,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/aeroport': typeof AeroportRoute
+  '/carriere': typeof CarriereRoute
   '/chantier': typeof ChantierRoute
   '/espace': typeof EspaceRoute
   '/ferme': typeof FermeRoute
@@ -95,6 +104,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/aeroport'
+    | '/carriere'
     | '/chantier'
     | '/espace'
     | '/ferme'
@@ -105,6 +115,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/aeroport'
+    | '/carriere'
     | '/chantier'
     | '/espace'
     | '/ferme'
@@ -115,6 +126,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/aeroport'
+    | '/carriere'
     | '/chantier'
     | '/espace'
     | '/ferme'
@@ -126,6 +138,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AeroportRoute: typeof AeroportRoute
+  CarriereRoute: typeof CarriereRoute
   ChantierRoute: typeof ChantierRoute
   EspaceRoute: typeof EspaceRoute
   FermeRoute: typeof FermeRoute
@@ -148,6 +161,13 @@ declare module '@tanstack/react-router' {
       path: '/aeroport'
       fullPath: '/aeroport'
       preLoaderRoute: typeof AeroportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/carriere': {
+      id: '/carriere'
+      path: '/carriere'
+      fullPath: '/carriere'
+      preLoaderRoute: typeof CarriereRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/chantier': {
@@ -198,6 +218,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AeroportRoute: AeroportRoute,
+  CarriereRoute: CarriereRoute,
   ChantierRoute: ChantierRoute,
   EspaceRoute: EspaceRoute,
   FermeRoute: FermeRoute,
