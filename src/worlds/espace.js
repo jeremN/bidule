@@ -4,9 +4,10 @@ import { V3, rad, clamp, rnd, pick } from '../kit/util.js';
 import { tw, to, sleep, pop, easeIn, easeSine, easeBack, lin } from '../kit/tween.js';
 import { engineOn, engineOff, thud, ding, chime, tone } from '../kit/audio.js';
 import { C, MT, UB, ICO, dummy, tmpCol, mat, std, add, box, grp, cylY, cylZ, cylX, rod, rail, sph, rbox, ext, extY, arc, anchor, beam, wp, shadows, instanced } from '../kit/geo.js';
-import { trackUnit, hydraulic, beacon } from '../kit/parts.js';
+import { trackUnit, hydraulic, beacon, tire, operator } from '../kit/parts.js';
 import { lamp } from '../kit/props.js';
 import { createFx } from '../kit/fx.js';
+import { route, person as walker, miniCar, traffic } from '../kit/life.js';
 
 const YAW = Math.PI / 4;
 const SM = {
@@ -44,11 +45,21 @@ const DATA = {
     how: 'Ses moteurs freinent la descente, et ses grandes pattes amortissent l’atterrissage.' },
   station: { short: 'La station', full: 'La station spatiale', verb: 'Rejoindre', horn: 'bell',
     use: "C'est une maison dans l'espace, où vivent des astronautes.",
-    how: "Elle tourne autour de la Terre. Ses grands panneaux solaires lui donnent l'électricité, et des capsules lui amènent les astronautes." }
+    how: "Elle tourne autour de la Terre. Ses grands panneaux solaires lui donnent l'électricité, et des capsules lui amènent les astronautes." },
+  bus: { short: 'Le bus', full: 'Le bus des astronautes', verb: 'Embarquer', horn: 'horn',
+    use: "Il emmène les astronautes jusqu'à la fusée.",
+    how: "Leurs combinaisons sont lourdes : le bus les conduit au pied de la tour, puis un ascenseur les monte tout en haut." },
+  capsule: { short: 'La capsule', full: 'La capsule', verb: 'Atterrir', horn: 'bell',
+    use: 'Elle ramène les astronautes sur Terre.',
+    how: "En revenant, elle chauffe très fort. Ses parachutes la freinent, puis des petites fusées l'aident à se poser." }
 };
-const ORDER = ['fusee', 'navette', 'transporteur', 'rover', 'module', 'station'];
+const ORDER = ['transporteur', 'bus', 'fusee', 'navette', 'station', 'capsule', 'rover', 'module'];
 const GND = '<path class="gnd" d="M4 75H116"/>';
 const ICONS = {
+  bus: GND + `<rect x="10" y="26" width="92" height="36" rx="12" fill="#c9ced8"/><rect class="g" x="20" y="32" width="60" height="12" rx="3"/><rect class="b" x="10" y="48" width="92" height="5"/><rect class="g" x="86" y="32" width="12" height="14" rx="3"/>
+    <circle class="k" cx="30" cy="64" r="9"/><circle class="s" cx="30" cy="64" r="3.5"/><circle class="k" cx="84" cy="64" r="9"/><circle class="s" cx="84" cy="64" r="3.5"/>`,
+  capsule: GND + `<path d="M30 10q14-12 28 0z" fill="#f26a2a"/><path d="M62 10q14-12 28 0z" fill="#ffffff" stroke="#c9ccd8"/><path class="ln" d="M30 10L54 42M58 10L56 42M62 10L60 42M90 10L62 42"/>
+    <path class="w" d="M48 44h20l10 26H38z"/><rect class="k" x="36" y="68" width="44" height="5" rx="2"/><circle class="g" cx="58" cy="54" r="4"/>`,
   station: `<rect class="s" x="8" y="36" width="104" height="5" rx="2"/>
   <rect class="b" x="10" y="12" width="14" height="22"/><rect class="b" x="10" y="43" width="14" height="22"/><rect class="b" x="28" y="12" width="14" height="22"/><rect class="b" x="28" y="43" width="14" height="22"/>
   <rect class="b" x="78" y="12" width="14" height="22"/><rect class="b" x="78" y="43" width="14" height="22"/><rect class="b" x="96" y="12" width="14" height="22"/><rect class="b" x="96" y="43" width="14" height="22"/>
@@ -66,13 +77,26 @@ const ICONS = {
   module: GND + `<path class="yd" d="M34 46h52l6 10H28z"/><rect class="yd" x="30" y="40" width="60" height="8"/><path class="s" d="M42 40l6-20h24l6 20z"/><rect class="k" x="52" y="24" width="7" height="6"/><rect class="k" x="62" y="24" width="7" height="6"/>
     <path class="ln" d="M34 50L18 72M86 50L102 72M44 52L40 72M76 52L80 72"/><rect class="s" x="12" y="71" width="12" height="3"/><rect class="s" x="96" y="71" width="12" height="3"/>`
 };
+// Layout coordinates: h runs left → right on screen in the overview, d from the back (−) to the front (+).
+const S2 = Math.SQRT1_2;
+const Q = (h, d) => [(h + d) * S2, (d - h) * S2];
+const CF = (h, d, yaw = YAW) => { const [x, z] = Q(h, d); return { x, z, yaw }; };
 const CFG = {
-  fusee: { x: -6, z: -22, yaw: YAW }, navette: { x: -20, z: -2, yaw: YAW }, transporteur: { x: 22, z: -14, yaw: YAW + Math.PI },
-  rover: { x: -10, z: 17, yaw: YAW }, module: { x: 16, z: 12, yaw: YAW },
-  station: { x: -24, z: 8, yaw: YAW }
+  fusee: CF(-6, -28), navette: CF(-30, -20), transporteur: CF(30, -14, YAW + Math.PI), bus: CF(-1, -6, 3 * Math.PI / 4),
+  rover: CF(-22, 18), module: CF(20, 18), station: CF(-36, 2), capsule: CF(0, 19)
 };
+const GB = [], GP = [];
+const blob = (h, d, r, col) => { const [x, z] = Q(h, d); GB.push([x, z, r, col]); };
+const road = (pts, w = 2.4, col = '#c3bfd6', al = 0.85) => GP.push({ pts: pts.map(([h, d]) => Q(h, d)), w, col, al });
+road([[19, -14], [30, -14]], 7, '#b9b6c8', 0.9);
+road([[-1, -4], [-1, -22]], 3.2);
+road([[5, -8], [16, -8], [16, 6], [5, 6], [5, -8]], 2.6);
+road([[5, -1], [-1, -1]], 2.4);
+road([[-12, 4], [-4, 4], [-4, 9], [-12, 9], [-12, 4]], 1.6, '#d6d2e6', 0.8);
+blob(-22, 18, 13, 'rgba(200,100,58,.95)'); blob(-22, 18, 9, 'rgba(214,118,70,.9)');
+blob(20, 18, 12, 'rgba(225,226,236,.95)'); blob(20, 18, 8.5, 'rgba(235,236,244,.9)');
+blob(-6, -28, 7, 'rgba(255,196,140,.35)'); blob(-30, -20, 6, 'rgba(255,196,140,.3)'); blob(22, -14, 7, 'rgba(255,196,140,.3)'); blob(0, 19, 6, 'rgba(255,220,180,.35)');
 
-/** Generic two-booster rocket. Origin = bottom of the core stage. */
 function buildRocket(p, s = 1) {
   const g = grp(p); g.scale.setScalar(s);
   const core = grp(g);
@@ -112,19 +136,17 @@ function astronaut(p, x, y, z, s = 1) {
 
 export default {
   id: 'espace', title: "L'Espace", titleHtml: "L'<span>Espace</span>",
-  subtitle: 'Des fusées, une navette, une station spatiale, un rover sur Mars et un module sur la Lune. Touche-les pour les faire décoller !',
+  subtitle: 'Une vraie base spatiale : des fusées, une navette, le bus des astronautes, une station dans le ciel... Touche-les pour les faire décoller !',
   welcome: "Bienvenue dans l'espace ! Touche un engin pour le faire décoller.",
   hint: 'Touche un engin pour le découvrir.', backLabel: 'Toute la base',
   brandIcon: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3c5 4 6 10 4 17h-8C10 13 11 7 16 3z"/><path d="M12 20l-4 5h5M20 20l4 5h-5M14 24l2 5 2-5"/><circle cx="16" cy="12" r="2"/></svg>',
   data: DATA, order: ORDER, icons: ICONS, cfg: CFG,
-  radius: 34, floating: true, forest: false, tufts: false, sky: 0x05060f, rimColor: 0x3d3a52,
+  radius: 46, floating: true, forest: false, tufts: false, sky: 0x05060f, rimColor: 0x3d3a52,
   lights: { hemi: [0xb8c8ff, 0x3a3050, 0.85], sun: [0xfff0d8, 1.15] },
-  overview: { w: 62, h: 44, focus: [0, 2, 0] },
+  overview: { w: 80, h: 56, focus: [0, 3, 0] },
   ground: {
     base: ['#7d86b6', '#636c9e', '#4a5180'],
-    blobs: [[16, 12, 11, 'rgba(225,226,236,.95)'], [16, 12, 8, 'rgba(235,236,244,.9)'], [-10, 17, 12, 'rgba(200,100,58,.95)'], [-10, 17, 8, 'rgba(214,118,70,.9)'],
-      [-6, -22, 6, 'rgba(255,196,140,.35)'], [-20, -2, 6, 'rgba(255,196,140,.35)'], [16, -8, 7, 'rgba(255,196,140,.3)']],
-    paths: [{ pts: [[-20, -2], [-6, -22]], w: 2.4, col: '#b9b6c8', al: 0.5 }, { pts: [[22, -14], [12, -4], [0, -6], [-6, -22]], w: 2, col: '#b9b6c8', al: 0.4 }]
+    blobs: GB, paths: GP
   },
 
   build(ctx) {
@@ -136,26 +158,7 @@ export default {
     const groundSmoke = (center, k = 1) => { for (let i = 0; i < 2 * k; i++) { const a = rnd(0, Math.PI * 2); fx.smoke(new V3(center.x + Math.cos(a), 0.6, center.z + Math.sin(a)), new V3(Math.cos(a) * rnd(3, 6), rnd(0.2, 1), Math.sin(a) * rnd(3, 6)), rnd(0.9, 1.5)); } };
     const countdown = async () => { for (const n of ['Trois...', 'Deux...', 'Un...']) { tone(880, 0, 0.18, 'square', 0.04); await step(n, null); } };
 
-    /* ---------- scenery ---------- */
-    // Moon corner: craters, boulders, the Earth in the sky
-    [[12, 8, 1.6], [20, 15, 1.2], [18, 6, 0.9], [11, 16, 1.0], [22, 9, 0.7]].forEach(([x, z, r]) => {
-      const ring = add(scene, new THREE.TorusGeometry(r, r * 0.22, 6, 20), SM.moonRock, x, 0.05, z); ring.rotation.x = Math.PI / 2; ring.scale.z = 0.5;
-      const hole = add(scene, new THREE.CircleGeometry(r * 0.85, 18), 0xb8bac6, x, 0.03, z); hole.rotation.x = -Math.PI / 2;
-    });
-    instanced(scene, ICO, 40, (i, d) => { const a = rnd(0, 6.28), r = rnd(3, 9); d.position.set(16 + Math.cos(a) * r, 0.1, 12 + Math.sin(a) * r); d.scale.setScalar(rnd(0.2, 0.6)); d.rotation.set(rnd(0, 3), rnd(0, 3), 0); return pick([0xa8aab6, 0x8e909c, 0xc2c4d0]); });
-    const earth = sph(scene, 3.2, std(0x3a7bd8, 0.6, 0), -22, 24, -22); const land = sph(scene, 3.25, std(0x5aa85a, 0.8, 0, { transparent: true, opacity: 0.85 }), -22, 24, -22); land.scale.set(3.25, 2.2, 2.6);
-    onUpdate((dt) => { earth.rotation.y += dt * 0.05; land.rotation.y += dt * 0.05; });
-    // Mars corner: rocks and little hills
-    instanced(scene, ICO, 70, (i, d) => { const a = rnd(0, 6.28), r = rnd(2, 10); d.position.set(-10 + Math.cos(a) * r, 0.1, 17 + Math.sin(a) * r); d.scale.set(rnd(0.2, 0.7), rnd(0.15, 0.5), rnd(0.2, 0.7)); d.rotation.set(rnd(0, 3), rnd(0, 3), 0); return pick([0x9a4a2a, 0xb85a32, 0x7a3a22]); });
-    [[-17, 22, 2.6], [-4, 24, 2.0], [-16, 11, 1.8]].forEach(([x, z, r]) => { const h = add(scene, new THREE.ConeGeometry(r, r * 0.8, 10), SM.mars, x, r * 0.4, z); });
-    // spaceport: control tower, dish, fuel spheres
-    { const g = grp(scene, 3, 0, 2); rbox(g, 3, 4, 3, 0.1, SM.off, 0, 2, 0); rbox(g, 3.4, 1.0, 3.4, 0.1, SM.panel, 0, 4.4, 0); rbox(g, 3.6, 0.15, 3.6, 0.05, SM.white, 0, 5.0, 0); cylY(g, 0.05, 1.5, SM.grey, 0.8, 5.8, 0.8, 6); sph(g, 0.08, MT.tail, 0.8, 6.6, 0.8); shadows(g); }
-    const dish = grp(scene, 10, 0, -16); { cylY(dish, 0.3, 2.5, SM.grey, 0, 1.25, 0, 10); const hd = grp(dish, 0, 2.7, 0); const d = add(hd, new THREE.SphereGeometry(2, 20, 10, 0, Math.PI * 2, 0, Math.PI / 3.2), SM.white); d.material = SM.white.clone(); d.material.side = THREE.DoubleSide; d.rotation.x = -0.9; rod(hd, new V3(0, 0, 0), new V3(0, 1.2, 0.9), 0.04, SM.grey); shadows(dish); onUpdate((dt) => (hd.rotation.y += dt * 0.15)); }
-    [[-14, -14], [-11.5, -15.5]].forEach(([x, z]) => { const g = grp(scene, x, 0, z); sph(g, 1.1, SM.white, 0, 1.9, 0); [0, 1, 2, 3].forEach((k) => rod(g, new V3(Math.cos(k * 1.57) * 0.7, 0, Math.sin(k * 1.57) * 0.7), new V3(Math.cos(k * 1.57) * 0.6, 1.5, Math.sin(k * 1.57) * 0.6), 0.06, SM.grey)); shadows(g); });
-    lamp(scene, -2, -14, 1); lamp(scene, -14, 4, 0.4); lamp(scene, 8, -2, 2);
-    // the crew, waving in front of the control tower
-    const crew = [[5.6, 4.2], [6.6, 3.0], [4.4, 5.3]].map(([x, z]) => { const a = astronaut(scene, x, 0, z, 1.1); a.rotation.y = -Math.PI / 4; shadows(a); return a; });
-    { let T = 0; onUpdate((dt) => { T += dt; crew.forEach((a, i) => { const [r, l] = a.userData.arms; r.rotation.x = -(1.9 + Math.sin(T * 6 + i * 2) * 0.5) * (i === 1 ? 0.15 : 1); l.rotation.x = i === 1 ? 2.2 + Math.sin(T * 6) * 0.5 : 0.15; }); }); }
+    buildBase(scene, onUpdate);
 
     /* ---- fusée ---- */
     (function () {
@@ -503,5 +506,146 @@ export default {
         st.ascBurn = false; asc.visible = false; chime(); st.done = true;
       };
     })();
+
+    /* ---- bus des astronautes ---- */
+    (function () {
+      const st = makeStation('bus'), S = st.g, END = 15;
+      // the crew building on the left of the road
+      const hq = grp(S, -0.5, 0, -6.2); rbox(hq, 5.2, 3.2, 3.6, 0.1, SM.white, 0, 1.6, 0, 0.02); rbox(hq, 5.4, 0.25, 3.8, 0.05, SM.panel, 0, 3.3, 0, 0.02);
+      for (let x = -1.8; x <= 1.8; x += 1.2) box(hq, 0.8, 0.7, 0.05, MT.glassD, x, 2.2, 1.81); box(hq, 1.2, 2.0, 0.06, MT.glassD, 0, 1.0, 1.82); rbox(hq, 1.8, 0.1, 0.9, 0.03, SM.panel, 0, 2.3, 2.2, 0.01);
+      shadows(hq);
+      // the silver van
+      const m = grp(S, 0, 0, 0); st.m = m; st.lastX = 0;
+      rbox(m, 4.6, 1.75, 1.85, 0.35, SM.silver, 0, 1.35, 0, 0.04);
+      [1, -1].forEach((s) => { rbox(m, 3.4, 0.4, 0.04, 0.1, MT.glassD, -0.3, 1.75, s * 0.93, 0.01); rbox(m, 4.4, 0.12, 0.04, 0.03, SM.panel, 0, 1.1, s * 0.94, 0.01); });
+      rbox(m, 0.04, 0.6, 1.5, 0.12, MT.glassD, 2.31, 1.7, 0, 0.01); [0.6, -0.6].forEach((z) => rbox(m, 0.05, 0.14, 0.26, 0.04, MT.lamp, 2.31, 0.9, z, 0.01));
+      const door = grp(m, 0.9, 0, -0.95); rbox(door, 0.9, 1.4, 0.05, 0.05, SM.off, 0, 1.3, 0, 0.01);
+      st.wheels = [[1.5, 1], [1.5, -1], [-1.5, 1], [-1.5, -1]].map(([x, s]) => tire(m, 0.42, 0.28, x, 0.42, s * 0.82, MT.grey, s));
+      operator(m, 1.5, 0.75, 0.4).scale.setScalar(0.85);
+      const home = [[-0.6, -4.2], [0.2, -4.5], [1.0, -4.2]];
+      const crew = home.map(([x, z]) => { const a = astronaut(S, x, 0, z, 0.9); a.rotation.y = Math.PI / 2; a.visible = false; shadows(a); return a; });
+      part(st, 'bus', 'le bus', anchor(m, 0, 2.6, 0), true);
+      part(st, 'astronautes', 'les astronautes', anchor(S, 0.2, 1.6, -3.4), false);
+      part(st, 'porte', 'la porte', anchor(door, 0, 1.9, -0.1), false);
+      part(st, 'batiment', 'le bâtiment des astronautes', anchor(hq, 0, 3.6, 1), true);
+      st.focusAt = anchor(m, 0, 1.4, -2); st.size = { w: 12, h: 8 }; st.tagAt = anchor(m, 0, 3.4, 0);
+      st.update = (dt) => roll(st, dt);
+      const walk = (a, x0, z0, x1, z1, d) => { a.rotation.y = Math.atan2(-(z1 - z0), x1 - x0); return tw(d, (k) => { a.position.set(x0 + (x1 - x0) * k, Math.abs(Math.sin(k * Math.PI * 6)) * 0.05, z0 + (z1 - z0) * k); a.userData.arms[0].rotation.z = Math.sin(k * 20) * 0.4; a.userData.arms[1].rotation.z = -Math.sin(k * 20) * 0.4; }, lin); };
+      st.action = async function () {
+        if (st.done) { st.reversing = true; st.beepT = 0; await Promise.all([step('Le bus rentre au bâtiment.', 'bus'), to(m.position, 'x', 0, 3)]); st.reversing = false; st.done = false; }
+        engineOn(80);
+        crew.forEach((a, i) => { a.visible = true; a.scale.setScalar(0.9); a.position.set(home[i][0], 0, home[i][1]); });
+        await Promise.all([step('Les astronautes sortent, dans leurs grosses combinaisons.', 'astronautes'), to(door.position, 'x', 0.1, 0.8),
+          ...crew.map((a, i) => sleep(i * 0.4).then(() => walk(a, home[i][0], home[i][1], 0.9, -1.2, 1.6)).then(() => (a.visible = false)))]);
+        await Promise.all([step('Ils montent dans le bus. On ferme la porte.', 'porte'), to(door.position, 'x', 0.9, 0.8)]);
+        await Promise.all([step("Le bus les emmène jusqu'au pied de la fusée.", 'bus'), to(m.position, 'x', END, 6, easeSine)]);
+        await to(door.position, 'x', 0.1, 0.6);
+        await Promise.all([step("Ils marchent jusqu'à la tour de lancement...", 'astronautes'),
+          ...crew.map((a, i) => sleep(i * 0.45).then(() => { a.visible = true; return walk(a, END + 0.9, -1.2, END + 3.2 + i * 0.6, -6.2 - i * 0.3, 2.2); }))]);
+        await Promise.all([step("...et un ascenseur les monte tout en haut. Bon voyage !", 'astronautes'), tw(1.2, (k) => crew.forEach((a) => (a.position.y = k * 2.5)), easeIn).then(() => tw(0.5, (k) => crew.forEach((a) => a.scale.setScalar(Math.max(0.01, 0.9 * (1 - k))))))]);
+        crew.forEach((a) => (a.visible = false)); await to(door.position, 'x', 0.9, 0.6);
+        chime(); st.done = true;
+      };
+    })();
+
+    /* ---- capsule ---- */
+    (function () {
+      const st = makeStation('capsule'), S = st.g, HIGH = 32;
+      const pad = add(S, new THREE.CircleGeometry(3.4, 32), 0xd6d2e6, 0, 0.04, 0); pad.rotation.x = -Math.PI / 2;
+      const ring = add(S, new THREE.RingGeometry(2.2, 2.5, 32), 0xf26a2a, 0, 0.05, 0); ring.rotation.x = -Math.PI / 2;
+      const m = grp(S, 0, HIGH, 0); st.m = m; m.visible = false;
+      const body = grp(m);
+      add(body, new THREE.CylinderGeometry(0.75, 1.45, 1.7, 24), SM.white, 0, 1.0, 0); cylY(body, 1.48, 0.25, SM.black, 0, 0.1, 0, 24);
+      cylY(body, 0.55, 0.3, SM.grey, 0, 1.95, 0, 18);
+      const hotM = std(0x3a2a2a, 0.6, 0, { emissive: 0xff5a1a, emissiveIntensity: 0 }); const shield = cylY(body, 1.46, 0.1, hotM, 0, -0.04, 0, 24);
+      const hatch = grp(body, 0, 1.2, 0.9); hatch.rotation.x = -0.45; const hd = cylZ(hatch, 0.35, 0.08, SM.off, 0, 0, 0.05, 16);
+      [[0.5, 1.5], [-0.5, 1.5]].forEach(([x, y]) => { const w = cylZ(body, 0.13, 0.05, MT.glassD, x, y, 0.85, 12); w.rotation.x = -0.4; });
+      // three parachutes
+      const chutes = [-1.6, 0, 1.6].map((x, i) => {
+        const g = grp(m, x * 0.6, 2.2, (i - 1) * 0.6); const dome = add(g, new THREE.SphereGeometry(1.6, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), i === 1 ? SM.chute2 : SM.chute, x, 7.0, 0);
+        dome.material = dome.material.clone(); dome.material.side = THREE.DoubleSide; dome.scale.y = 0.7;
+        for (let k = 0; k < 6; k++) { const a = (k / 6) * Math.PI * 2; rod(g, new V3(0, 0, 0), new V3(x + Math.cos(a) * 1.5, 7.0, Math.sin(a) * 1.5), 0.012, SM.black, 3); }
+        g.visible = false; return g;
+      });
+      const astro = astronaut(S, 1.6, 0, 1.2, 0.9); astro.visible = false; astro.rotation.y = -Math.PI / 4;
+      const bottom = anchor(m, 0, -0.1, 0);
+      part(st, 'capsule', 'la capsule', anchor(m, 0, 2.6, 0), false);
+      part(st, 'bouclier', 'le bouclier', anchor(m, 1.2, -0.1, 0.6), false);
+      part(st, 'parachutes', 'les parachutes', anchor(m, 0, 9.4, 0), false);
+      part(st, 'zone', "la zone d'atterrissage", anchor(S, 2.6, 0.4, 2), true);
+      st.focusAt = anchor(m, 0, 3, 0); st.size = { w: 12, h: 13 }; st.tagAt = anchor(S, 0, 3, 0);
+      st.update = () => {
+        if (st.hot) { const p = wp(bottom); for (let i = 0; i < 4; i++) fx.fire(p, new V3(0, 1, 0), 6, 1.6, rnd(0.3, 0.6)); }
+        if (st.retro) { const p = wp(bottom); for (let i = 0; i < 3; i++) fx.fire(p, DOWN, 6, 1.2, rnd(0.2, 0.35)); if (m.position.y < 2.5) groundSmoke(S.getWorldPosition(new V3()), 1); }
+      };
+      st.action = async function () {
+        if (st.done) { m.visible = false; astro.visible = false; chutes.forEach((c) => { c.visible = false; c.scale.set(1, 1, 1); c.position.y = 2.2; }); hatch.rotation.x = -0.45; st.done = false; }
+        m.position.set(0, HIGH, 0); m.rotation.set(0, 0, 0.25); m.visible = true;
+        engineOn(130); st.hot = true;
+        await Promise.all([step("Une capsule revient de l'espace. Elle chauffe très fort en traversant l'air !", 'bouclier'),
+          to(m.position, 'y', 13, 4.2, lin), to(m.rotation, 'z', 0, 4.2), tw(4.2, (k) => (hotM.emissiveIntensity = Math.sin(k * Math.PI) * 1.6), lin)]);
+        st.hot = false; engineOff();
+        chutes.forEach((c) => { c.visible = true; c.scale.set(0.05, 0.05, 0.05); });
+        await Promise.all([step("Pouf ! Les parachutes s'ouvrent pour la freiner.", 'parachutes'), ...chutes.map((c, i) => sleep(i * 0.2).then(() => tw(0.8, (k) => c.scale.setScalar(Math.max(0.05, k)), easeBack)))]);
+        await Promise.all([step('Elle descend tout doucement en se balançant.', 'capsule'), to(m.position, 'y', 1.6, 6, lin), tw(6, (k) => (m.rotation.z = Math.sin(k * Math.PI * 4) * 0.06), lin)]);
+        engineOn(90); st.retro = true;
+        await Promise.all([step('Juste avant le sol, des petites fusées freinent encore.', 'capsule'), to(m.position, 'y', 0.02, 1.2, (k) => 1 - Math.pow(1 - k, 2))]);
+        st.retro = false; engineOff(); thud();
+        await Promise.all(chutes.map((c) => tw(1.2, (k) => { c.scale.y = Math.max(0.05, 1 - k); c.position.y = 2.2 - k * 1.8; })));
+        chutes.forEach((c) => (c.visible = false));
+        await to(hatch.rotation, 'x', -2.2, 0.9);
+        astro.visible = true; pop(astro, 0.5);
+        await Promise.all([step('Atterrissage réussi ! Les astronautes sont de retour sur Terre.', 'capsule'), tw(2, (k) => (astro.userData.arms[0].rotation.x = -1.8 - Math.sin(k * 20) * 0.5), lin)]);
+        chime(); st.done = true;
+      };
+    })();
+
+    buildLife(scene, onUpdate);
   }
 };
+
+/* ================= the base around the machines ================= */
+function atQ(p, h, d, yaw = YAW) { const [x, z] = Q(h, d); const g = grp(p, x, 0, z); g.rotation.y = yaw; return g; }
+function buildBase(scene, onUpdate) {
+  // the Earth, big in the sky behind the base
+  { const [x, z] = Q(0, -78); const e = sph(scene, 9, std(0x3a7bd8, 0.6, 0), x, 30, z); const land = sph(scene, 9.1, std(0x5aa85a, 0.8, 0), x, 30, z); land.scale.set(9.1, 6.2, 7.4);
+    const cl = sph(scene, 9.3, std(0xffffff, 0.9, 0, { transparent: true, opacity: 0.55 }), x, 30, z); cl.scale.set(9.3, 3.2, 9.3);
+    onUpdate((dt) => { land.rotation.y += dt * 0.04; cl.rotation.y += dt * 0.06; }); }
+  // mission control: glass front, dish on the roof
+  { const g = atQ(scene, 10.5, -1); rbox(g, 7, 3.6, 5, 0.12, SM.off, 0, 1.8, 0, 0.02); box(g, 6, 1.8, 0.06, MT.glassD, 0, 2.2, 2.52); rbox(g, 7.4, 0.3, 5.4, 0.05, SM.panel, 0, 3.75, 0, 0.02);
+    rbox(g, 2, 0.12, 1.2, 0.03, SM.white, 0, 3.9, 2.4, 0.01); const hd = grp(g, -2.2, 4.6, -1); const d = add(hd, new THREE.SphereGeometry(1.1, 16, 8, 0, Math.PI * 2, 0, Math.PI / 3), SM.white); d.material = SM.white.clone(); d.material.side = THREE.DoubleSide; d.rotation.x = -0.8; cylY(g, 0.12, 0.8, SM.grey, -2.2, 4.2, -1, 8);
+    cylY(g, 0.05, 2.2, SM.grey, 2.6, 4.9, -1.6, 6); sph(g, 0.1, MT.tail, 2.6, 6.05, -1.6); shadows(g); onUpdate((dt) => (hd.rotation.y += dt * 0.2)); }
+  // big dish antenna and fuel spheres
+  { const g = atQ(scene, 14, -25); cylY(g, 0.35, 3, SM.grey, 0, 1.5, 0, 10); const hd = grp(g, 0, 3.2, 0); const d = add(hd, new THREE.SphereGeometry(2.6, 22, 10, 0, Math.PI * 2, 0, Math.PI / 3.2), SM.white); d.material = SM.white.clone(); d.material.side = THREE.DoubleSide; d.rotation.x = -0.9; rod(hd, new V3(0, 0, 0), new V3(0, 1.5, 1.2), 0.05, SM.grey); shadows(g); onUpdate((dt) => (hd.rotation.y += dt * 0.12)); }
+  [[-17, -29], [-14, -32]].forEach(([h, d]) => { const g = atQ(scene, h, d); sph(g, 1.3, SM.white, 0, 2.1, 0); [0, 1, 2, 3].forEach((k) => rod(g, new V3(Math.cos(k * 1.57) * 0.8, 0, Math.sin(k * 1.57) * 0.8), new V3(Math.cos(k * 1.57) * 0.7, 1.6, Math.sin(k * 1.57) * 0.7), 0.07, SM.grey)); shadows(g); });
+  // lamps along the roads
+  [[4, -6, 0], [17, -4, Math.PI], [4, 4, 0], [-2.6, -16, 0], [-2.6, -8, 0], [-8, -9, Math.PI / 2], [-20, -9, Math.PI / 2]].forEach(([h, d, r]) => { const [x, z] = Q(h, d); lamp(scene, x, z, YAW + r); });
+  // the Moon area: craters and grey rocks
+  [[20, 18, 2.0], [26, 22, 1.4], [15, 13, 1.1], [24, 12, 0.9], [14, 23, 1.2]].forEach(([h, d, r]) => {
+    const [x, z] = Q(h, d); const ring = add(scene, new THREE.TorusGeometry(r, r * 0.22, 6, 20), SM.moonRock, x, 0.05, z); ring.rotation.x = Math.PI / 2; ring.scale.z = 0.5;
+    const hole = add(scene, new THREE.CircleGeometry(r * 0.85, 18), 0xb8bac6, x, 0.03, z); hole.rotation.x = -Math.PI / 2; });
+  instanced(scene, ICO, 60, (i, d) => { const a = rnd(0, 6.28), r = rnd(4, 11); const [x, z] = Q(20 + Math.cos(a) * r, 18 + Math.sin(a) * r); d.position.set(x, 0.1, z); d.scale.setScalar(rnd(0.2, 0.6)); d.rotation.set(rnd(0, 3), rnd(0, 3), 0); return pick([0xa8aab6, 0x8e909c, 0xc2c4d0]); });
+  // the Mars area: red rocks, little hills, a dome for the explorers
+  instanced(scene, ICO, 90, (i, d) => { const a = rnd(0, 6.28), r = rnd(5, 12); const [x, z] = Q(-22 + Math.cos(a) * r, 18 + Math.sin(a) * r); d.position.set(x, 0.1, z); d.scale.set(rnd(0.2, 0.7), rnd(0.15, 0.5), rnd(0.2, 0.7)); d.rotation.set(rnd(0, 3), rnd(0, 3), 0); return pick([0x9a4a2a, 0xb85a32, 0x7a3a22]); });
+  [[-30, 12, 2.6], [-14, 27, 2.0], [-28, 26, 1.8]].forEach(([h, d, r]) => { const [x, z] = Q(h, d); add(scene, new THREE.ConeGeometry(r, r * 0.8, 10), SM.mars, x, r * 0.4, z); });
+  { const g = atQ(scene, -31, 20); const dm = add(g, new THREE.SphereGeometry(2.6, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), std(0xdfe8ff, 0.1, 0.1, { transparent: true, opacity: 0.55 })); dm.castShadow = false;
+    rbox(g, 1.2, 1.4, 1.0, 0.1, SM.off, 0, 0.7, 0, 0.02); sph(g, 0.5, std(0x5ab05a, 0.8, 0), -1, 0.4, 0.6); sph(g, 0.4, std(0x4c9a4a, 0.8, 0), 0.9, 0.35, -0.8); rbox(g, 1.2, 1.2, 1.6, 0.2, SM.off, 0, 0.6, 3.0, 0.02); shadows(g); }
+  // the crew who waves at visitors
+  const crew = [[6, 11.5], [7.2, 10.5], [5, 12.6]].map(([h, d]) => { const [x, z] = Q(h, d); const a = astronaut(scene, x, 0, z, 1.1); a.rotation.y = -Math.PI / 4; shadows(a); return a; });
+  { let T = 0; onUpdate((dt) => { T += dt; crew.forEach((a, i) => { const [r, l] = a.userData.arms; r.rotation.x = -(1.9 + Math.sin(T * 6 + i * 2) * 0.5) * (i === 1 ? 0.15 : 1); l.rotation.x = i === 1 ? 2.2 + Math.sin(T * 6) * 0.5 : 0.15; }); }); }
+}
+
+/* ================= life ================= */
+function buildLife(scene, onUpdate) {
+  const all = [];
+  const R = (pts, t = 0.1) => route(pts.map(([h, d]) => Q(h, d)), true, t);
+  const loop = R([[5, -8], [16, -8], [16, 6], [5, 6]], 0.15);
+  const cars = [miniCar(scene, 'truck', 0xf2f2f6), miniCar(scene, 'kei', 0xf2f2f6), miniCar(scene, 'van', 0x2f5fd0)]; all.push(...cars);
+  const t1 = traffic(loop, cars, 3, { gap: 4 });
+  const walkLoop = R([[-12, 4], [-4, 4], [-4, 9], [-12, 9]], 0.2);
+  const spacemen = [0, 1, 2].map(() => { const a = astronaut(scene, 0, 0, 0, 0.95); a.userData.walk = (ph) => { a.userData.arms[0].rotation.z = Math.sin(ph) * 0.4; a.userData.arms[1].rotation.z = -Math.sin(ph) * 0.4; a.children.forEach(() => {}); }; shadows(a); return a; });
+  const techs = [0, 1].map(() => walker(scene, 0, 0, { top: 0xf2f2f6, bottom: 0x2a3550 }));
+  all.push(...spacemen, ...techs);
+  const t2 = traffic(walkLoop, [...spacemen, ...techs], 0.9, { gap: 1.2 });
+  onUpdate((dt) => { t1.update(dt, all); t2.update(dt, all); });
+}
