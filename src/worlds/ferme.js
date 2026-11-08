@@ -4,7 +4,7 @@ import { V3, rad, clamp, rnd, pick } from '../kit/util.js';
 import { tw, to, sleep, pop, easeIn, easeSine, easeBack, lin } from '../kit/tween.js';
 import { engineOn, thud, ding, chime } from '../kit/audio.js';
 import {
-  C, MT, UB, ICO, dummy, tmpCol, std, add, box, grp, cylY, cylZ, cylX, rod, rail, sph, rbox, ext, arc, anchor, beam, wp, shadows, toonMat } from '../kit/geo.js';
+  C, MT, UB, ICO, dummy, tmpCol, std, add, box, grp, cylY, cylZ, cylX, rod, rail, sph, rbox, ext, arc, anchor, beam, wp, shadows, toonMat, freeze } from '../kit/geo.js';
 import { tire, agriTire, fender, hydraulic, strut, beacon, worker, glassCab } from '../kit/parts.js';
 import { autumnTree, barn, silo, fence, farmhouse, pond, lamp } from '../kit/props.js';
 import { route, person as walker, miniCar, traffic } from '../kit/life.js';
@@ -195,7 +195,7 @@ export default {
     const { scene, makeStation, part, roll, step, throwClod, onUpdate } = ctx;
     const W = (o, x, y, z) => o.localToWorld(new V3(x, y, z));
 
-    buildFarm(scene);
+    freeze(buildFarm(grp(scene)));
 
     /* ---- tracteur + charrue ---- */
     (function () {
@@ -844,6 +844,7 @@ function buildFarm(scene) {
   crop(scene, 6, 36, 16, 33, 0.7, GRASS, [0x8aa85a, 0x9ab86a, 0x7a9a4a], [0.3, 0.5], [[9, 31, 20.5, 25.6]]);
   // round bales lying in the dried meadow, a stack by the yard
   [[28, -31], [33, -22.5], [33, -15], [14, -33]].forEach(([h, d]) => { const [x, z] = Q(h, d); const b = newBale(scene, x, 0.85, z); b.rotation.y = rnd(0, 3); });
+  return scene;
 }
 
 /* ================= life ================= */

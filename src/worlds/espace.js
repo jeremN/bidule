@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { V3, rad, clamp, rnd, pick } from '../kit/util.js';
 import { tw, to, sleep, pop, easeIn, easeSine, easeBack, lin } from '../kit/tween.js';
 import { engineOn, engineOff, thud, ding, chime, tone } from '../kit/audio.js';
-import { C, MT, UB, ICO, dummy, tmpCol, mat, std, add, box, grp, cylY, cylZ, cylX, rod, rail, sph, rbox, ext, extY, arc, anchor, beam, wp, shadows, instanced, toonMat } from '../kit/geo.js';
+import { C, MT, UB, ICO, dummy, tmpCol, mat, std, add, box, grp, cylY, cylZ, cylX, rod, rail, sph, rbox, ext, extY, arc, anchor, beam, wp, shadows, instanced, toonMat, freeze } from '../kit/geo.js';
 import { trackUnit, hydraulic, beacon, tire, operator } from '../kit/parts.js';
 import { lamp } from '../kit/props.js';
 import { createFx } from '../kit/fx.js';
@@ -158,7 +158,7 @@ export default {
     const groundSmoke = (center, k = 1) => { for (let i = 0; i < 2 * k; i++) { const a = rnd(0, Math.PI * 2); fx.smoke(new V3(center.x + Math.cos(a), 0.6, center.z + Math.sin(a)), new V3(Math.cos(a) * rnd(3, 6), rnd(0.2, 1), Math.sin(a) * rnd(3, 6)), rnd(0.9, 1.5)); } };
     const countdown = async () => { for (const n of ['Trois...', 'Deux...', 'Un...']) { tone(880, 0, 0.18, 'square', 0.04); await step(n, null); } };
 
-    buildBase(scene, onUpdate);
+    freeze(buildBase(grp(scene), onUpdate));
 
     /* ---- fusée ---- */
     (function () {
@@ -610,13 +610,13 @@ function buildBase(scene, onUpdate) {
   // the Earth, big in the sky behind the base
   { const [x, z] = Q(0, -78); const e = sph(scene, 9, std(0x3a7bd8, 0.6, 0), x, 30, z); const land = sph(scene, 9.1, std(0x5aa85a, 0.8, 0), x, 30, z); land.scale.set(9.1, 6.2, 7.4);
     const cl = sph(scene, 9.3, std(0xffffff, 0.9, 0, { transparent: true, opacity: 0.55 }), x, 30, z); cl.scale.set(9.3, 3.2, 9.3);
-    onUpdate((dt) => { land.rotation.y += dt * 0.04; cl.rotation.y += dt * 0.06; }); }
+    land.userData.dynamic = cl.userData.dynamic = true; onUpdate((dt) => { land.rotation.y += dt * 0.04; cl.rotation.y += dt * 0.06; }); }
   // mission control: glass front, dish on the roof
   { const g = atQ(scene, 10.5, -1); rbox(g, 7, 3.6, 5, 0.12, SM.off, 0, 1.8, 0, 0.02); box(g, 6, 1.8, 0.06, MT.glassD, 0, 2.2, 2.52); rbox(g, 7.4, 0.3, 5.4, 0.05, SM.panel, 0, 3.75, 0, 0.02);
     rbox(g, 2, 0.12, 1.2, 0.03, SM.white, 0, 3.9, 2.4, 0.01); const hd = grp(g, -2.2, 4.6, -1); const d = add(hd, new THREE.SphereGeometry(1.1, 16, 8, 0, Math.PI * 2, 0, Math.PI / 3), SM.white); d.material = SM.white.clone(); d.material.side = THREE.DoubleSide; d.rotation.x = -0.8; cylY(g, 0.12, 0.8, SM.grey, -2.2, 4.2, -1, 8);
-    cylY(g, 0.05, 2.2, SM.grey, 2.6, 4.9, -1.6, 6); sph(g, 0.1, MT.tail, 2.6, 6.05, -1.6); shadows(g); onUpdate((dt) => (hd.rotation.y += dt * 0.2)); }
+    cylY(g, 0.05, 2.2, SM.grey, 2.6, 4.9, -1.6, 6); sph(g, 0.1, MT.tail, 2.6, 6.05, -1.6); hd.userData.dynamic = true; shadows(g); onUpdate((dt) => (hd.rotation.y += dt * 0.2)); }
   // big dish antenna and fuel spheres
-  { const g = atQ(scene, 14, -25); cylY(g, 0.35, 3, SM.grey, 0, 1.5, 0, 10); const hd = grp(g, 0, 3.2, 0); const d = add(hd, new THREE.SphereGeometry(2.6, 22, 10, 0, Math.PI * 2, 0, Math.PI / 3.2), SM.white); d.material = SM.white.clone(); d.material.side = THREE.DoubleSide; d.rotation.x = -0.9; rod(hd, new V3(0, 0, 0), new V3(0, 1.5, 1.2), 0.05, SM.grey); shadows(g); onUpdate((dt) => (hd.rotation.y += dt * 0.12)); }
+  { const g = atQ(scene, 14, -25); cylY(g, 0.35, 3, SM.grey, 0, 1.5, 0, 10); const hd = grp(g, 0, 3.2, 0); const d = add(hd, new THREE.SphereGeometry(2.6, 22, 10, 0, Math.PI * 2, 0, Math.PI / 3.2), SM.white); d.material = SM.white.clone(); d.material.side = THREE.DoubleSide; d.rotation.x = -0.9; rod(hd, new V3(0, 0, 0), new V3(0, 1.5, 1.2), 0.05, SM.grey); hd.userData.dynamic = true; shadows(g); onUpdate((dt) => (hd.rotation.y += dt * 0.12)); }
   [[-17, -29], [-14, -32]].forEach(([h, d]) => { const g = atQ(scene, h, d); sph(g, 1.3, SM.white, 0, 2.1, 0); [0, 1, 2, 3].forEach((k) => rod(g, new V3(Math.cos(k * 1.57) * 0.8, 0, Math.sin(k * 1.57) * 0.8), new V3(Math.cos(k * 1.57) * 0.7, 1.6, Math.sin(k * 1.57) * 0.7), 0.07, SM.grey)); shadows(g); });
   // lamps along the roads
   [[4, -6, 0], [17, -4, Math.PI], [4, 4, 0], [-2.6, -16, 0], [-2.6, -8, 0], [-8, -9, Math.PI / 2], [-20, -9, Math.PI / 2]].forEach(([h, d, r]) => { const [x, z] = Q(h, d); lamp(scene, x, z, YAW + r); });
@@ -631,8 +631,9 @@ function buildBase(scene, onUpdate) {
   { const g = atQ(scene, -31, 20); const dm = add(g, new THREE.SphereGeometry(2.6, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), std(0xdfe8ff, 0.1, 0.1, { transparent: true, opacity: 0.55 })); dm.castShadow = false;
     rbox(g, 1.2, 1.4, 1.0, 0.1, SM.off, 0, 0.7, 0, 0.02); sph(g, 0.5, std(0x5ab05a, 0.8, 0), -1, 0.4, 0.6); sph(g, 0.4, std(0x4c9a4a, 0.8, 0), 0.9, 0.35, -0.8); rbox(g, 1.2, 1.2, 1.6, 0.2, SM.off, 0, 0.6, 3.0, 0.02); shadows(g); }
   // the crew who waves at visitors
-  const crew = [[6, 11.5], [7.2, 10.5], [5, 12.6]].map(([h, d]) => { const [x, z] = Q(h, d); const a = astronaut(scene, x, 0, z, 1.1); a.rotation.y = -Math.PI / 4; shadows(a); return a; });
+  const crew = [[6, 11.5], [7.2, 10.5], [5, 12.6]].map(([h, d]) => { const [x, z] = Q(h, d); const a = astronaut(scene, x, 0, z, 1.1); a.rotation.y = -Math.PI / 4; a.userData.dynamic = true; shadows(a); return a; });
   { let T = 0; onUpdate((dt) => { T += dt; crew.forEach((a, i) => { const [r, l] = a.userData.arms; r.rotation.x = -(1.9 + Math.sin(T * 6 + i * 2) * 0.5) * (i === 1 ? 0.15 : 1); l.rotation.x = i === 1 ? 2.2 + Math.sin(T * 6) * 0.5 : 0.15; }); }); }
+  return scene;
 }
 
 /* ================= life ================= */

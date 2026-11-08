@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { V3, rad, clamp, rnd, pick } from '../kit/util.js';
 import { tw, to, sleep, pop, easeIn, easeSine, easeBack, lin } from '../kit/tween.js';
 import { engineOn, engineOff, thud, ding, chime, tone } from '../kit/audio.js';
-import { C, MT, UB, ICO, dummy, tmpCol, mat, std, add, box, grp, cylY, cylZ, cylX, rod, rail, sph, rbox, ext, extY, arc, anchor, beam, wp, shadows, instanced, toonMat } from '../kit/geo.js';
+import { C, MT, UB, ICO, dummy, tmpCol, mat, std, add, box, grp, cylY, cylZ, cylX, rod, rail, sph, rbox, ext, extY, arc, anchor, beam, wp, shadows, instanced, toonMat, freeze } from '../kit/geo.js';
 import { tire, operator, beacon } from '../kit/parts.js';
 import { createFx } from '../kit/fx.js';
 import { lamp } from '../kit/props.js';
@@ -203,7 +203,7 @@ export default {
     const { scene, makeStation, part, roll, step, onUpdate } = ctx;
     const fx = createFx(scene, 120);
     onUpdate((dt) => fx.update(dt));
-    buildTown(scene, onUpdate);
+    freeze(buildTown(grp(scene), onUpdate));
 
     /* ---- voiture + feux ---- */
     (function () {
@@ -517,6 +517,7 @@ function buildTown(scene, onUpdate) {
   [[-30, -14], [-36, -10], [-28, -20.5], [-34, -18]].forEach(([h, d]) => sak(scene, h, d, 1));
   // vending machines and lanterns here and there
   [[-9.6, 13], [1.6, 13], [12.6, 13], [-6.3, -8.8]].forEach(([h, d]) => { const [x, z] = Q(h, d); vending(scene, x, z, YAW + Math.PI); });
+  return scene;
 }
 
 /* ================= life ================= */

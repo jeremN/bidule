@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { V3, rad, clamp, rnd, pick } from '../kit/util.js';
 import { tw, to, sleep, pop, easeIn, easeSine, easeBack, lin } from '../kit/tween.js';
 import { engineOn, thud, ding } from '../kit/audio.js';
-import { C, MT, UB, ICO, dummy, tmpCol, mat, std, add, box, grp, cylGeo, cylY, cylZ, cylX, rod, rail, sph, rbox, ext, extY, arc, anchor, beam, pile, wp, shadows, instanced, toonMat } from '../kit/geo.js';
+import { C, MT, UB, ICO, dummy, tmpCol, mat, std, add, box, grp, cylGeo, cylY, cylZ, cylX, rod, rail, sph, rbox, ext, extY, arc, anchor, beam, pile, wp, shadows, instanced, toonMat, freeze } from '../kit/geo.js';
 import { trackUnit, tire, fender, hydraulic, telescopic, strut, beacon, operator, worker, truckCab } from '../kit/parts.js';
 import { autumnTree, lamp, cone, barrier, office, pipes } from '../kit/props.js';
 import { route, person, miniCar, traffic } from '../kit/life.js';
@@ -144,7 +144,7 @@ export default {
   build(ctx){
     const { scene, makeStation, part, roll, step, throwClod, onUpdate } = ctx;
     const fx=createFx(scene,140);onUpdate(dt=>fx.update(dt));
-    buildScenery(scene,onUpdate);
+    freeze(buildScenery(grp(scene),onUpdate));
 /* ---- pelleteuse ---- */
 (function(){
   const st=makeStation('pelleteuse'),S=st.g,m=grp(S);st.m=m;
@@ -1100,6 +1100,7 @@ function buildScenery(scene){
   // grass and gardens, a few more trees at the edges
   tuftField(scene,[[-24,36,4,40],[-2,34,5,40],[36,14,4,30],[-38,4,3,20],[38,-10,4,30],[-36,-6,3,20],[-4,-34,5,40],[18,-34,4,30],[2,16,3,20],[-30,26,4,30]]);
   [[-2,36],[4,33],[36,17],[-36,-2],[-8,-36],[22,-34],[-37,19],[35,-15],[0,15]].forEach(([h,d])=>treeAt(scene,h,d));
+  return scene;
 }
 
 /* ================= life ================= */

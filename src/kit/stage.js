@@ -102,6 +102,7 @@ export function createStage(world, root, opts = {}) {
   const nrt = new THREE.WebGLRenderTarget(4, 4); nrt.depthTexture = new THREE.DepthTexture(4, 4); nrt.depthTexture.type = THREE.UnsignedIntType;
   const normalMat = new THREE.MeshNormalMaterial();
   const INK = !/[?&]noink/.test(location.search);
+  let shadowTick = false;
   const postMat = new THREE.ShaderMaterial({
     uniforms: { tDiffuse: { value: rt.texture }, tNormal: { value: nrt.texture }, tDepth: { value: nrt.depthTexture }, uTexel: { value: new THREE.Vector2(1, 1) }, uInk: { value: INK ? 1 : 0 }, uDpr: { value: DPR }, uTime: { value: 0 } },
     depthTest: false, depthWrite: false,
@@ -240,6 +241,7 @@ export function createStage(world, root, opts = {}) {
   const updaters = [];
   const ctx = { THREE, scene, renderer, makeStation, part, roll, step, throwClod, isClear, stations, radius: RAD, onUpdate: (fn) => updaters.push(fn) };
   world.build(ctx);
+  if (/[?&]debug/.test(location.search)) window.__bidule = { renderer, scene };
   stations.forEach((st) => shadows(st.g));
 
   /* ---------- camera ---------- */
@@ -395,10 +397,12 @@ export function createStage(world, root, opts = {}) {
     if (fc % (busy ? 6 : 20) === 0) computeView();
     updateCam(dt);
     postMat.uniforms.uTime.value = now / 1000;
+    // shadows are redrawn every other frame: plenty for slow machines, and a lot lighter for tablets
+    renderer.shadowMap.autoUpdate = false; shadowTick = !shadowTick; if (shadowTick) renderer.shadowMap.needsUpdate = true;
     if (INK) {
-      cam.layers.disable(1); const bg = scene.background; scene.background = null; scene.overrideMaterial = normalMat; renderer.shadowMap.autoUpdate = false;
+      cam.layers.disable(1); const bg = scene.background; scene.background = null; scene.overrideMaterial = normalMat;
       renderer.setRenderTarget(nrt); renderer.render(scene, cam);
-      scene.overrideMaterial = null; scene.background = bg; cam.layers.enable(1); renderer.shadowMap.needsUpdate = true;
+      scene.overrideMaterial = null; scene.background = bg; cam.layers.enable(1);
     }
     renderer.setRenderTarget(rt); renderer.render(scene, cam); renderer.setRenderTarget(null); renderer.render(postScene, postCam);
     placeTags();

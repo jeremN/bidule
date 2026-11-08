@@ -1,5 +1,6 @@
 // Materials and geometry primitives shared by every world.
 import * as THREE from 'three';
+import { BufferGeometryUtils } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { V3, rad, pick } from './util.js';
 
 /* ---------- flat colors (Lambert, for scenery) ---------- */
@@ -170,3 +171,33 @@ export function instanced(parent, geo, count, place) {
 const PILE = new THREE.ConeGeometry(1.5, 1.2, 9, 1); PILE.translate(0, 0.6, 0);
 export function pile(p, x, z, s, color) { const m = add(p, PILE, color || C.dirt, x, 0, z); m.scale.setScalar(s); return m; }
 export const wp = (o, y) => { const v = o.getWorldPosition(new V3()); if (y) v.y += y; return v; };
+
+/**
+ * Merge every still mesh under `root` into one mesh per material (fewer draw calls, much faster on tablets).
+ * Subtrees marked userData.dynamic, instanced meshes, multi-material meshes and meshes with children are left alone.
+ */
+export function freeze(root) {
+  root.updateMatrixWorld(true);
+  const inv = new THREE.Matrix4().copy(root.matrixWorld).invert(), m = new THREE.Matrix4();
+  const buckets = new Map(), done = [];
+  const walk = (o) => {
+    if (o.userData && o.userData.dynamic) return;
+    if (o.isMesh && !o.isInstancedMesh && !Array.isArray(o.material) && o.children.length === 0 && o.geometry && o.visible) {
+      const key = o.material.uuid + (o.castShadow ? 'c' : '') + (o.receiveShadow ? 'r' : '');
+      let b = buckets.get(key); if (!b) { b = { mat: o.material, cast: o.castShadow, recv: o.receiveShadow, geos: [] }; buckets.set(key, b); }
+      let g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone();
+      const out = new THREE.BufferGeometry(); out.setAttribute('position', g.attributes.position);
+      out.setAttribute('normal', g.attributes.normal || new THREE.BufferAttribute(new Float32Array(g.attributes.position.count * 3), 3));
+      out.setAttribute('uv', g.attributes.uv || new THREE.BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
+      out.applyMatrix4(m.multiplyMatrices(inv, o.matrixWorld)); b.geos.push(out); done.push(o);
+    }
+    o.children.slice().forEach(walk);
+  };
+  walk(root);
+  done.forEach((o) => o.parent.remove(o));
+  buckets.forEach((b) => {
+    const g = BufferGeometryUtils.mergeBufferGeometries(b.geos); if (!g) return;
+    const mesh = new THREE.Mesh(g, b.mat); mesh.castShadow = b.cast; mesh.receiveShadow = b.recv; root.add(mesh);
+  });
+  return root;
+}
