@@ -25,6 +25,7 @@ Chaque « monde » est un petit diorama vivant en 3D, dans un style de dessin an
 | **Le Garage** | dépanneuse, pont élévateur, pneus, vidange, diagnostic, lavage, station-service (la voiture de la famille tombe en panne et repart toute propre) |
 | **Le Chemin de fer** | TGV, train de la caténaire, passage à niveau, aiguillage, train de fret, bourreuse, locomotive à vapeur (tout ce qui fait rouler les trains) |
 | **La Fête foraine** | grande roue, carrousel, autos tamponneuses, chenille, montagnes russes, chaises volantes, camion-manège, barbe à papa (comment marchent les manèges) |
+| **L'Énergie** | barrage, éolienne, centrale solaire, poste électrique, pylônes, camion nacelle, borne de recharge, maison (d'où vient l'électricité de la prise) |
 
 L'idée de départ vient de [os-taxonomy de Marble](https://github.com/withmarbleapp/os-taxonomy), un graphe des notions du primaire avec leurs prérequis. À terme, chaque monde pourra être rattaché aux notions du programme français (maternelle → lycée).
 
@@ -40,7 +41,7 @@ npm run build    # site statique prérendu dans dist/client
 npm run check    # eslint + TypeScript
 ```
 
-L'app est construite avec [TanStack Start](https://tanstack.com/start) (React) en **prérendu statique** : chaque page (`/`, `/chantier`, `/ferme`, `/ville`, `/espace`, `/aeroport`, `/militaire`, `/usine`, `/carriere`, `/recyclage`, `/port`, `/foret`, `/mer`, `/montagne`, `/secours`, `/travaux`, `/livraison`, `/garage`, `/rail`, `/fete`) est générée en HTML au build, puis la navigation se fait côté client.
+L'app est construite avec [TanStack Start](https://tanstack.com/start) (React) en **prérendu statique** : chaque page (`/`, `/chantier`, `/ferme`, `/ville`, `/espace`, `/aeroport`, `/militaire`, `/usine`, `/carriere`, `/recyclage`, `/port`, `/foret`, `/mer`, `/montagne`, `/secours`, `/travaux`, `/livraison`, `/garage`, `/rail`, `/fete`, `/energie`) est générée en HTML au build, puis la navigation se fait côté client.
 Le moteur 3D est chargé uniquement dans le navigateur (import dynamique dans `WorldStage`), il ne tourne jamais pendant le prérendu.
 
 Pour tester vite dans un navigateur lent (rendu logiciel, CI), ajoute `?fast` à l'URL d'un monde : les animations avancent par grands pas. `?noink` coupe les contours, `?debug` expose `window.__bidule` (renderer, scène) pour mesurer.
@@ -91,6 +92,7 @@ src/
     garage.js         le garage
     rail.js           le chemin de fer
     fete.js           la fête foraine
+    energie.js        l'énergie
 ```
 
 ## Ajouter un monde

@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AeroportRouteImport } from './routes/aeroport'
 import { Route as CarriereRouteImport } from './routes/carriere'
 import { Route as ChantierRouteImport } from './routes/chantier'
+import { Route as EnergieRouteImport } from './routes/energie'
 import { Route as EspaceRouteImport } from './routes/espace'
 import { Route as FermeRouteImport } from './routes/ferme'
 import { Route as FeteRouteImport } from './routes/fete'
@@ -48,6 +49,11 @@ const CarriereRoute = CarriereRouteImport.update({
 const ChantierRoute = ChantierRouteImport.update({
   id: '/chantier',
   path: '/chantier',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EnergieRoute = EnergieRouteImport.update({
+  id: '/energie',
+  path: '/energie',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EspaceRoute = EspaceRouteImport.update({
@@ -136,6 +142,7 @@ export interface FileRoutesByFullPath {
   '/aeroport': typeof AeroportRoute
   '/carriere': typeof CarriereRoute
   '/chantier': typeof ChantierRoute
+  '/energie': typeof EnergieRoute
   '/espace': typeof EspaceRoute
   '/ferme': typeof FermeRoute
   '/fete': typeof FeteRoute
@@ -158,6 +165,7 @@ export interface FileRoutesByTo {
   '/aeroport': typeof AeroportRoute
   '/carriere': typeof CarriereRoute
   '/chantier': typeof ChantierRoute
+  '/energie': typeof EnergieRoute
   '/espace': typeof EspaceRoute
   '/ferme': typeof FermeRoute
   '/fete': typeof FeteRoute
@@ -181,6 +189,7 @@ export interface FileRoutesById {
   '/aeroport': typeof AeroportRoute
   '/carriere': typeof CarriereRoute
   '/chantier': typeof ChantierRoute
+  '/energie': typeof EnergieRoute
   '/espace': typeof EspaceRoute
   '/ferme': typeof FermeRoute
   '/fete': typeof FeteRoute
@@ -205,6 +214,7 @@ export interface FileRouteTypes {
     | '/aeroport'
     | '/carriere'
     | '/chantier'
+    | '/energie'
     | '/espace'
     | '/ferme'
     | '/fete'
@@ -227,6 +237,7 @@ export interface FileRouteTypes {
     | '/aeroport'
     | '/carriere'
     | '/chantier'
+    | '/energie'
     | '/espace'
     | '/ferme'
     | '/fete'
@@ -249,6 +260,7 @@ export interface FileRouteTypes {
     | '/aeroport'
     | '/carriere'
     | '/chantier'
+    | '/energie'
     | '/espace'
     | '/ferme'
     | '/fete'
@@ -272,6 +284,7 @@ export interface RootRouteChildren {
   AeroportRoute: typeof AeroportRoute
   CarriereRoute: typeof CarriereRoute
   ChantierRoute: typeof ChantierRoute
+  EnergieRoute: typeof EnergieRoute
   EspaceRoute: typeof EspaceRoute
   FermeRoute: typeof FermeRoute
   FeteRoute: typeof FeteRoute
@@ -318,6 +331,13 @@ declare module '@tanstack/react-router' {
       path: '/chantier'
       fullPath: '/chantier'
       preLoaderRoute: typeof ChantierRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/energie': {
+      id: '/energie'
+      path: '/energie'
+      fullPath: '/energie'
+      preLoaderRoute: typeof EnergieRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/espace': {
@@ -440,6 +460,7 @@ const rootRouteChildren: RootRouteChildren = {
   AeroportRoute: AeroportRoute,
   CarriereRoute: CarriereRoute,
   ChantierRoute: ChantierRoute,
+  EnergieRoute: EnergieRoute,
   EspaceRoute: EspaceRoute,
   FermeRoute: FermeRoute,
   FeteRoute: FeteRoute,

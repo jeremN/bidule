@@ -898,6 +898,52 @@ const worlds = [
           </g>
         </svg>
       )
+    },
+  {
+      to: '/energie' as const,
+      title: "L'Énergie",
+      text: "Le voyage de l'électricité : le barrage, l'éolienne, les panneaux solaires, les pylônes, jusqu'à la lampe de la maison…",
+      art: (
+        <svg viewBox="0 0 240 150" aria-hidden="true">
+          <defs>
+            <linearGradient id="en-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#a8dcff" /><stop offset="1" stopColor="#e8f6ff" /></linearGradient>
+          </defs>
+          <rect width="240" height="150" fill="url(#en-sky)" />
+          <circle cx="34" cy="30" r="14" fill="#ffd23a" />
+          <g fill="#fff"><ellipse cx="96" cy="22" rx="16" ry="6" /><ellipse cx="108" cy="18" rx="10" ry="7" /></g>
+          <path d="M0 112Q120 100 240 112V150H0Z" fill="#8cc46a" />
+          <path d="M0 128Q120 120 240 130V150H0Z" fill="#6aa84e" />
+          {/* pylon and its wires, with glowing pulses */}
+          <g {...ol} fill="none" stroke="#8d96a6" strokeWidth="2.5">
+            <path d="M120 114l10-46h8l10 46M124 96h20M127 82h14M130 68L118 50h32L138 68" />
+            <path d="M118 50h32" strokeWidth="3.5" />
+          </g>
+          <path d="M60 60Q90 70 118 56M150 56Q172 64 196 74M60 64Q100 78 134 60" stroke={INK} strokeWidth="1.5" fill="none" />
+          <g fill="#fff07a" stroke="#d8a020" strokeWidth="1.5"><circle cx="82" cy="64" r="3.5" /><circle cx="104" cy="62" r="3.5" /><circle cx="170" cy="63" r="3.5" /><circle cx="186" cy="69" r="3.5" /></g>
+          {/* the house with its lit window */}
+          <g {...ol}>
+            <path d="M180 92l24-20 24 20z" fill="#c0583a" />
+            <rect x="184" y="92" width="40" height="26" fill="#f2e6d0" />
+            <rect x="190" y="98" width="10" height="9" fill="#ffd96a" />
+            <rect x="208" y="100" width="9" height="18" fill="#8a6644" />
+          </g>
+          <circle cx="195" cy="102" r="10" fill="#fff07a" opacity=".35" />
+          {/* the wind turbine turns */}
+          <g {...ol}>
+            <path d="M56 120l3-58h4l3 58z" fill="#f3f4f7" />
+            <rect x="52" y="54" width="18" height="9" rx="3" fill="#f3f4f7" />
+          </g>
+          <g className="bob">
+            <g {...ol} fill="#f3f4f7">
+              <path d="M70 58L74 22l5 2z" />
+              <path d="M70 58l32 14-3 4z" />
+              <path d="M70 58L40 74l-2-4z" />
+              <circle cx="70" cy="58" r="4.5" fill="#c9ced6" />
+            </g>
+          </g>
+          <path {...ol} d="M146 30l-8 13h6l-3 11 10-15h-6l3-9z" fill="#ffd23a" />
+        </svg>
+      )
     }
 ];
 function Home() {
