@@ -780,6 +780,65 @@ const worlds = [
           </g>
         </svg>
       )
+    },
+  {
+      to: '/rail' as const,
+      title: 'Le Chemin de fer',
+      text: 'Le TGV et sa caténaire, le train de fret, l’aiguillage, le passage à niveau, la bourreuse, la vieille locomotive à vapeur…',
+      art: (
+        <svg viewBox="0 0 240 150" aria-hidden="true">
+          <defs>
+            <linearGradient id="rail-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#bfe3f6" /><stop offset="1" stopColor="#f3f7e4" /></linearGradient>
+          </defs>
+          <rect width="240" height="150" fill="url(#rail-sky)" />
+          <g fill="#fff"><ellipse cx="54" cy="22" rx="16" ry="5" /><ellipse cx="66" cy="18" rx="10" ry="6" /></g>
+          {/* the stone viaduct in the distance, between two green hills */}
+          <path d="M-10 74Q20 40 54 74Z" fill="#8cc06a" />
+          <path d="M186 74Q216 36 250 74Z" fill="#8cc06a" />
+          <path d="M30 50H206V74H196Q196 62 186 62Q176 62 176 74H164Q164 62 154 62Q144 62 144 74H132Q132 62 122 62Q112 62 112 74H100Q100 62 90 62Q80 62 80 74H68Q68 62 58 62Q48 62 48 74H30Z" fill="#e2d6bc" />
+          <rect x="30" y="47" width="176" height="4" fill="#c9b998" />
+          <path d="M0 74H240V150H0Z" fill="#a8d277" />
+          {/* catenary: masts and the wire */}
+          <g {...ol}>
+            <rect x="22" y="40" width="5" height="64" fill="#9aa3ad" /><rect x="192" y="40" width="5" height="64" fill="#9aa3ad" />
+            <path d="M27 46H40M197 46H210" fill="none" />
+          </g>
+          <path d="M0 52H240" stroke={INK} strokeWidth="2" />
+          <path d="M0 44Q60 50 120 44T240 44" fill="none" stroke={INK} strokeWidth="1.2" />
+          {/* ballast and rails */}
+          <path d="M-4 112H244L236 124H4Z" fill="#9a9488" />
+          <path d="M0 112H240" stroke="#6a6f7a" strokeWidth="3" />
+          <g className="bob">
+            <path d="M80 76L96 60L82 52" fill="none" stroke="#5a5f6c" strokeWidth="3" strokeLinejoin="round" />
+            <rect x="72" y="52" width="22" height="3" rx="1" fill="#c07a3a" />
+            <path {...ol} d="M6 106V80Q6 74 13 74H160Q200 74 226 98L228 106Z" fill="#f4f5f8" />
+            <path d="M7 98H222L225 102H7Z" fill="#a8183c" />
+            <path d="M170 77Q196 80 212 92L174 92Z" fill="#2a3f58" />
+            <g fill="#2a3f58">
+              <rect x="16" y="79" width="12" height="7" rx="2" /><rect x="34" y="79" width="12" height="7" rx="2" /><rect x="52" y="79" width="12" height="7" rx="2" />
+              <rect x="100" y="79" width="12" height="7" rx="2" /><rect x="118" y="79" width="12" height="7" rx="2" /><rect x="136" y="79" width="12" height="7" rx="2" />
+              <rect x="16" y="89" width="12" height="6" rx="2" /><rect x="34" y="89" width="12" height="6" rx="2" /><rect x="52" y="89" width="12" height="6" rx="2" />
+              <rect x="100" y="89" width="12" height="6" rx="2" /><rect x="118" y="89" width="12" height="6" rx="2" /><rect x="136" y="89" width="12" height="6" rx="2" />
+            </g>
+            <path {...ol} d="M82 74v32M156 74v32" fill="none" strokeWidth="1.5" />
+            <g {...ol} fill="#3f424a"><circle cx="24" cy="108" r="5" /><circle cx="40" cy="108" r="5" /><circle cx="196" cy="108" r="5" /><circle cx="212" cy="108" r="5" /></g>
+            <circle cx="220" cy="99" r="2.5" fill="#fff3c8" />
+          </g>
+          {/* a level-crossing sign and a cow watching the train */}
+          <g {...ol}>
+            <rect x="16" y="118" width="4" height="28" fill="#f4f5f8" />
+            <path d="M6 112l24 14M30 112L6 126" stroke="#d8302a" strokeWidth="6" />
+            <path d="M6 112l24 14M30 112L6 126" stroke="#fff" strokeWidth="2.5" />
+            <circle cx="12" cy="132" r="4" fill="#ff3a2a" /><circle cx="24" cy="132" r="4" fill="#4a1a1a" />
+            <rect x="178" y="122" width="34" height="16" rx="7" fill="#f6f2ea" />
+            <rect x="182" y="136" width="4" height="10" fill="#f6f2ea" /><rect x="204" y="136" width="4" height="10" fill="#f6f2ea" />
+            <rect x="164" y="116" width="16" height="13" rx="5" fill="#f6f2ea" />
+            <rect x="160" y="122" width="8" height="7" rx="3" fill="#f0a8a0" />
+          </g>
+          <g fill="#7a4a2a"><ellipse cx="196" cy="128" rx="6" ry="4" /><circle cx="173" cy="120" r="3" /></g>
+          <circle cx="170" cy="121" r="1.4" fill={INK} />
+        </svg>
+      )
     }
 ];
 function Home() {

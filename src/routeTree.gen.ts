@@ -22,6 +22,7 @@ import { Route as MerRouteImport } from './routes/mer'
 import { Route as MilitaireRouteImport } from './routes/militaire'
 import { Route as MontagneRouteImport } from './routes/montagne'
 import { Route as PortRouteImport } from './routes/port'
+import { Route as RailRouteImport } from './routes/rail'
 import { Route as RecyclageRouteImport } from './routes/recyclage'
 import { Route as SecoursRouteImport } from './routes/secours'
 import { Route as TravauxRouteImport } from './routes/travaux'
@@ -93,6 +94,11 @@ const PortRoute = PortRouteImport.update({
   path: '/port',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RailRoute = RailRouteImport.update({
+  id: '/rail',
+  path: '/rail',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RecyclageRoute = RecyclageRouteImport.update({
   id: '/recyclage',
   path: '/recyclage',
@@ -133,6 +139,7 @@ export interface FileRoutesByFullPath {
   '/militaire': typeof MilitaireRoute
   '/montagne': typeof MontagneRoute
   '/port': typeof PortRoute
+  '/rail': typeof RailRoute
   '/recyclage': typeof RecyclageRoute
   '/secours': typeof SecoursRoute
   '/travaux': typeof TravauxRoute
@@ -153,6 +160,7 @@ export interface FileRoutesByTo {
   '/militaire': typeof MilitaireRoute
   '/montagne': typeof MontagneRoute
   '/port': typeof PortRoute
+  '/rail': typeof RailRoute
   '/recyclage': typeof RecyclageRoute
   '/secours': typeof SecoursRoute
   '/travaux': typeof TravauxRoute
@@ -174,6 +182,7 @@ export interface FileRoutesById {
   '/militaire': typeof MilitaireRoute
   '/montagne': typeof MontagneRoute
   '/port': typeof PortRoute
+  '/rail': typeof RailRoute
   '/recyclage': typeof RecyclageRoute
   '/secours': typeof SecoursRoute
   '/travaux': typeof TravauxRoute
@@ -196,6 +205,7 @@ export interface FileRouteTypes {
     | '/militaire'
     | '/montagne'
     | '/port'
+    | '/rail'
     | '/recyclage'
     | '/secours'
     | '/travaux'
@@ -216,6 +226,7 @@ export interface FileRouteTypes {
     | '/militaire'
     | '/montagne'
     | '/port'
+    | '/rail'
     | '/recyclage'
     | '/secours'
     | '/travaux'
@@ -236,6 +247,7 @@ export interface FileRouteTypes {
     | '/militaire'
     | '/montagne'
     | '/port'
+    | '/rail'
     | '/recyclage'
     | '/secours'
     | '/travaux'
@@ -257,6 +269,7 @@ export interface RootRouteChildren {
   MilitaireRoute: typeof MilitaireRoute
   MontagneRoute: typeof MontagneRoute
   PortRoute: typeof PortRoute
+  RailRoute: typeof RailRoute
   RecyclageRoute: typeof RecyclageRoute
   SecoursRoute: typeof SecoursRoute
   TravauxRoute: typeof TravauxRoute
@@ -357,6 +370,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PortRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/rail': {
+      id: '/rail'
+      path: '/rail'
+      fullPath: '/rail'
+      preLoaderRoute: typeof RailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/recyclage': {
       id: '/recyclage'
       path: '/recyclage'
@@ -409,6 +429,7 @@ const rootRouteChildren: RootRouteChildren = {
   MilitaireRoute: MilitaireRoute,
   MontagneRoute: MontagneRoute,
   PortRoute: PortRoute,
+  RailRoute: RailRoute,
   RecyclageRoute: RecyclageRoute,
   SecoursRoute: SecoursRoute,
   TravauxRoute: TravauxRoute,
