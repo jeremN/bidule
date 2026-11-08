@@ -4,10 +4,11 @@ import * as THREE from 'three';
 import { V3, rad, clamp, rnd, pick } from '../kit/util.js';
 import { tw, to, sleep, pop, easeIn, easeSine, easeBack, lin } from '../kit/tween.js';
 import { engineOn, thud, ding } from '../kit/audio.js';
-import { C, MT, UB, ICO, dummy, tmpCol, mat, std, add, box, grp, cylGeo, cylY, cylZ, cylX, rod, rail, sph, rbox, ext, extY, arc, anchor, pile, wp, shadows, instanced } from '../kit/geo.js';
+import { C, MT, UB, ICO, dummy, tmpCol, mat, std, add, box, grp, cylGeo, cylY, cylZ, cylX, rod, rail, sph, rbox, ext, extY, arc, anchor, beam, pile, wp, shadows, instanced } from '../kit/geo.js';
 import { trackUnit, tire, fender, hydraulic, telescopic, strut, beacon, operator, worker, truckCab } from '../kit/parts.js';
 import { autumnTree, lamp, cone, barrier, office, pipes } from '../kit/props.js';
 import { route, person, miniCar, traffic } from '../kit/life.js';
+import { createFx } from '../kit/fx.js';
 
 const DATA={
   pelleteuse:{short:'La pelleteuse',full:'La pelleteuse',verb:'Creuser',horn:'horn',
@@ -23,23 +24,35 @@ const DATA={
     use:'Elle ramasse les cailloux et remplit les camions.',
     how:'Elle fonce dans le tas avec son gros godet, le lève très haut, puis le vide dans la benne.'},
   bulldozer:{short:'Le bulldozer',full:'Le bulldozer',verb:'Pousser',horn:'horn',
-    use:'Il pousse la terre pour rendre le sol tout plat.',
+    use:'Il pousse la terre pour faire la place de la nouvelle route.',
     how:"Sa grande lame pousse devant lui. Ses chenilles l'empêchent de glisser."},
   rouleau:{short:'Le rouleau',full:'Le rouleau compresseur',verb:'Rouler',horn:'horn',
-    use:'Il écrase les cailloux pour faire une route bien plate.',
-    how:'Son gros rouleau en métal est très lourd, et il vibre.'},
+    use:'Il tasse les cailloux pour que la route soit bien solide.',
+    how:'Son gros rouleau en métal est très lourd, et il vibre pour écraser les cailloux.'},
   grue:{short:'La grue',full:'La grue',verb:'Soulever',horn:'bell',
     use:'Elle soulève des choses très lourdes, tout là-haut.',
     how:"Le crochet descend, attrape, puis remonte. Elle aide à construire l'immeuble."},
   toupie:{short:'La toupie',full:'Le camion toupie',verb:'Verser',horn:'horn',
     use:'Il apporte le béton pour faire les murs et le sol.',
     how:'Sa grosse toupie tourne tout le temps, pour que le béton reste mou.'},
+  tractopelle:{short:'La tractopelle',full:'La tractopelle',verb:'Creuser',horn:'horn',
+    use:'Elle creuse des tranchées pour passer les tuyaux.',
+    how:'Devant, elle a un godet pour pousser. Derrière, un bras pour creuser. Ses béquilles la tiennent bien.'},
+  pompe:{short:'La pompe',full:'La pompe à béton',verb:'Pomper',horn:'horn',
+    use:'Elle envoie le béton tout en haut des immeubles.',
+    how:'Son grand bras se déplie très haut. Le béton monte dans un tuyau et coule là où il faut.'},
+  niveleuse:{short:'La niveleuse',full:'La niveleuse',verb:'Niveler',horn:'horn',
+    use:'Elle étale les cailloux bien à plat pour faire la route.',
+    how:'Sa longue lame, sous son ventre, gratte et pousse les cailloux. Son long cou l’aide à aller tout droit.'},
+  finisseur:{short:'Le finisseur',full:'Le finisseur et le rouleau tandem',verb:'Goudronner',horn:'horn',
+    use:'Il pose le goudron tout chaud sur la route.',
+    how:'Un camion remplit sa trémie d’enrobé. Il l’étale derrière lui, et un rouleau tandem le tasse.'},
   nacelle:{short:'La nacelle',full:'La nacelle élévatrice',verb:'Monter',horn:'bell',
     use:'Elle fait monter les ouvriers tout en haut des murs.',
     how:"Ses bras se déplient comme des ciseaux, et la plateforme monte avec l'ouvrier dessus."}
 };
 
-const ORDER=['pelleteuse','camion','dumper','chargeuse','bulldozer','rouleau','grue','toupie','nacelle'];
+const ORDER=['pelleteuse','camion','tractopelle','dumper','chargeuse','grue','pompe','toupie','nacelle','bulldozer','niveleuse','rouleau','finisseur'];
 const GND='<path class="gnd" d="M4 75H116"/>';
 const ICONS={
  pelleteuse:GND+`<rect class="k" x="8" y="58" width="58" height="15" rx="7.5"/><circle class="s" cx="17" cy="65.5" r="4"/><circle class="s" cx="37" cy="65.5" r="4"/><circle class="s" cx="57" cy="65.5" r="4"/>
@@ -70,6 +83,17 @@ const ICONS={
  rouleau:GND+`<circle class="s" cx="90" cy="57" r="17"/><circle class="k" cx="90" cy="57" r="6"/><rect class="y" x="76" y="34" width="28" height="8" rx="2"/><rect class="y" x="98" y="38" width="5" height="16"/>
   <rect class="y" x="16" y="38" width="58" height="22" rx="3"/><rect class="k" x="24" y="16" width="3" height="22"/><rect class="k" x="52" y="16" width="3" height="22"/><rect class="k" x="20" y="12" width="40" height="5" rx="2"/>
   <circle class="k" cx="32" cy="62" r="12"/><circle class="s" cx="32" cy="62" r="5"/>`,
+ tractopelle:GND+`<rect class="y" x="36" y="36" width="46" height="18" rx="3"/><rect class="y" x="44" y="14" width="24" height="24" rx="3"/><rect class="g" x="48" y="18" width="16" height="13" rx="1.5"/>
+  <path class="arm" d="M38 38L20 14L6 34"/><path class="yd" d="M2 32h12l-2 10H4z"/><path class="arm" d="M80 42L100 52"/><path class="yd" d="M96 44h18l-4 14H96z"/>
+  <circle class="k" cx="46" cy="62" r="12"/><circle class="s" cx="46" cy="62" r="5"/><circle class="k" cx="84" cy="66" r="8"/><circle class="s" cx="84" cy="66" r="3"/>`,
+ pompe:GND+`<path class="arm" d="M50 36L66 8L104 14L112 34" style="stroke:#e5452c"/><path class="ln" d="M112 34v10"/><rect class="r" x="8" y="38" width="76" height="14" rx="2"/><rect class="w" x="84" y="30" width="26" height="24" rx="3"/><rect class="g" x="96" y="34" width="10" height="9"/>
+  <circle class="k" cx="20" cy="62" r="9"/><circle class="k" cx="40" cy="62" r="9"/><circle class="k" cx="96" cy="62" r="9"/>`,
+ niveleuse:GND+`<rect class="y" x="6" y="34" width="34" height="20" rx="3"/><rect class="y" x="28" y="14" width="20" height="22" rx="3"/><rect class="g" x="32" y="18" width="12" height="12" rx="1.5"/>
+  <path class="arm" d="M40 40Q70 22 104 52"/><path class="yd" d="M50 58q12-6 26 0l-2 6H52z"/>
+  <circle class="k" cx="14" cy="64" r="9"/><circle class="k" cx="34" cy="64" r="9"/><circle class="k" cx="104" cy="64" r="9"/>`,
+ finisseur:GND+`<rect x="2" y="66" width="60" height="8" fill="#2a2e3d"/><rect class="y" x="58" y="38" width="40" height="20" rx="3"/><path class="yd" d="M96 40h20l-4 16H96z"/><rect class="y" x="50" y="56" width="12" height="12"/>
+  <path class="ln" d="M64 38V20M90 38V20"/><rect class="w" x="60" y="16" width="34" height="6"/><rect class="k" x="60" y="60" width="38" height="12" rx="6"/>
+  <circle class="s" cx="10" cy="62" r="10"/><circle class="s" cx="40" cy="62" r="10"/><rect class="y" x="10" y="40" width="30" height="12" rx="3"/>`,
  nacelle:GND+`<rect class="c" x="70" y="6" width="44" height="62"/><rect class="g" x="80" y="14" width="10" height="12"/><rect class="g" x="96" y="14" width="10" height="12"/><rect class="g" x="80" y="36" width="10" height="12"/>
   <rect class="o" x="14" y="10" width="50" height="6" rx="2"/><path class="ln" d="M16 10V2H62V10"/><path class="ln" d="M20 18L58 32L20 46L58 60M58 18L20 32L58 46L20 60"/>
   <rect class="o" x="12" y="58" width="54" height="10" rx="3"/><circle class="k" cx="22" cy="70" r="5"/><circle class="k" cx="56" cy="70" r="5"/>`
@@ -83,7 +107,8 @@ const YAWF=-Math.PI/4; // a machine driving towards the front (along a street th
 const CF=(h,d,yaw=YAW)=>{const [x,z]=Q(h,d);return {x,z,yaw};};
 const CFG={
   pelleteuse:CF(18,-20), camion:CF(27,-8), dumper:CF(5,-11), chargeuse:CF(20,17),
-  bulldozer:CF(-27,13), rouleau:CF(-14,20,YAWF), grue:CF(-16,-21), toupie:CF(-31,-6), nacelle:CF(3,-21)
+  bulldozer:CF(-27,38), niveleuse:CF(-12,38), rouleau:CF(4,38), finisseur:CF(23,38), tractopelle:CF(-12.6,21,YAWF), pompe:CF(-27.5,-14),
+  grue:CF(-16,-21), toupie:CF(-31,-6), nacelle:CF(3,-21)
 };
 
 // ground painting helpers (world coordinates come from Q)
@@ -97,12 +122,13 @@ rect(0,4,92,5.6,'h','#3b3a52');rect(0,4,92,.18,'h','#f3efe2',.6);
 for(let h=-42;h<42;h+=3.2)rect(h,4,1.6,.16,'h','#f3efe2',.9);
 rect(0,.6,92,1.4,'h','#b6b2d6');rect(0,7.4,92,1.4,'h','#b6b2d6');
 [-33,33].forEach(h=>rect(h,4,3,5.6,'h','#f3efe2',.95,'#3b3a52'));
-rect(-14,21,30,4.4,'d','#9a8a7a',.95);
+rect(-14,21.5,31,4.4,'d','#3b3a52');for(let d=8;d<35;d+=3.2)rect(-14,d,1.6,.16,'d','#f3efe2',.9);
+rect(0,38,104,5.2,'h','#8a6a52');rect(0,35,104,1.2,'h','#b6b2d6');
 path([[-34,-6],[-20,-12],[-4,-14],[12,-12],[28,-14],[36,-4]],4,'#c79a92',.55);
 path([[8,10],[14,18],[24,22],[34,20]],3.4,'#c79a92',.5);
 // site soil
 blob(-18,-20,15,'rgba(214,150,120,.55)');blob(20,-20,14,'rgba(214,150,120,.55)');blob(22,18,13,'rgba(214,150,120,.5)');
-blob(-27,13,7,'rgba(214,150,120,.5)');blob(5,-11,8,'rgba(214,150,120,.45)');blob(24,-20,6,'rgba(120,70,46,.7)');
+blob(-27,38,7,'rgba(214,150,120,.5)');blob(-12,38,7,'rgba(214,150,120,.4)');blob(5,-11,8,'rgba(214,150,120,.45)');blob(24,-20,6,'rgba(120,70,46,.7)');
 blob(-14,-30,8,'rgba(170,170,200,.35)');blob(3,-28,7,'rgba(170,170,200,.35)');
 
 export default {
@@ -112,11 +138,12 @@ export default {
   hint:'Touche un engin pour le découvrir.', backLabel:'Tout le chantier',
   brandIcon:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 29V5M13 29V5M9 9l4 4-4 4 4 4-4 4M3 5h27M23 5v9"/><rect x="20" y="14" width="6" height="5" rx="1"/></svg>',
   data:DATA, order:ORDER, icons:ICONS, cfg:CFG,
-  radius:46, tufts:false,
-  overview:{w:76,h:52,focus:[0,3,0]},
+  radius:56, tufts:false,
+  overview:{w:88,h:60,focus:[0,3,3]},
   ground:{ base:['#7c79c6','#6a68b6','#4a4a8a'], paths:GP, rects:GR, blobs:GB },
   build(ctx){
     const { scene, makeStation, part, roll, step, throwClod, onUpdate } = ctx;
+    const fx=createFx(scene,140);onUpdate(dt=>fx.update(dt));
     buildScenery(scene,onUpdate);
 /* ---- pelleteuse ---- */
 (function(){
@@ -477,7 +504,7 @@ export default {
   const X0=-6.5,X1=6.8,RW=2.8,START=-6.6,END=5.4;
   box(S,X1-X0,.06,RW,0x8a7765,(X0+X1)/2,.03,0);
   const AG=new THREE.BoxGeometry(1,.07,RW);AG.translate(.5,0,0);
-  const asphalt=add(S,AG,C.asphalt,X0,.07,0);asphalt.scale.x=.001;
+  const asphalt=add(S,AG,0x8a8478,X0,.07,0);asphalt.scale.x=.001;
   const dashes=[];for(let x=X0+.6;x<X1-.3;x+=1.3){const d=box(S,.7,.02,.14,0xf3efe2,x,.115,0);d.visible=false;dashes.push(d);}
   const N=240,stones=[];
   const gm=new THREE.InstancedMesh(ICO,new THREE.MeshLambertMaterial({color:0xffffff}),N);gm.castShadow=true;gm.receiveShadow=true;S.add(gm);
@@ -517,7 +544,7 @@ export default {
   let T=0;
   st.update=dt=>{T+=dt;roll(st,dt);const front=m.position.x+1.6;
     if(st.rolling){let dirty=false;stones.forEach(s=>{if(!s.flat&&s.x<front){s.flat=true;dirty=true;}});if(dirty)writeStones(1);
-      const len=clamp(front-X0,.001,X1-X0);asphalt.scale.x=len;dashes.forEach(d=>d.visible=d.position.x<X0+len-.4);
+      const len=clamp(front-X0,.001,X1-X0);asphalt.scale.x=len;dashes.forEach(d=>d.visible=false);
       drum.position.y=.82+Math.sin(T*70)*.025;}else drum.position.y=.82;};
   st.action=async function(){
     if(st.done){
@@ -529,7 +556,7 @@ export default {
     engineOn(52);st.rolling=true;
     await Promise.all([to(m.position,'x',END,5.6,easeSine),(async()=>{await step('Le gros rouleau roule sur les cailloux.','rouleau');await step('Il vibre très fort pour bien les écraser.','rouleau');})()]);
     st.rolling=false;
-    await step('Voilà une route toute lisse !','route');
+    await step('Les cailloux sont bien tassés : la route sera solide !','route');
     st.done=true;
   };
 })();
@@ -724,6 +751,218 @@ export default {
   };
 })();
 
+/* ---- niveleuse ---- */
+(function(){
+  const st=makeStation('niveleuse'),S=st.g,X0=-6.5,X1=6.5,RW=3.4,START=-3,END=3,GRAV=0x9a8e80;
+  box(S,X1-X0,.05,RW,0x8a6a52,0,.025,0);
+  const flat=add(S,(()=>{const g=new THREE.BoxGeometry(1,.1,RW);g.translate(.5,0,0);return g;})(),mat(0xa89a88),X0,.06,0);flat.scale.x=.001;
+  const heaps=[];[-4.5,-1.5,1.5,4.5].forEach(cx=>{for(let i=0;i<34;i++){const a=rnd(0,6.28),r=Math.sqrt(Math.random())*1.1;heaps.push({x:cx+Math.cos(a)*r,y:.1+(1.1-r)*.35,z:Math.sin(a)*r*1.2,s:rnd(.16,.28),k:1});}});
+  const hm=new THREE.InstancedMesh(ICO,new THREE.MeshLambertMaterial({color:0xffffff}),heaps.length);hm.castShadow=hm.receiveShadow=true;S.add(hm);
+  heaps.forEach((h,i)=>hm.setColorAt(i,tmpCol.setHex(pick([0x9a8e80,0x7d7368,0xb3a796,0x8a8070]))));
+  const writeH=()=>{heaps.forEach((h,i)=>{const s=h.s*Math.max(.001,h.k);dummy.position.set(h.x,h.y*h.k,h.z);dummy.rotation.set(h.x,h.z,0);dummy.scale.set(s,s*.8,s);dummy.updateMatrix();hm.setMatrixAt(i,dummy.matrix);});hm.instanceMatrix.needsUpdate=true;};writeH();
+  const m=grp(S,START,0,0);st.m=m;st.lastX=START;
+  // rear: engine and cab on two pairs of wheels
+  rbox(m,2.4,.85,1.5,.14,MT.yel,-2.2,1.25,0);for(let k=0;k<5;k++)box(m,.04,.4,.02,MT.black,-2.9+k*.18,1.3,.76);
+  rbox(m,.06,.2,1.1,.02,MT.stripes,-3.42,.9,0,.01);[.55,-.55].forEach(z=>rbox(m,.04,.1,.16,.02,MT.tail,-3.42,1.35,z,.01));
+  rbox(m,3.6,.35,.8,.06,MT.dark,-1.8,.75,0);cylY(m,.07,.6,MT.black,-2.8,1.95,-.4,10);
+  const cab=grp(m,-.75,1.25,0);rbox(cab,1.35,.1,1.4,.03,MT.dark,0,.05,0);[[.6,.62],[.6,-.62],[-.6,.62],[-.6,-.62]].forEach(([x,z])=>rbox(cab,.08,1.5,.08,.03,MT.yel,x,.78,z,.01));
+  rbox(cab,1.5,.12,1.55,.05,MT.yel,0,1.56,0);box(cab,.02,1.25,1.2,MT.glass,.6,.8,0);box(cab,1.15,1.25,.02,MT.glass,0,.8,.62);box(cab,1.15,1.25,.02,MT.glass,0,.8,-.62);box(cab,.02,1.25,1.2,MT.glass,-.6,.8,0);
+  operator(cab,-.1,.1,0);beacon(st,cab,-.4,1.62,.4);
+  st.wheels=[];[1,-1].forEach(s=>{[-1.55,-2.75].forEach(x=>st.wheels.push(tire(m,.55,.4,x,.55,s*1.0,MT.yel,s)));st.wheels.push(tire(m,.55,.36,3.3,.55,s*.92,MT.yel,s));});
+  // the long neck to the front wheels
+  beam(m,new V3(-.2,1.45,0),new V3(1.5,1.9,0),.42,MT.yel);beam(m,new V3(1.5,1.9,0),new V3(3.3,1.15,0),.38,MT.yel);rbox(m,.5,.3,1.6,.06,MT.yel,3.3,.95,0);
+  [.35,-.35].forEach(z=>rbox(m,.05,.1,.14,.02,MT.lamp,3.56,1.05,z,.01));
+  // blade under the middle, slightly turned
+  const bladeG=grp(m,.9,.62,0);bladeG.rotation.y=.42;
+  const bo=arc(.0,.3,.55,150,215,10),bi=arc(.0,.3,.47,215,150,10);ext(bladeG,bo.concat(bi),0,3.5,MT.yelD,0,-.2,0,.02);rbox(bladeG,.08,.06,3.5,.02,MT.steel,-.47,-.42,0,.01);
+  rod(m,new V3(3.1,.85,0),new V3(.9,.85,0),.07,MT.dark,8);cylY(m,.55,.06,MT.dark,.9,.85,0,20);
+  st.links=[hydraulic(m,anchor(m,1.4,1.85,.45),anchor(bladeG,-.3,.25,.9),{barrel:.55,rb:.07}),hydraulic(m,anchor(m,1.4,1.85,-.45),anchor(bladeG,-.3,.25,-.9),{barrel:.55,rb:.07})];
+  part(st,'lame','la longue lame',anchor(bladeG,-.3,.2,1.6),true);
+  part(st,'cou','le long cou',anchor(m,1.6,2.2,0),true);
+  part(st,'cailloux','les tas de cailloux',anchor(S,4.5,.8,0),false);
+  part(st,'cabine','la cabine',anchor(cab,0,1.8,0),true);
+  st.focusAt=anchor(m,0,1.2,0);st.size={w:14,h:6.5};st.tagAt=anchor(m,0,3.6,0);
+  st.update=dt=>{roll(st,dt);if(st.grading){const bx=m.position.x+.9+.75;let d=false;heaps.forEach(h=>{if(h.k>0&&h.x<bx){h.k=Math.max(0,h.k-dt*6);d=true;}});if(d)writeH();flat.scale.x=clamp(bx-X0,.001,X1-X0);}};
+  st.action=async function(){
+    if(st.done){engineOn(52);st.reversing=true;st.beepT=0;
+      await Promise.all([step('Un camion a vidé de nouveaux tas de cailloux.','cailloux'),to(m.position,'x',START,2.6),tw(1,k=>{heaps.forEach(h=>h.k=k);writeH();flat.scale.x=Math.max(.001,flat.scale.x*(1-k));})]);
+      st.reversing=false;st.done=false;}
+    engineOn(55);
+    flat.scale.x=clamp(m.position.x+1.65-X0,.001,X1-X0);
+    await Promise.all([step('La niveleuse baisse sa longue lame.','lame'),to(bladeG.position,'y',.5,1.0)]);
+    st.grading=true;
+    await Promise.all([to(m.position,'x',END,6.5,easeSine),(async()=>{await step('Sa lame étale les cailloux bien à plat.','lame');await step('Son long cou l’aide à faire une route bien droite.','cou');})()]);
+    st.grading=false;
+    await Promise.all([step('La lame remonte. Maintenant, on peut tasser !','lame'),to(bladeG.position,'y',.62,.8)]);
+    st.done=true;
+  };
+})();
+
+/* ---- finisseur + rouleau tandem ---- */
+(function(){
+  const st=makeStation('finisseur'),S=st.g,X0=-7,X1=6.5,RW=3.4,START=-3.2,END=5.2,BEHIND=4.9;
+  box(S,X1-X0,.05,RW,0x8a8478,(X0+X1)/2,.025,0);
+  const AG=new THREE.BoxGeometry(1,.08,RW);AG.translate(.5,0,0);
+  const fresh=add(S,AG,mat(0x3a3a46),X0,.07,0);fresh.scale.x=.001;
+  const smooth=add(S,AG,mat(C.asphalt),X0,.075,0);smooth.scale.x=.001;
+  const dashes=[];for(let x=X0+.6;x<X1-.3;x+=1.4){const d=box(S,.7,.02,.14,0xf3efe2,x,.12,0);d.visible=false;dashes.push(d);}
+  // the paver: tracks, hopper in front, driver platform, wide screed behind
+  const m=grp(S,START,0,0);st.m=m;st.lastX=START;
+  st.tracks=[trackUnit(m,{len:2.4,r:.32,w:.45,z:1.0}),trackUnit(m,{len:2.4,r:.32,w:.45,z:-1.0})];
+  rbox(m,2.6,.7,2.0,.1,MT.yel,-.2,1.05,0);rbox(m,1.0,.5,1.8,.08,MT.dark,-.7,1.6,0);
+  const hop=grp(m,1.55,.95,0);rbox(hop,1.2,.12,2.4,.03,MT.yelD,0,0,0);[1.2,-1.2].forEach(z=>{const w=grp(hop,0,0,z);ext(w,[[-.6,0],[.6,0],[.6,.6],[-.6,.5]],.03,.08,MT.yel,0,0,0,.01);});rbox(hop,.08,.55,2.4,.02,MT.yel,.6,.28,0);
+  const load=grp(hop,0,.15,0);[[0,0,.5,.6],[-.2,.05,-.5,.55],[.2,0,0,.65]].forEach(([x,y,z,s])=>{const l=add(load,ICO,0x26262e,x,y,z);l.scale.set(s,s*.45,s);});
+  rbox(m,1.2,.1,2.1,.03,MT.dark,-1.2,1.88,0);[[-.6,.95],[-.6,-.95],[-1.8,.95],[-1.8,-.95]].forEach(([x,z])=>cylY(m,.04,1.4,MT.dark,x,2.6,z,6));rbox(m,1.6,.08,2.2,.03,std(0xf2f2f6,.6,0),-1.2,3.32,0);
+  const drv=operator(m,-1.3,1.95,.4);drv.rotation.y=Math.PI/2;
+  const screed=grp(m,-1.8,.1,0);rbox(screed,.6,.4,3.4,.06,MT.yel,0,.2,0);rbox(screed,.62,.08,3.42,.02,MT.dark,0,.02,0);rail(screed,[[-.3,.45,1.7],[-.3,.85,1.7],[-.3,.85,-1.7],[-.3,.45,-1.7]],.025,MT.yel);
+  beacon(st,m,-.4,3.4,0);
+  // the tandem roller that follows
+  const r=grp(S,START-BEHIND,0,0);const RR=.5,drums=[];
+  [1.0,-1.0].forEach(x=>{const d=grp(r,x,RR,0);cylZ(d,RR,1.8,MT.steel,0,0,0,24);[.92,-.92].forEach(z=>cylZ(d,RR+.02,.05,MT.dark,0,0,z,24));drums.push(d);});
+  rbox(r,1.2,.5,1.6,.08,MT.yel,0,1.15,0);[1,-1].forEach(s=>{rbox(r,2.6,.35,.12,.04,MT.yel,0,1.0,s*.95);});
+  const rcab=grp(r,0,1.4,0);[[.4,.45],[.4,-.45],[-.4,.45],[-.4,-.45]].forEach(([x,z])=>cylY(rcab,.03,1.2,MT.dark,x,.6,z,6));rbox(rcab,1.1,.08,1.1,.03,std(0xf2f2f6,.6,0),0,1.2,0);
+  const rdrv=operator(rcab,-.1,0,0);beacon(st,rcab,0,1.25,0);
+  part(st,'tremie','la trémie',anchor(hop,0,.7,1.0),true);
+  part(st,'table','la table qui lisse',anchor(screed,0,.5,1.4),true);
+  part(st,'enrobe',"l'enrobé tout chaud",anchor(S,X0+1.5,.4,0),false);
+  part(st,'tandem','le rouleau tandem',anchor(r,0,2.9,0),true);
+  st.focusAt=anchor(m,-2.2,1.2,0);st.size={w:15,h:7};st.tagAt=anchor(m,0,4.2,0);
+  let T=0,steam=0;
+  st.update=dt=>{T+=dt;roll(st,dt);
+    const rx=r.position.x,dr=rx-(st.rLast??rx);st.rLast=rx;if(dr)drums.forEach(d=>d.rotation.z-=dr/RR);
+    if(st.paving){const back=m.position.x-2.1;fresh.scale.x=clamp(back-X0,.001,X1-X0);steam-=dt;if(steam<=0){steam=.12;fx.smoke(W(S,back-rnd(0,2),.3,rnd(-1.4,1.4)),new V3(0,rnd(.6,1.2),0),rnd(.25,.45),0xe8e8f0,1.4);}}
+    const sx=clamp(r.position.x+1.5-X0,.001,X1-X0);if(st.rolling){smooth.scale.x=Math.max(smooth.scale.x,sx);drums.forEach(d=>d.position.y=RR+Math.sin(T*60)*.015);}
+  };
+  const W=(o,x,y,z)=>o.localToWorld(new V3(x,y,z));
+  st.action=async function(){
+    if(st.done){engineOn(48);st.reversing=true;st.beepT=0;
+      await Promise.all([step('On prépare un nouveau bout de route.','enrobe'),to(m.position,'x',START,2.6),to(r.position,'x',START-BEHIND,2.6),tw(1,k=>{fresh.scale.x=Math.max(.001,fresh.scale.x*(1-k));smooth.scale.x=Math.max(.001,smooth.scale.x*(1-k));})]);
+      dashes.forEach(d=>d.visible=false);load.visible=true;st.reversing=false;st.done=false;}
+    engineOn(45);
+    load.scale.setScalar(.01);load.visible=true;
+    await Promise.all([step('Un camion verse l’enrobé tout chaud dans la trémie.','tremie'),tw(1.4,k=>load.scale.setScalar(Math.max(.01,k)),easeBack),
+      tw(1.4,k=>{if(Math.random()<.3)fx.smoke(wp(hop,.6),new V3(0,1,0),.4,0xe8e8f0,1.2);},lin)]);
+    st.paving=true;st.rolling=true;
+    await Promise.all([to(m.position,'x',END,8,lin),to(r.position,'x',END-BEHIND+.4,8,lin),tw(8,k=>load.scale.setScalar(Math.max(.2,1-k*.8)),lin),
+      (async()=>{await step('Le finisseur avance, et étale l’enrobé derrière lui.','table');await step('Sa table chauffe et lisse le goudron.','table');await step('Le rouleau tandem suit, et écrase tout bien à plat.','tandem');})()]);
+    st.paving=false;st.rolling=false;smooth.scale.x=clamp(r.position.x+1.5-X0,.001,X1-X0);
+    await Promise.all([step('Il reste à peindre les lignes. Voilà la nouvelle route !','enrobe'),tw(1,k=>dashes.forEach((d,i)=>d.visible=d.position.x<X0+smooth.scale.x-.4&&k*dashes.length>i))]);
+    st.done=true;
+  };
+})();
+
+/* ---- tractopelle ---- */
+(function(){
+  const st=makeStation('tractopelle'),S=st.g,TZ=-2.1;
+  const m=grp(S,0,0,0);st.m=m;
+  rbox(m,3.6,.5,1.2,.08,MT.dark,0,.95,0);
+  rbox(m,1.7,.9,1.4,.14,MT.yel,1.0,1.55,0);for(let k=0;k<5;k++)box(m,.04,.4,.02,MT.black,.5+k*.2,1.55,.71);
+  const cab=grp(m,-.75,1.2,0);rbox(cab,1.4,.1,1.45,.03,MT.dark,0,.05,0);[[.62,.65],[.62,-.65],[-.62,.65],[-.62,-.65]].forEach(([x,z])=>rbox(cab,.08,1.6,.08,.03,MT.yel,x,.82,z,.01));
+  rbox(cab,1.55,.12,1.6,.05,MT.yel,0,1.65,0);box(cab,.02,1.3,1.25,MT.glass,.62,.85,0);box(cab,1.2,1.3,.02,MT.glass,0,.85,.65);box(cab,1.2,1.3,.02,MT.glass,0,.85,-.65);box(cab,.02,1.3,1.25,MT.glass,-.62,.85,0);
+  const drv=operator(cab,0,.1,0);drv.rotation.y=Math.PI;beacon(st,cab,.3,1.72,.4);
+  st.wheels=[];[1,-1].forEach(s=>{st.wheels.push(tire(m,.78,.48,-.95,.78,s*.95,MT.yel,s),tire(m,.5,.34,1.4,.5,s*.88,MT.yel,s));fender(m,.9,.55,-.95,.78,s*.97,MT.yelD,Math.PI*.6);});
+  // front loader bucket
+  const la=grp(m,.6,1.35,0);[.62,-.62].forEach(z=>beam(la,new V3(0,0,z),new V3(2.2,-.75,z),.13,MT.yel));
+  const fb=grp(la,2.25,-.82,0);rbox(fb,.1,.7,2.2,.03,MT.yelD,0,0,0);rbox(fb,.7,.08,2.2,.02,MT.yelD,.3,-.32,0);[1.1,-1.1].forEach(z=>ext(fb,[[0,.35],[0,-.35],[.7,-.35]],0,.05,MT.yelD,0,0,z,.01));
+  // backhoe at the rear, with its stabiliser legs
+  const legs=[1,-1].map(s=>{const g=grp(m,-1.85,.95,s*.75);rod(g,new V3(0,0,0),new V3(0,-.2,s*.5),.08,MT.yel);const foot=grp(g,0,0,s*.5);rbox(foot,.3,.08,.4,.02,MT.dark,0,-.1,0);g.userData.foot=foot;return g;});
+  const sw=grp(m,-2.05,1.1,0);cylY(sw,.18,.4,MT.dark,0,0,0,12);sw.rotation.y=Math.PI;
+  const boom=grp(sw,0,.15,0);ext(boom,[[-.05,.12],[1.2,1.0],[2.3,.85],[2.35,.55],[1.2,.7],[-.05,-.12]],.06,.24,MT.yel,0,0,0,.02);
+  const stick=grp(boom,2.3,.7,0);ext(stick,[[-.15,.15],[1.6,.06],[1.65,-.08],[-.1,-.12]],.04,.2,MT.yel,0,0,0,.02);
+  const bk=grp(stick,1.65,0,0);const ob=arc(.25,-.2,.4,118,-60,10),ib=arc(.25,-.2,.33,-60,118,10);ext(bk,ob.concat(ib),0,.6,MT.yelD,0,0,0,.01);
+  const ball=add(bk,ICO,C.dirt,.25,-.2,0);ball.scale.setScalar(.25);ball.visible=false;
+  const setArm=(a,b,c)=>{boom.rotation.z=a;stick.rotation.z=b;bk.rotation.z=c;};
+  const REST=[1.2,-2.6,-1.4];setArm(...REST);
+  st.links=[hydraulic(sw,anchor(sw,.1,.05,0),anchor(boom,1.0,.15,0),{barrel:.6,rb:.07}),hydraulic(boom,anchor(boom,1.4,1.05,0),anchor(stick,-.1,.15,0),{barrel:.55,rb:.06})];
+  // the trench along the sidewalk, the pipe, the dirt pile
+  const tr=grp(S,0,0,TZ);const TG=new THREE.BoxGeometry(1,.06,.9);TG.translate(-.5,0,0);const trench=add(tr,TG,0x24160f,-2.6,.03,0);trench.scale.x=.001;
+  const lip=add(tr,TG,0x8a5634,-2.6,.02,0);lip.scale.set(.001,1,1.6);
+  const pipe=cylX(tr,.22,5.2,std(0x2f7de0,.5,.1),-5.2,.1,0,14);pipe.visible=false;
+  const pl=pile(S,-4.2,-3.5,.01);
+  part(st,'bras','le bras qui creuse',anchor(stick,.8,.3,0),true);
+  part(st,'bequilles','les béquilles',anchor(legs[0].userData.foot,0,.2,0),false);
+  part(st,'godet','le godet de devant',anchor(fb,.3,.5,1.0),true);
+  part(st,'tranchee','la tranchée',anchor(tr,-4.5,.3,0),false);
+  part(st,'tuyau','le tuyau',anchor(tr,-5.2,.5,0),false);
+  st.focus=new V3(-2.6,1.2,-1.4);st.size={w:12.5,h:7};st.tagAt=anchor(m,0,3.6,0);
+  st.update=()=>{st.links.forEach(l=>l.update());};
+  const swTo=(a,d)=>to(sw.rotation,'y',a,d);
+  const pose=(p,d)=>{const f=[boom.rotation.z,stick.rotation.z,bk.rotation.z];return tw(d,k=>setArm(f[0]+(p[0]-f[0])*k,f[1]+(p[1]-f[1])*k,f[2]+(p[2]-f[2])*k));};
+  st.action=async function(){
+    if(st.done){await Promise.all([step('On creuse une nouvelle tranchée.','tranchee'),tw(.8,k=>{trench.scale.x=Math.max(.001,trench.scale.x*(1-k));lip.scale.x=trench.scale.x;pl.scale.setScalar(Math.max(.01,pl.scale.x*(1-k)));})]);pipe.visible=false;st.done=false;}
+    engineOn(60);
+    await Promise.all([step('Les béquilles se posent par terre, pour ne pas bouger.','bequilles'),...legs.map(l=>to(l.position,'y',.75,1.0)),to(fb.rotation,'z',.5,1.0)]);
+    for(let i=0;i<2;i++){
+      await Promise.all([i?sleep(0):step('Le bras arrière plonge, et creuse une tranchée.','bras'),swTo(Math.PI-.71,1.0),pose([.2,-1.3,-.4],1.4)]);
+      await Promise.all([pose([.35,-2.1,-1.6],1.2),tw(1.2,k=>{const L=Math.min(5.2,trench.scale.x+1.4*k/1.2*.9);trench.scale.x=Math.max(trench.scale.x,L);lip.scale.x=trench.scale.x;})]);
+      ball.visible=true;
+      await Promise.all([pose([1.1,-2.3,-1.5],1.0),swTo(Math.PI-1.02,1.0)]);
+      await Promise.all([i?sleep(0):step('Et hop, la terre va sur le tas.','bras'),pose([.8,-1.4,.6],.6).then(()=>{ball.visible=false;thud();for(let k=0;k<8;k++)throwClod(wp(bk),wp(pl,.3));const s0=pl.scale.x;return tw(.7,k=>pl.scale.setScalar(Math.max(.01,s0+(.45+.25*i-s0)*k)));})]);
+    }
+    trench.scale.x=5.2;lip.scale.x=5.2;
+    await Promise.all([swTo(Math.PI,1.2),pose(REST,1.2)]);
+    pipe.visible=true;pop(pipe,.6);ding();
+    await step("On pose un gros tuyau dedans : c'est pour l'eau des maisons.",'tuyau');
+    await Promise.all([step('La tranchée est prête. On relève les béquilles.','bequilles'),...legs.map(l=>to(l.position,'y',.95,.8)),to(fb.rotation,'z',0,.8)]);
+    st.done=true;
+  };
+})();
+
+/* ---- pompe à béton ---- */
+(function(){
+  const st=makeStation('pompe'),S=st.g,m=grp(S);st.m=m;
+  [.42,-.42].forEach(z=>rbox(m,6.6,.3,.16,.03,MT.black,-.4,.97,z));
+  const cab=truckCab(m,MT.white,1.45);[1.11,-1.11].forEach(z=>rbox(cab,1.62,.14,.02,.01,MT.red,.8,.75,z,.005));
+  st.wheels=[];[1,-1].forEach(s=>{st.wheels.push(tire(m,.55,.4,2.3,.55,s*.9,MT.grey));[-1.0,-2.1,-3.2].forEach(x=>st.wheels.push(tire(m,.55,.3,x,.55,s*.95,MT.grey,s)));fender(m,.66,.48,2.3,.55,s*.92,MT.black);});
+  rbox(m,4.4,.5,2.0,.08,MT.red,-1.4,1.4,0);rbox(m,1.2,.9,1.6,.08,MT.grey,-3.4,1.6,0);
+  const hopper=add(m,new THREE.CylinderGeometry(.55,.3,.6,12,1,true),std(0x8f96a6,.5,.4,{side:THREE.DoubleSide}),-4.1,1.9,0);
+  // outrigger legs
+  const legs=[[.6,1],[.6,-1],[-3.2,1],[-3.2,-1]].map(([x,s])=>{const g=grp(m,x,1.25,s*.95);const arm=grp(g);rbox(arm,.25,.25,1.0,.04,MT.red,0,0,s*.5);const foot=grp(arm,0,0,s*1.0);rbox(foot,.18,1.1,.18,.04,MT.dark,0,-.55,0);rbox(foot,.5,.08,.5,.02,MT.dark,0,-1.15,0);arm.scale.z=.3;foot.position.y=.5;return {arm,foot};});
+  // turret and the three-part boom, folded on top of the truck
+  const tur=grp(m,-1.5,1.65,0);cylY(tur,.5,.5,MT.red,0,.25,0,16);
+  const b1=grp(tur,0,1.4,0),b2=grp(b1,4.6,.32,0),b3=grp(b2,4.3,-.3,0);
+  [[b1,4.6,.34],[b2,4.3,.28],[b3,3.8,.22]].forEach(([g,L,t])=>{rbox(g,L,t,t,.04,MT.red,L/2,0,0);cylY(g,.08,L,MT.steel,L/2,t/2+.05,0,8).rotation.z=Math.PI/2;cylZ(g,t*.7,t+.1,MT.dark,0,0,0,10);});
+  const hose=grp(b3,3.8,0,0);const hoseM=cylY(hose,.1,1.4,MT.black,0,-.7,0,10);
+  // the concrete going into the top floor of the block of flats
+  S.updateMatrixWorld(true);const target=S.worldToLocal(new V3(...(()=>{const [x,z]=Q(-29,-22);return [x,10.2,z];})()));
+  const fG=new THREE.BoxGeometry(5.2,1,3.6);fG.translate(0,.5,0);const fill=add(S,fG,mat(C.wet),target.x,10.05,target.z);fill.scale.y=.01;fill.rotation.y=-YAW+YAW;
+  const SG=new THREE.CylinderGeometry(.12,.18,1,8);SG.translate(0,-.5,0);const stream=add(S,SG,C.wet,0,0,0);stream.visible=false;
+  st.fill=0;
+  // boom pose: [turret yaw, b1, b2, b3] angles
+  const FOLD=[0,0,Math.PI,-Math.PI];
+  const setBoom=(p)=>{tur.rotation.y=p[0];b1.rotation.z=p[1];b2.rotation.z=p[2];b3.rotation.z=p[3];};
+  setBoom([0,.06,Math.PI-.08,-Math.PI+.12]);hose.rotation.z=-.1;
+  // solve the boom so the hose hangs above the target
+  part(st,'bequilles','les béquilles',anchor(legs[0].foot,0,0,0),false);
+  part(st,'bras','le grand bras',anchor(b2,2,.6,0),true);
+  part(st,'tuyau','le tuyau',anchor(hose,0,-.6,0),false);
+  part(st,'dalle','le plancher',anchor(S,target.x,11.2,target.z),false);
+  part(st,'tremie','la trémie',anchor(m,-4.1,2.4,.5),true);
+  st.focus=new V3(-2,6.5,-3.5);st.size={w:17,h:17};st.tagAt=anchor(m,0,4.4,0);
+  st.update=()=>{fill.scale.y=Math.max(.01,st.fill*.35);if(stream.visible){const p=S.worldToLocal(wp(hose,0).add(new V3(0,-1.35,0)));stream.position.copy(p);stream.scale.y=Math.max(.01,p.y-10.1-st.fill*.35);}};
+  // IK for the two outer sections, with the first one steep
+  function poseFor(){
+    S.updateMatrixWorld(true);const base=S.worldToLocal(tur.getWorldPosition(new V3()));base.y+=1.4;
+    const dx=target.x-base.x,dz=target.z-base.z,yaw=Math.atan2(-dz,dx),R=Math.hypot(dx,dz),Hh=target.y+2.6-base.y;
+    const a1=1.25,p1x=4.6*Math.cos(a1),p1y=4.6*Math.sin(a1);let tx=R-p1x,ty=Hh-p1y;const L2=4.3,L3=3.8,D=Math.min(L2+L3-.01,Math.hypot(tx,ty));
+    const c3=(D*D-L2*L2-L3*L3)/(2*L2*L3),q3=-Math.acos(clamp(c3,-1,1)),q2=Math.atan2(ty,tx)-Math.atan2(L3*Math.sin(q3),L2+L3*Math.cos(q3));
+    return [yaw,a1,q2-a1,q3];
+  }
+  st.action=async function(){
+    if(st.fill>=1){await Promise.all([step('Le plancher est sec. On en coule un autre !','dalle'),to(st,'fill',0,1)]);}
+    engineOn(70);
+    await Promise.all([step('Les béquilles se déplient pour que le camion ne tombe pas.','bequilles'),...legs.map(l=>Promise.all([to(l.arm.scale,'z',1,1.2),to(l.foot.position,'y',0,1.2)]))]);
+    const P=poseFor(),P0=[tur.rotation.y,b1.rotation.z,b2.rotation.z,b3.rotation.z];
+    await Promise.all([step('Le grand bras se déplie, comme un serpent.','bras'),tw(4,k=>setBoom(P0.map((v,i)=>v+(P[i]-v)*k)),easeSine),tw(4,()=>{hose.rotation.z=-(b1.rotation.z+b2.rotation.z+b3.rotation.z);},lin)]);
+    stream.visible=true;
+    await Promise.all([step('Le béton monte dans le tuyau, et coule tout en haut de l’immeuble.','tuyau'),to(st,'fill',1,4.2,lin)]);
+    stream.visible=false;
+    await Promise.all([step('Le plancher du nouvel étage est coulé !','dalle'),sleep(.6)]);
+    await Promise.all([step('On replie le bras pour repartir.','bras'),tw(3.2,k=>{setBoom(P.map((v,i)=>v+(P0[i]-v)*k));hose.rotation.z=-(b1.rotation.z+b2.rotation.z+b3.rotation.z);},easeSine)]);
+    await Promise.all(legs.map(l=>Promise.all([to(l.arm.scale,'z',.3,1),to(l.foot.position,'y',.5,1)])));
+  };
+})();
+
     buildLife(scene,onUpdate,ctx.stations);
   }
 };
@@ -830,9 +1069,9 @@ function buildScenery(scene){
   heras(scene,[-38,9.8],[-17,9.8],[]);
   // ---- back left: block of flats and the crane's yard ----
   flats(scene,-29,-22,4,2,8,6,SM.peach);
-  bricks(scene,-24,-12);bricks(scene,-22.4,-12.2);rebar(scene,-27,-10.5);
+  bricks(scene,-19,-12.6);bricks(scene,-17.4,-12.6);rebar(scene,-34,-9.6);
   pipes(scene,...Q(-9,-12),YAW);
-  workerAt(scene,-20,-12.5,-.6);workerAt(scene,-26,-13,.9);
+  workerAt(scene,-21,-15.4,-.6);workerAt(scene,-23,-9,.9);
   // ---- back right: the dig ----
   [[13,-27],[30,-25],[31,-15]].forEach(([h,d])=>pile(scene,...Q(h,d),.9));
   [[14,-14.5],[20,-14.2]].forEach(([h,d])=>barrier(scene,...Q(h,d),YAW));
@@ -847,7 +1086,6 @@ function buildScenery(scene){
   // left side: one finished house at the front, the lot being levelled further back
   house(scene,-21.5,30,YAW,3,SM.lilac,SM.roofG);garden(scene,-21.5,30,YAW);
   house(scene,-23,22.5,YAW,0,SM.cream,SM.roofR);
-  bricks(scene,-9.6,25.5);bricks(scene,-9.6,17);
   workerAt(scene,-9.5,21,Math.PI);
   [[-11.5,8.6],[-16.5,8.6],[-11.4,34],[-16.6,34]].forEach(([h,d])=>cone(scene,...Q(h,d)));
   lampAt(scene,-17,15,0);lampAt(scene,-11,28,Math.PI);
@@ -878,8 +1116,6 @@ function buildLife(scene,onUpdate){
   // workers walking about the site
   const loops=[
     route([[4,23.5],[12,23.2],[13,31.5],[3.5,31.8]],true,.2),
-    route([[-25,-15],[-19,-16],[-19,-14],[-25,-13.5]],true,.3),
-    route([[-10.4,10],[-10.4,33],[-10.9,33.5],[-10.9,10]],true,.05)
   ];
   const crews=loops.map((r,i)=>{const ps=[0,1].map(()=>person(scene,0,0,{vest:true,hat:i===1?MT.white:MT.hat}));all.push(...ps);return traffic(r,ps,.9,{gap:1.2});});
   onUpdate(dt=>{tr.update(dt,all);tw2.update(dt,all);crews.forEach(c=>c.update(dt,all));});
