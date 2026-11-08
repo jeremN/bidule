@@ -10,14 +10,21 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AeroportRouteImport } from './routes/aeroport'
 import { Route as ChantierRouteImport } from './routes/chantier'
 import { Route as EspaceRouteImport } from './routes/espace'
 import { Route as FermeRouteImport } from './routes/ferme'
+import { Route as MilitaireRouteImport } from './routes/militaire'
 import { Route as VilleRouteImport } from './routes/ville'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AeroportRoute = AeroportRouteImport.update({
+  id: '/aeroport',
+  path: '/aeroport',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ChantierRoute = ChantierRouteImport.update({
@@ -35,6 +42,11 @@ const FermeRoute = FermeRouteImport.update({
   path: '/ferme',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MilitaireRoute = MilitaireRouteImport.update({
+  id: '/militaire',
+  path: '/militaire',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const VilleRoute = VilleRouteImport.update({
   id: '/ville',
   path: '/ville',
@@ -43,39 +55,69 @@ const VilleRoute = VilleRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/aeroport': typeof AeroportRoute
   '/chantier': typeof ChantierRoute
   '/espace': typeof EspaceRoute
   '/ferme': typeof FermeRoute
+  '/militaire': typeof MilitaireRoute
   '/ville': typeof VilleRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/aeroport': typeof AeroportRoute
   '/chantier': typeof ChantierRoute
   '/espace': typeof EspaceRoute
   '/ferme': typeof FermeRoute
+  '/militaire': typeof MilitaireRoute
   '/ville': typeof VilleRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/aeroport': typeof AeroportRoute
   '/chantier': typeof ChantierRoute
   '/espace': typeof EspaceRoute
   '/ferme': typeof FermeRoute
+  '/militaire': typeof MilitaireRoute
   '/ville': typeof VilleRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/chantier' | '/espace' | '/ferme' | '/ville'
+  fullPaths:
+    | '/'
+    | '/aeroport'
+    | '/chantier'
+    | '/espace'
+    | '/ferme'
+    | '/militaire'
+    | '/ville'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/chantier' | '/espace' | '/ferme' | '/ville'
-  id: '__root__' | '/' | '/chantier' | '/espace' | '/ferme' | '/ville'
+  to:
+    | '/'
+    | '/aeroport'
+    | '/chantier'
+    | '/espace'
+    | '/ferme'
+    | '/militaire'
+    | '/ville'
+  id:
+    | '__root__'
+    | '/'
+    | '/aeroport'
+    | '/chantier'
+    | '/espace'
+    | '/ferme'
+    | '/militaire'
+    | '/ville'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AeroportRoute: typeof AeroportRoute
   ChantierRoute: typeof ChantierRoute
   EspaceRoute: typeof EspaceRoute
   FermeRoute: typeof FermeRoute
+  MilitaireRoute: typeof MilitaireRoute
   VilleRoute: typeof VilleRoute
 }
 
@@ -86,6 +128,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/aeroport': {
+      id: '/aeroport'
+      path: '/aeroport'
+      fullPath: '/aeroport'
+      preLoaderRoute: typeof AeroportRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/chantier': {
@@ -109,6 +158,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FermeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/militaire': {
+      id: '/militaire'
+      path: '/militaire'
+      fullPath: '/militaire'
+      preLoaderRoute: typeof MilitaireRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/ville': {
       id: '/ville'
       path: '/ville'
@@ -121,9 +177,11 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AeroportRoute: AeroportRoute,
   ChantierRoute: ChantierRoute,
   EspaceRoute: EspaceRoute,
   FermeRoute: FermeRoute,
+  MilitaireRoute: MilitaireRoute,
   VilleRoute: VilleRoute,
 }
 export const routeTree = rootRouteImport

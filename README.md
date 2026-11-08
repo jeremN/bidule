@@ -10,6 +10,8 @@ Chaque « monde » est un petit diorama vivant en 3D, dans un style de dessin an
 | **La Ferme** | épandeur à fumier, tracteur + charrue, semoir, pulvérisateur, moissonneuse-batteuse, faucheuse, andaineur, presse à balles, enrubanneuse, chariot télescopique |
 | **La Ville** (japonaise) | voiture, car, camion-poubelle, camion de pompiers, tramway, métro, bateau-bus, Shinkansen, téléphérique |
 | **L'Espace** | transporteur à chenilles, bus des astronautes, fusée, navette spatiale, station spatiale, capsule, rover martien, module lunaire |
+| **L'Aéroport** | avion de ligne (décollage), petit avion à hélice (atterrissage), tracteur pushback, passerelle, tapis à bagages, camion avitailleur, camion traiteur, pompiers d'aéroport |
+| **La Base militaire** | char, char poseur de pont, véhicule amphibie, camion de transport, hélicoptère, drone, avion de chasse, avion de transport (sans combat : on montre comment ils roulent, traversent, volent et transportent) |
 
 L'idée de départ vient de [os-taxonomy de Marble](https://github.com/withmarbleapp/os-taxonomy), un graphe des notions du primaire avec leurs prérequis. À terme, chaque monde pourra être rattaché aux notions du programme français (maternelle → lycée).
 
@@ -25,7 +27,7 @@ npm run build    # site statique prérendu dans dist/client
 npm run check    # eslint + TypeScript
 ```
 
-L'app est construite avec [TanStack Start](https://tanstack.com/start) (React) en **prérendu statique** : chaque page (`/`, `/chantier`, `/ferme`, `/ville`, `/espace`) est générée en HTML au build, puis la navigation se fait côté client.
+L'app est construite avec [TanStack Start](https://tanstack.com/start) (React) en **prérendu statique** : chaque page (`/`, `/chantier`, `/ferme`, `/ville`, `/espace`, `/aeroport`, `/militaire`) est générée en HTML au build, puis la navigation se fait côté client.
 Le moteur 3D est chargé uniquement dans le navigateur (import dynamique dans `WorldStage`), il ne tourne jamais pendant le prérendu.
 
 Pour tester vite dans un navigateur lent (rendu logiciel, CI), ajoute `?fast` à l'URL d'un monde : les animations avancent par grands pas. `?noink` coupe les contours, `?debug` expose `window.__bidule` (renderer, scène) pour mesurer.
@@ -51,6 +53,7 @@ src/
     geo.js            matériaux « toon », primitives (boîtes arrondies, profils extrudés…), freeze() qui fusionne le décor fixe
     life.js           la vie autour : chemins, piétons, petites voitures, circulation qui s'arrête pour les autres
     fx.js             feu, fumée, poussière
+    aircraft.js       avions et hélicoptère (avion de ligne, à hélice, de chasse, de transport)
     parts.js          pièces mécaniques : chenilles, pneus, vérins, cabines, conducteurs
     props.js          décor : arbres, lampadaires, grange, silo, clôtures…
     tween.js          petit moteur d'animation à base de promesses
@@ -60,6 +63,8 @@ src/
     ferme.js          la grande ferme
     ville.js          la ville japonaise
     espace.js         la base spatiale
+    aeroport.js       l'aéroport
+    militaire.js      la base militaire
 ```
 
 ## Ajouter un monde

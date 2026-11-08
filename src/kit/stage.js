@@ -282,7 +282,7 @@ export function createStage(world, root, opts = {}) {
   const tmpF = new V3();
   /** Back to the automatic framing: of the selected machine (seen from the side) or of the whole world. */
   function resetView(turn = true) {
-    panT.set(0, 0, 0); zoomT = 1; elT = ELEV0; userMoved = false; $('#recenter').hidden = true;
+    panT.set(0, 0, 0); zoomT = 1; elT = current && current.el ? current.el : ELEV0; userMoved = false; $('#recenter').hidden = true;
     if (turn) azT = nearAz(current ? (current.az != null ? current.az : current.g.rotation.y) : OVAZ);
   }
   function moved() { if (!userMoved && startEl.hidden) { userMoved = true; $('#recenter').hidden = false; } }
@@ -311,7 +311,7 @@ export function createStage(world, root, opts = {}) {
     });
   });
   function hop(st) {
-    const m = st.m; if (st.hopping) return; st.hopping = true; const y0 = m.position.y;
+    const m = st.m; if (!m || st.hopping) return; st.hopping = true; const y0 = m.position.y;
     return tw(0.5, (k) => (m.position.y = y0 + Math.sin(k * Math.PI) * 0.3), lin).then(() => { m.position.y = y0; st.hopping = false; });
   }
   function select(st) {

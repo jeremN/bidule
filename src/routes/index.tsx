@@ -192,9 +192,70 @@ const worlds = [
         <g fill="#fff" opacity=".8"><circle cx="200" cy="104" r="2" /><circle cx="212" cy="112" r="2" /><circle cx="192" cy="114" r="1.6" /></g>
       </svg>
     )
+  },
+  {
+    to: '/aeroport' as const,
+    title: "L'Aéroport",
+    text: "Les avions qui décollent et atterrissent, la passerelle, les valises, le plein, les repas, le pushback…",
+    art: (
+      <svg viewBox="0 0 240 150" aria-hidden="true">
+        <defs>
+          <linearGradient id="ae-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#9fd4ff" /><stop offset="1" stopColor="#e4f4ff" /></linearGradient>
+        </defs>
+        <rect width="240" height="150" fill="url(#ae-sky)" />
+        <g fill="#fff"><ellipse cx="40" cy="30" rx="20" ry="7" /><ellipse cx="54" cy="25" rx="12" ry="8" /><ellipse cx="190" cy="56" rx="16" ry="6" /></g>
+        <path d="M0 116H240V150H0Z" fill="#6a6e80" />
+        <path d="M0 124H240" stroke="#f3efe2" strokeWidth="3" strokeDasharray="14 10" />
+        <g {...ol}>
+          <rect x="180" y="58" width="10" height="58" fill="#f4f5f8" /><rect x="172" y="48" width="26" height="12" rx="3" fill="#8ccaf0" /><rect x="174" y="44" width="22" height="5" fill="#2f6fe0" />
+        </g>
+        <g className="bob">
+          <g transform="rotate(-12 110 70)" {...ol}>
+            <path d="M40 72L58 54H76L66 72Z" fill="#2f6fe0" />
+            <path d="M44 74Q44 66 54 66H150Q170 66 178 74Q170 82 150 82H54Q44 82 44 74Z" fill="#f6f7fb" />
+            <path d="M100 76L84 102H100L122 76Z" fill="#c9ccd8" />
+            <rect x="94" y="84" width="18" height="9" rx="4" fill="#8f96a6" />
+            <path d="M160 70h8" stroke={INK} strokeWidth="4" />
+          </g>
+          <g fill="#2a2440">{[70, 80, 90, 100, 110, 120, 130].map((x) => <circle key={x} cx={x} cy={62 - (x - 70) * 0.21} r="2" />)}</g>
+        </g>
+        <g {...ol}><rect x="18" y="104" width="32" height="12" rx="3" fill="#f2b21c" /><circle cx="26" cy="118" r="4" fill="#3a3550" /><circle cx="42" cy="118" r="4" fill="#3a3550" /></g>
+      </svg>
+    )
+  },
+  {
+    to: '/militaire' as const,
+    title: 'La Base militaire',
+    text: "Le char qui passe partout, le pont qui se déplie, l'amphibie, l'hélicoptère, le drone, l'avion de chasse…",
+    art: (
+      <svg viewBox="0 0 240 150" aria-hidden="true">
+        <defs>
+          <linearGradient id="mi-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#bfe0c8" /><stop offset="1" stopColor="#eef6e4" /></linearGradient>
+        </defs>
+        <rect width="240" height="150" fill="url(#mi-sky)" />
+        <g fill="#fff"><ellipse cx="190" cy="26" rx="18" ry="6" /><ellipse cx="204" cy="21" rx="11" ry="7" /></g>
+        <g {...ol}>
+          <path d="M150 40h72" /><rect x="183" y="40" width="6" height="7" fill="#2a2f2a" />
+          <path d="M160 58q0-12 18-12h20q14 0 18 12-4 10-18 10h-20q-18 0-18-10z" fill="#6a7a52" />
+          <path d="M162 58l-24-4v-6h6l18 6z" fill="#6a7a52" />
+        </g>
+        <path d="M0 112Q120 100 240 114V150H0Z" fill="#8a7a52" />
+        <path d="M0 128Q120 120 240 130V150H0Z" fill="#7a6a42" />
+        <g className="bob">
+          <g {...ol}>
+            <rect x="34" y="100" width="98" height="20" rx="10" fill="#46522a" />
+            <g fill="#9b96b8"><circle cx="48" cy="110" r="5" /><circle cx="68" cy="110" r="5" /><circle cx="88" cy="110" r="5" /><circle cx="108" cy="110" r="5" /></g>
+            <path d="M38 100l10-14h74l10 14z" fill="#5f6e3a" />
+            <path d="M60 86q2-16 22-16h18q16 0 18 16z" fill="#5f6e3a" />
+            <rect x="112" y="74" width="56" height="7" rx="3" fill="#46522a" />
+            <rect x="78" y="62" width="12" height="8" rx="3" fill="#46522a" />
+          </g>
+        </g>
+        <g {...ol}><rect x="16" y="54" width="4" height="58" fill="#f4f5f8" /><rect x="20" y="56" width="10" height="16" fill="#2f4fa8" /><rect x="30" y="56" width="10" height="16" fill="#f4f5f8" /><rect x="40" y="56" width="10" height="16" fill="#d8302a" /></g>
+      </svg>
+    )
   }
 ];
-
 function Home() {
   return (
     <main className="hub">
