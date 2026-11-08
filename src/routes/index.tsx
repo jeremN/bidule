@@ -732,6 +732,54 @@ const worlds = [
           </g>
         </svg>
       )
+    },
+  {
+      to: '/garage' as const,
+      title: 'Le Garage',
+      text: 'La voiture est en panne ! La dépanneuse, le pont élévateur, les pneus, la vidange, la batterie, le lavage et la station-service…',
+      art: (
+        <svg viewBox="0 0 240 150" aria-hidden="true">
+          <defs>
+            <linearGradient id="ga-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#a8d8ff" /><stop offset="1" stopColor="#eef7ff" /></linearGradient>
+          </defs>
+          <rect width="240" height="150" fill="url(#ga-sky)" />
+          <g fill="#fff"><ellipse cx="40" cy="24" rx="17" ry="6" /><ellipse cx="54" cy="19" rx="10" ry="6" /></g>
+          {/* the garage, open in front: the car up on the blue lift */}
+          <g {...ol}>
+            <rect x="126" y="40" width="108" height="70" fill="#f0e6d4" />
+            <rect x="122" y="34" width="116" height="10" fill="#2f5fc8" />
+            <rect x="150" y="16" width="60" height="16" rx="3" fill="#2f5fc8" />
+            <rect x="138" y="54" width="84" height="56" fill="#c8c4b8" />
+            <rect x="146" y="56" width="7" height="54" fill="#2f6fd8" /><rect x="207" y="56" width="7" height="54" fill="#2f6fd8" />
+            <path d="M156 82q2-7 10-8l8-1 7-7h16l8 7h4q5 1 5 7v4h-58z" fill="#d83a2a" />
+            <circle cx="168" cy="88" r="5" fill="#2a2f40" /><circle cx="200" cy="88" r="5" fill="#2a2f40" />
+            <path d="M153 90h12M207 90h-10" strokeWidth="3" />
+          </g>
+          <path d="M162 24h36" stroke="#fff" strokeWidth="4" strokeLinecap="round" />
+          <g {...ol}>
+            <rect x="18" y="56" width="7" height="54" fill="#8a5a3a" />
+            <circle cx="21" cy="48" r="17" fill="#5aa85a" />
+          </g>
+          <path d="M0 108H240V150H0Z" fill="#8a8ea0" />
+          <path d="M0 132H240" stroke="#f3efe2" strokeWidth="3" strokeDasharray="14 10" />
+          <path d="M0 106Q60 101 120 107V112H0Z" fill="#8cc46a" />
+          <g className="bob">
+            <g {...ol}>
+              {/* the flatbed tow truck carrying the family car */}
+              <rect x="20" y="104" width="86" height="8" rx="2" fill="#f2781c" />
+              <rect x="104" y="80" width="30" height="36" rx="5" fill="#f3f4f7" />
+              <rect x="114" y="85" width="16" height="12" rx="2" fill="#9fe0ff" />
+              <rect x="108" y="74" width="20" height="6" rx="2" fill="#f6b21a" />
+              <rect x="20" y="112" width="114" height="8" rx="2" fill="#2a2f40" />
+              <path d="M28 96q0-7 7-8l11-1 10-9h22l10 9h5q6 1 6 8v9H28z" fill="#d83a2a" />
+              <path d="M58 81h8v6H51zM70 81h7l8 6H70z" fill="#9fe0ff" />
+              <circle cx="42" cy="104" r="5.5" fill="#2a2f40" /><circle cx="82" cy="104" r="5.5" fill="#2a2f40" />
+              <circle cx="38" cy="124" r="9" fill="#2a2f40" /><circle cx="60" cy="124" r="9" fill="#2a2f40" /><circle cx="120" cy="124" r="9" fill="#2a2f40" />
+              <circle cx="38" cy="124" r="3.5" fill="#c9ced8" /><circle cx="60" cy="124" r="3.5" fill="#c9ced8" /><circle cx="120" cy="124" r="3.5" fill="#c9ced8" />
+            </g>
+          </g>
+        </svg>
+      )
     }
 ];
 function Home() {

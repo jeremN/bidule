@@ -22,6 +22,7 @@ Chaque « monde » est un petit diorama vivant en 3D, dans un style de dessin an
 | **Les Secours** | grande échelle, fourgon pompe, ambulance des pompiers, SAMU, voiture de police, moto de police, hélicoptère, bateau des pompiers (des sauvetages tout doux en ville) |
 | **La Route** | raboteuse, balayeuse, répandeuse, finisseur, compacteur tandem, compacteur à pneus, traceuse, camion flèche, signaleur (la vieille route devient toute neuve) |
 | **Le Colis** | semi-remorque, transpalette, robots d'entrepôt, trieuse, camionnette, vélo cargo, drone, robot livreur (le cadeau de Léo, de l'entrepôt à sa porte) |
+| **Le Garage** | dépanneuse, pont élévateur, pneus, vidange, diagnostic, lavage, station-service (la voiture de la famille tombe en panne et repart toute propre) |
 
 L'idée de départ vient de [os-taxonomy de Marble](https://github.com/withmarbleapp/os-taxonomy), un graphe des notions du primaire avec leurs prérequis. À terme, chaque monde pourra être rattaché aux notions du programme français (maternelle → lycée).
 
@@ -37,7 +38,7 @@ npm run build    # site statique prérendu dans dist/client
 npm run check    # eslint + TypeScript
 ```
 
-L'app est construite avec [TanStack Start](https://tanstack.com/start) (React) en **prérendu statique** : chaque page (`/`, `/chantier`, `/ferme`, `/ville`, `/espace`, `/aeroport`, `/militaire`, `/usine`, `/carriere`, `/recyclage`, `/port`, `/foret`, `/mer`, `/montagne`, `/secours`, `/travaux`, `/livraison`) est générée en HTML au build, puis la navigation se fait côté client.
+L'app est construite avec [TanStack Start](https://tanstack.com/start) (React) en **prérendu statique** : chaque page (`/`, `/chantier`, `/ferme`, `/ville`, `/espace`, `/aeroport`, `/militaire`, `/usine`, `/carriere`, `/recyclage`, `/port`, `/foret`, `/mer`, `/montagne`, `/secours`, `/travaux`, `/livraison`, `/garage`) est générée en HTML au build, puis la navigation se fait côté client.
 Le moteur 3D est chargé uniquement dans le navigateur (import dynamique dans `WorldStage`), il ne tourne jamais pendant le prérendu.
 
 Pour tester vite dans un navigateur lent (rendu logiciel, CI), ajoute `?fast` à l'URL d'un monde : les animations avancent par grands pas. `?noink` coupe les contours, `?debug` expose `window.__bidule` (renderer, scène) pour mesurer.
@@ -85,6 +86,7 @@ src/
     secours.js        les secours
     travaux.js        la route (travaux)
     livraison.js      le colis
+    garage.js         le garage
 ```
 
 ## Ajouter un monde

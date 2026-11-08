@@ -16,6 +16,7 @@ import { Route as ChantierRouteImport } from './routes/chantier'
 import { Route as EspaceRouteImport } from './routes/espace'
 import { Route as FermeRouteImport } from './routes/ferme'
 import { Route as ForetRouteImport } from './routes/foret'
+import { Route as GarageRouteImport } from './routes/garage'
 import { Route as LivraisonRouteImport } from './routes/livraison'
 import { Route as MerRouteImport } from './routes/mer'
 import { Route as MilitaireRouteImport } from './routes/militaire'
@@ -60,6 +61,11 @@ const FermeRoute = FermeRouteImport.update({
 const ForetRoute = ForetRouteImport.update({
   id: '/foret',
   path: '/foret',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GarageRoute = GarageRouteImport.update({
+  id: '/garage',
+  path: '/garage',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LivraisonRoute = LivraisonRouteImport.update({
@@ -121,6 +127,7 @@ export interface FileRoutesByFullPath {
   '/espace': typeof EspaceRoute
   '/ferme': typeof FermeRoute
   '/foret': typeof ForetRoute
+  '/garage': typeof GarageRoute
   '/livraison': typeof LivraisonRoute
   '/mer': typeof MerRoute
   '/militaire': typeof MilitaireRoute
@@ -140,6 +147,7 @@ export interface FileRoutesByTo {
   '/espace': typeof EspaceRoute
   '/ferme': typeof FermeRoute
   '/foret': typeof ForetRoute
+  '/garage': typeof GarageRoute
   '/livraison': typeof LivraisonRoute
   '/mer': typeof MerRoute
   '/militaire': typeof MilitaireRoute
@@ -160,6 +168,7 @@ export interface FileRoutesById {
   '/espace': typeof EspaceRoute
   '/ferme': typeof FermeRoute
   '/foret': typeof ForetRoute
+  '/garage': typeof GarageRoute
   '/livraison': typeof LivraisonRoute
   '/mer': typeof MerRoute
   '/militaire': typeof MilitaireRoute
@@ -181,6 +190,7 @@ export interface FileRouteTypes {
     | '/espace'
     | '/ferme'
     | '/foret'
+    | '/garage'
     | '/livraison'
     | '/mer'
     | '/militaire'
@@ -200,6 +210,7 @@ export interface FileRouteTypes {
     | '/espace'
     | '/ferme'
     | '/foret'
+    | '/garage'
     | '/livraison'
     | '/mer'
     | '/militaire'
@@ -219,6 +230,7 @@ export interface FileRouteTypes {
     | '/espace'
     | '/ferme'
     | '/foret'
+    | '/garage'
     | '/livraison'
     | '/mer'
     | '/militaire'
@@ -239,6 +251,7 @@ export interface RootRouteChildren {
   EspaceRoute: typeof EspaceRoute
   FermeRoute: typeof FermeRoute
   ForetRoute: typeof ForetRoute
+  GarageRoute: typeof GarageRoute
   LivraisonRoute: typeof LivraisonRoute
   MerRoute: typeof MerRoute
   MilitaireRoute: typeof MilitaireRoute
@@ -300,6 +313,13 @@ declare module '@tanstack/react-router' {
       path: '/foret'
       fullPath: '/foret'
       preLoaderRoute: typeof ForetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/garage': {
+      id: '/garage'
+      path: '/garage'
+      fullPath: '/garage'
+      preLoaderRoute: typeof GarageRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/livraison': {
@@ -383,6 +403,7 @@ const rootRouteChildren: RootRouteChildren = {
   EspaceRoute: EspaceRoute,
   FermeRoute: FermeRoute,
   ForetRoute: ForetRoute,
+  GarageRoute: GarageRoute,
   LivraisonRoute: LivraisonRoute,
   MerRoute: MerRoute,
   MilitaireRoute: MilitaireRoute,
