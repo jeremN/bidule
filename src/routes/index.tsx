@@ -337,6 +337,45 @@ const worlds = [
           </g>
         </svg>
       )
+    },
+  {
+      to: '/recyclage' as const,
+      title: 'Le Recyclage',
+      text: "Le camion-poubelle, la grue des colonnes à verre, le centre de tri, l'aimant géant, la presse… et la bouteille redevient une bouteille !",
+      art: (
+        <svg viewBox="0 0 240 150" aria-hidden="true">
+          <defs>
+            <linearGradient id="re-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#bfeec8" /><stop offset="1" stopColor="#f2fbe8" /></linearGradient>
+          </defs>
+          <rect width="240" height="150" fill="url(#re-sky)" />
+          <g fill="#fff"><ellipse cx="44" cy="26" rx="18" ry="6" /><ellipse cx="58" cy="21" rx="11" ry="7" /><ellipse cx="200" cy="34" rx="14" ry="5" /></g>
+          <g {...ol}>
+            <rect x="150" y="50" width="76" height="44" fill="#e8ecf0" /><rect x="150" y="76" width="76" height="18" fill="#2f8a50" />
+            <path d="M144 50L188 30L232 50Z" fill="#6a7086" />
+            <rect x="176" y="70" width="24" height="24" fill="#5a6070" />
+            <path d="M166 40l6-6h8l-4 6M188 38l4 6-4 6M162 46h8" fill="none" />
+          </g>
+          <path d="M0 110Q120 102 240 112V150H0Z" fill="#73aa64" />
+          <path d="M0 122H240V150H0Z" fill="#5d6070" />
+          <path d="M0 136H240" stroke="#f3efe2" strokeWidth="3" strokeDasharray="14 10" />
+          <g {...ol}>
+            <path d="M22 108V92q0-12 13-12t13 12v16z" fill="#3a9a50" /><circle cx="30" cy="94" r="2.5" fill={INK} /><circle cx="40" cy="94" r="2.5" fill={INK} />
+            <rect x="54" y="98" width="12" height="16" rx="2" fill="#3e4c48" /><rect x="52" y="94" width="16" height="5" rx="2" fill="#f4c21c" />
+          </g>
+          <g className="bob">
+            <g {...ol}>
+              <rect x="80" y="84" width="74" height="36" rx="8" fill="#f4f5f8" />
+              <rect x="80" y="104" width="74" height="9" fill="#2fae55" />
+              <path d="M80 88L70 96V120H80Z" fill="#dfe2ea" />
+              <path d="M154 92h22q12 0 14 12v16h-36z" fill="#f4f5f8" />
+              <rect x="166" y="96" width="16" height="11" rx="2" fill="#8ccaf0" />
+              <rect x="104" y="78" width="10" height="6" rx="2" fill="#f4c21c" />
+              <circle cx="98" cy="124" r="8" fill="#3a3550" /><circle cx="120" cy="124" r="8" fill="#3a3550" /><circle cx="172" cy="124" r="8" fill="#3a3550" />
+              <circle cx="66" cy="104" r="5" fill="#f0c39a" /><rect x="62" y="108" width="8" height="10" rx="2" fill="#ff8f1f" />
+            </g>
+          </g>
+        </svg>
+      )
     }
 ];
 function Home() {

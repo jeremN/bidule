@@ -16,6 +16,7 @@ import { Route as ChantierRouteImport } from './routes/chantier'
 import { Route as EspaceRouteImport } from './routes/espace'
 import { Route as FermeRouteImport } from './routes/ferme'
 import { Route as MilitaireRouteImport } from './routes/militaire'
+import { Route as RecyclageRouteImport } from './routes/recyclage'
 import { Route as UsineRouteImport } from './routes/usine'
 import { Route as VilleRouteImport } from './routes/ville'
 
@@ -54,6 +55,11 @@ const MilitaireRoute = MilitaireRouteImport.update({
   path: '/militaire',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RecyclageRoute = RecyclageRouteImport.update({
+  id: '/recyclage',
+  path: '/recyclage',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UsineRoute = UsineRouteImport.update({
   id: '/usine',
   path: '/usine',
@@ -73,6 +79,7 @@ export interface FileRoutesByFullPath {
   '/espace': typeof EspaceRoute
   '/ferme': typeof FermeRoute
   '/militaire': typeof MilitaireRoute
+  '/recyclage': typeof RecyclageRoute
   '/usine': typeof UsineRoute
   '/ville': typeof VilleRoute
 }
@@ -84,6 +91,7 @@ export interface FileRoutesByTo {
   '/espace': typeof EspaceRoute
   '/ferme': typeof FermeRoute
   '/militaire': typeof MilitaireRoute
+  '/recyclage': typeof RecyclageRoute
   '/usine': typeof UsineRoute
   '/ville': typeof VilleRoute
 }
@@ -96,6 +104,7 @@ export interface FileRoutesById {
   '/espace': typeof EspaceRoute
   '/ferme': typeof FermeRoute
   '/militaire': typeof MilitaireRoute
+  '/recyclage': typeof RecyclageRoute
   '/usine': typeof UsineRoute
   '/ville': typeof VilleRoute
 }
@@ -109,6 +118,7 @@ export interface FileRouteTypes {
     | '/espace'
     | '/ferme'
     | '/militaire'
+    | '/recyclage'
     | '/usine'
     | '/ville'
   fileRoutesByTo: FileRoutesByTo
@@ -120,6 +130,7 @@ export interface FileRouteTypes {
     | '/espace'
     | '/ferme'
     | '/militaire'
+    | '/recyclage'
     | '/usine'
     | '/ville'
   id:
@@ -131,6 +142,7 @@ export interface FileRouteTypes {
     | '/espace'
     | '/ferme'
     | '/militaire'
+    | '/recyclage'
     | '/usine'
     | '/ville'
   fileRoutesById: FileRoutesById
@@ -143,6 +155,7 @@ export interface RootRouteChildren {
   EspaceRoute: typeof EspaceRoute
   FermeRoute: typeof FermeRoute
   MilitaireRoute: typeof MilitaireRoute
+  RecyclageRoute: typeof RecyclageRoute
   UsineRoute: typeof UsineRoute
   VilleRoute: typeof VilleRoute
 }
@@ -198,6 +211,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MilitaireRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/recyclage': {
+      id: '/recyclage'
+      path: '/recyclage'
+      fullPath: '/recyclage'
+      preLoaderRoute: typeof RecyclageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/usine': {
       id: '/usine'
       path: '/usine'
@@ -223,6 +243,7 @@ const rootRouteChildren: RootRouteChildren = {
   EspaceRoute: EspaceRoute,
   FermeRoute: FermeRoute,
   MilitaireRoute: MilitaireRoute,
+  RecyclageRoute: RecyclageRoute,
   UsineRoute: UsineRoute,
   VilleRoute: VilleRoute,
 }
