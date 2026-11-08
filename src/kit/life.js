@@ -106,7 +106,7 @@ export function traffic(r, objs, speed = 3, opts = {}) {
         const target = blocked ? 0 : it.max;
         it.v += (target - it.v) * Math.min(1, dt * (blocked ? 6 : 1.5));
         it.s += it.v * dt;
-        const wh = it.o.userData.wheels; if (wh) wh.forEach((w) => (w.rotation.z -= (it.v * dt) / 0.24));
+        const wh = it.o.userData.wheels; if (wh) wh.forEach((w) => (w.rotation.z -= (it.v * dt) / (w.userData.r || 0.24)));
         if (it.o.userData.walk) { it.ph = (it.ph || rnd(0, 6)) + it.v * dt * 5.5; it.o.userData.walk(it.ph); }
       });
     }

@@ -1,4 +1,4 @@
-// La Ferme — six agricultural machines, one field strip each.
+// La Ferme — a big farm: the yard with its animals, and fields at every stage, each with the machine that works it.
 import * as THREE from 'three';
 import { V3, rad, clamp, rnd, pick } from '../kit/util.js';
 import { tw, to, sleep, pop, easeIn, easeSine, easeBack, lin } from '../kit/tween.js';
@@ -8,6 +8,8 @@ import {
 } from '../kit/geo.js';
 import { tire, agriTire, fender, hydraulic, strut, beacon, worker, glassCab } from '../kit/parts.js';
 import { autumnTree, barn, silo, fence, farmhouse, pond, lamp } from '../kit/props.js';
+import { route, person as walker, miniCar, traffic } from '../kit/life.js';
+import { instanced } from '../kit/geo.js';
 
 /* Fields are laid out in parallel strips. u = across strips (towards the camera), v = along a strip. */
 const S2 = Math.SQRT1_2;
@@ -58,9 +60,18 @@ const DATA = {
     how: "Le pick-up attrape la paille, la presse la roule en boule, puis la porte s'ouvre." },
   telescopique: { short: 'Le télescopique', full: 'Le chariot télescopique', verb: 'Empiler', horn: 'horn',
     use: 'Il soulève les balles de paille très haut.',
-    how: "Son bras sort comme une longue-vue : c'est pour ça qu'on l'appelle télescopique." }
+    how: "Son bras sort comme une longue-vue : c'est pour ça qu'on l'appelle télescopique." },
+  faucheuse: { short: 'La faucheuse', full: 'La faucheuse', verb: 'Faucher', horn: 'horn',
+    use: "Elle coupe l'herbe du pré pour faire du foin.",
+    how: "Son bras se déplie sur le côté. Dessous, des petits disques tournent très vite et coupent l'herbe." },
+  andaineur: { short: "L'andaineur", full: "L'andaineur", verb: 'Ratisser', horn: 'horn',
+    use: 'Il range le foin sec en longues lignes.',
+    how: "Ses râteaux tournent comme un manège et poussent le foin pour faire une ligne : l'andain." },
+  enrubanneuse: { short: "L'enrubanneuse", full: "L'enrubanneuse", verb: 'Emballer', horn: 'horn',
+    use: 'Elle emballe les balles de foin dans du plastique.',
+    how: "La balle tourne sur la table, et un bras l'enveloppe de film, comme un bonbon." }
 };
-const ORDER = ['tracteur', 'semoir', 'pulve', 'moissonneuse', 'presse', 'telescopique'];
+const ORDER = ['tracteur', 'semoir', 'pulve', 'moissonneuse', 'faucheuse', 'andaineur', 'presse', 'enrubanneuse', 'telescopique'];
 const GND = '<path class="gnd" d="M4 75H116"/>';
 const TRACTOR_SVG = (cls, dx = 0) => `<g transform="translate(${dx},0)">
   <rect class="${cls}" x="56" y="38" width="44" height="16" rx="3"/><rect class="k" x="98" y="40" width="5" height="12"/>
@@ -69,6 +80,10 @@ const TRACTOR_SVG = (cls, dx = 0) => `<g transform="translate(${dx},0)">
   <circle class="k" cx="50" cy="56" r="18"/><circle class="y" cx="50" cy="56" r="7"/>
   <circle class="k" cx="92" cy="65" r="10"/><circle class="y" cx="92" cy="65" r="4"/></g>`;
 const ICONS = {
+  faucheuse: GND + `<path class="ln" d="M4 60l4-10M10 60l3-12M16 60l4-11" style="stroke:#3f8f3a"/><rect class="r" x="4" y="58" width="40" height="8" rx="3"/><rect class="k" x="38" y="50" width="16" height="4"/>` + TRACTOR_SVG('gr', 8),
+  andaineur: GND + `<path class="wt" d="M0 75q22-16 46 0z"/><ellipse class="tl" cx="24" cy="40" rx="22" ry="5"/><path class="ln" d="M8 42v18M16 44v18M24 45v18M32 44v18M40 42v18"/><rect class="k" x="40" y="48" width="18" height="4"/>` + TRACTOR_SVG('r', 14),
+  enrubanneuse: GND + `<circle cx="28" cy="50" r="22" fill="#3f8f5a"/><path d="M10 42l36 18M10 56l36-16" stroke="#8ad09a" stroke-width="3"/><rect class="w" x="54" y="22" width="8" height="26" rx="3"/><path class="ln" d="M58 14v8M28 14h30M28 14v10"/>
+    <g transform="translate(46,14) scale(.72)">${TRACTOR_SVG('b')}</g>`,
   tracteur: GND + `<path class="s" d="M4 66l10-14h14l-6 14z"/><rect class="k" x="20" y="50" width="16" height="4"/>` + TRACTOR_SVG('r'),
   semoir: GND + `<path class="b" d="M4 30h26l-3 22H8z"/><circle class="s" cx="11" cy="62" r="7"/><circle class="s" cx="25" cy="62" r="7"/><rect class="k" x="28" y="50" width="10" height="4"/>` + TRACTOR_SVG('gr'),
   pulve: GND + `<rect class="k" x="2" y="27" width="116" height="3"/><path d="M8 32v3M20 32v3M32 32v3M88 32v3M100 32v3M112 32v3" stroke="#2b3040" stroke-width="2"/>
@@ -88,10 +103,29 @@ const ICONS = {
     <rect class="k" x="86" y="8" width="4" height="22"/><circle class="wt" cx="103" cy="20" r="12"/><circle class="reel" cx="103" cy="20" r="5"/>
     <circle class="k" cx="26" cy="63" r="11"/><circle class="s" cx="26" cy="63" r="4"/><circle class="k" cx="64" cy="63" r="11"/><circle class="s" cx="64" cy="63" r="4"/>`
 };
-const U = { moissonneuse: -12, pulve: -6, semoir: 0, tracteur: 6, presse: 12 };
-const CFG = {};
-Object.entries(U).forEach(([id, u]) => { const [x, z] = P(u, 0); CFG[id] = { x, z, yaw: YAW }; });
-{ const [x, z] = P(-3, -13); CFG.telescopique = { x, z, yaw: YAW }; }
+// Layout coordinates: h runs left → right on screen in the overview, d from the back (−) to the front (+).
+const Q = (h, d) => [(h + d) * S2, (d - h) * S2];
+const CF = (h, d, yaw = YAW) => { const [x, z] = Q(h, d); return { x, z, yaw }; };
+const CFG = {
+  tracteur: CF(20, 23), moissonneuse: CF(-20, 23), semoir: CF(-22, 1), pulve: CF(22, 1),
+  faucheuse: CF(-22, -27), andaineur: CF(-22, -19), presse: CF(22, -27), enrubanneuse: CF(22, -18.5), telescopique: CF(1, -14)
+};
+
+// painted ground: a patchwork of fields between farm tracks
+const GR = [], GB = [], GP = [];
+const rect = (h, d, len, wid, col, al = 1, stripes) => { const [cx, cz] = Q(h, d); GR.push({ cx, cz, len, wid, rot: -Math.PI / 4, col, al, stripes }); };
+const blob = (h, d, r, col) => { const [x, z] = Q(h, d); GB.push([x, z, r, col]); };
+const track = (pts, w = 2.6) => GP.push({ pts: pts.map(([h, d]) => Q(h, d)), w, col: '#c9a68a', al: 0.85 });
+rect(-21, 24, 32, 19, '#d6ae48', 1, '#c49a3a');            // wheat, front left
+rect(21, 24, 32, 19, '#76a654', 1, '#6a9a4a');             // stubble to plough, front right
+rect(21, 19.5, 32, 6, '#8a5a3a', 0.9, '#6e4428');           // already ploughed headland
+rect(-22, 1, 34, 13, '#8a5a3a', 1, '#74482c');             // ploughed field to sow, middle left
+rect(22, 1, 34, 13, '#5f9a4a', 1, '#4f8a3e');              // young crop, middle right
+rect(-23, -23, 26, 16, '#7ab05a', 1, '#6aa04e');           // hay meadow, back left
+rect(23, -23, 26, 16, '#c9c27a', 1, '#b8b06a');            // dried hay, back right
+track([[-44, -8.5], [44, -8.5]]); track([[-44, 12.5], [44, 12.5]]); track([[0, -8.5], [0, 44]], 2.4); track([[0, -8.5], [0, -36]], 3.2);
+track([[-9.5, -8.5], [-9.5, -14]], 2.2); track([[9.5, -8.5], [9.5, -14]], 2.2);
+blob(0, -24, 11, 'rgba(214,180,140,.75)'); blob(0, -33, 6, 'rgba(110,170,90,.6)');
 
 /* ---------- shared machines ---------- */
 function tractor(st, parent, bodyM, rimM) {
@@ -148,50 +182,21 @@ function growStrip(parent, X0, w, m, y) {
 
 export default {
   id: 'ferme', title: 'La Ferme', titleHtml: 'La <span>Ferme</span>',
-  subtitle: "Six machines pour faire pousser le blé et ranger la paille. Touche-les pour voir comment elles marchent.",
+  subtitle: "Une grande ferme : la cour et ses animaux, les champs et les prés. Touche une machine pour la voir travailler.",
   welcome: 'Bienvenue à la ferme ! Touche une machine pour voir comment elle marche.',
   hint: 'Touche une machine pour la découvrir.', backLabel: 'Toute la ferme',
   brandIcon: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="22" r="6"/><circle cx="25" cy="25" r="3"/><path d="M14 18V8h8l3 8h3v6M4 18h10"/></svg>',
   data: DATA, order: ORDER, icons: ICONS, cfg: CFG,
-  overview: { w: 46, h: 32, focus: [0.5, 2, 0.5] },
-  tuftColors: [0x3f9a6a, 0x2f7f5a, 0x5ab07a, 0x3a6fd0, 0x2a8a8a, 0x4c78ff],
+  overview: { w: 76, h: 52, focus: [0, 2, 0] },
+  radius: 46, tufts: false,
   forest: { bush: [0x2f8a5a, 0x2a6fb8, 0x3f9a6a, 0x4a6ef0] },
-  zones: [
-    [...P(-3, -12), 3.6], [...P(-3, -7.2), 1.8], [...P(-6, 14), 5], [...P(-11, 12), 2], [...P(-14, 10), 2], [...P(4, 14), 3.6],
-    [...P(10, -14), 3.4], [...P(-17.6, 2.4), 2.8], [...P(-17.6, -2), 2.8], [...P(0, 12), 2.4]
-  ],
-  segs: [
-    [...P(-12, -15), ...P(-12, 6), 3.4], [...P(-6, -9), ...P(-6, 8), 2.2], [...P(0, -9), ...P(0, 10), 2.2],
-    [...P(6, -9), ...P(6, 10), 2.2], [...P(12, -9), ...P(12, 10), 2.2]
-  ],
-  ground: {
-    base: ['#7a86c4', '#5b66a6', '#3d467e'],
-    rects: [
-      { cx: P(-12, -1)[0], cz: P(-12, -1)[1], len: 15, wid: 6.2, rot: -Math.PI / 4, col: '#c9a24a', al: 0.55 },
-      { cx: P(-6, -1)[0], cz: P(-6, -1)[1], len: 14, wid: 3.8, rot: -Math.PI / 4, col: '#5f9a5a', al: 0.55 },
-      { cx: P(0, -1)[0], cz: P(0, -1)[1], len: 14, wid: 3.8, rot: -Math.PI / 4, col: '#8a5a3a', al: 0.6 },
-      { cx: P(6, -1)[0], cz: P(6, -1)[1], len: 14, wid: 3.8, rot: -Math.PI / 4, col: '#5f9a5a', al: 0.5 },
-      { cx: P(12, -1)[0], cz: P(12, -1)[1], len: 14, wid: 3.8, rot: -Math.PI / 4, col: '#d9c27a', al: 0.45 }
-    ],
-    paths: [{ pts: [P(-20, 9), P(-6, 10), P(4, 10), P(17, 9)], w: 3.2, col: '#c79a92', al: 0.55 }, { pts: [P(-3, -16), P(-3, -6), P(-3, 9)], w: 2.4, col: '#c79a92', al: 0.4 }],
-    blobs: [[...P(-6, 13), 7, 'rgba(255,196,140,.45)'], [...P(-3, -11), 6, 'rgba(255,196,140,.45)'], [...P(0, 0), 10, 'rgba(255,196,140,.25)']]
-  },
+  ground: { base: ['#7a86c4', '#5b66a6', '#3d467e'], rects: GR, paths: GP, blobs: GB },
 
   build(ctx) {
-    const { scene, makeStation, part, roll, step, throwClod } = ctx;
+    const { scene, makeStation, part, roll, step, throwClod, onUpdate } = ctx;
     const W = (o, x, y, z) => o.localToWorld(new V3(x, y, z));
 
-    /* scenery */
-    { const [x, z] = P(-6, 14); barn(scene, x, z, YAW); }
-    { const [x, z] = P(-11, 12); silo(scene, x, z, 7.5); }
-    { const [x, z] = P(-14, 9.5); silo(scene, x, z, 6); }
-    { const [x, z] = P(4, 14); farmhouse(scene, x, z, YAW); }
-    { const [x, z] = P(10, -14); pond(scene, x, z, 2.2); }
-    { const [x, z] = P(0, 12.5); const g = grp(scene, x, 0, z); g.rotation.y = YAW; [-0.95, 0.95].forEach((xx) => newBale(g, xx, 0.85, 0)); newBale(g, 0, 2.5, 0); shadows(g); }
-    fence(scene, P(15, -10), P(15, 7), 10); fence(scene, P(-16, -15), P(-16, -6), 6);
-    [[-19, -6], [-15, 15], [18, -4], [9, -18], [-21, 4], [16, 12]].forEach(([u, v], i) => { const [x, z] = P(u, v); autumnTree(scene, x, z, i % 2 ? [0xf2b21c, 0xe8901e, 0xf6cf3a] : [0xe8721e, 0xd13f1f, 0xf2a12a]); });
-    { const [x, z] = P(-2, 10.5); lamp(scene, x, z, 1); }
-    [[1.5, 10.5, 2.5], [-8, 9.5, 0.4], [13.5, -8, 2.2]].forEach(([u, v, r]) => { const [x, z] = P(u, v); worker(scene, x, z, r, FM.cap); });
+    buildFarm(scene);
 
     /* ---- tracteur + charrue ---- */
     (function () {
@@ -617,5 +622,253 @@ export default {
         pickBale = newBale(S, PICK, 0.85, -0.08); pop(pickBale, 0.6);
       };
     })();
+
+    /* ---- faucheuse ---- */
+    (function () {
+      const st = makeStation('faucheuse'), S = st.g, X0 = -7, X1 = 5, START = X0 + 1.2, END = X1 + 2.4, Z0 = 0.9, Z1 = 3.5;
+      const tall = []; for (let i = 0; i < 520; i++) tall.push({ x: rnd(X0, X1), z: rnd(Z0, Z1), sx: 1, sy: rnd(0.8, 1.3), sz: 1, ry: rnd(0, 3), rz: rnd(-0.2, 0.2), k: 1 });
+      const TU = new THREE.ConeGeometry(0.11, 0.75, 4); TU.translate(0, 0.37, 0);
+      const tim = fieldItems(S, TU, tall, [0x5ab05a, 0x6ac06a, 0x4c9a4a, 0x7ac86a]);
+      const cut = []; for (let x = X0 + 0.15; x < X1; x += 0.28) cut.push({ x, y: 0.06, z: rnd(1.9, 2.5), sx: rnd(0.35, 0.5), sy: 0.1, sz: rnd(0.5, 0.7), ry: rnd(0, 3), k: 0 });
+      const cim = fieldItems(S, ICO, cut, [0x8ac06a, 0x9ac874, 0x7ab05a]);
+      const m = grp(S, START, 0, 0); st.m = m; st.lastX = START;
+      const T = tractor(st, m, FM.green, MT.yel); st.wheels = T.wheels; st.links = T.links;
+      // side mower on the rear linkage: folded up for the road, down on the grass to work
+      const arm = grp(m, -1.15, 0.75, 0.55); arm.rotation.x = -Math.PI / 2 + 0.15;
+      rbox(arm, 0.3, 0.25, 0.6, 0.05, FM.red, 0, 0, 0.25);
+      const bar = grp(arm, 0, -0.55, 0);
+      rbox(bar, 0.42, 0.1, 2.9, 0.03, MT.dark, 0, 0, 1.95); ext(bar, [[-0.35, 0.05], [0.3, 0.05], [0.22, 0.45], [-0.3, 0.45]], 0.08, 2.9, FM.red, 0, 0, 1.95, 0.02);
+      const discs = []; for (let z = 0.75; z <= 3.3; z += 0.5) { const d = grp(bar, 0.05, -0.02, z); cylY(d, 0.2, 0.06, MT.steel, 0, 0, 0, 14); [0, 1].forEach((k) => box(d, 0.48, 0.02, 0.06, MT.dark, 0, 0, 0).rotation.y = k * Math.PI / 2); discs.push(d); }
+      st.links.push(hydraulic(m, anchor(m, -0.9, 1.45, 0.45), anchor(arm, 0, 0.1, 0.5), { barrel: 0.45, rb: 0.055, mat: MT.dark }));
+      part(st, 'bras', 'le bras de la faucheuse', anchor(arm, 0, 0.3, 0.5), true);
+      part(st, 'disques', 'les disques qui coupent', anchor(bar, 0, 0.5, 2.6), false);
+      part(st, 'herbe', "l'herbe haute", anchor(S, 2, 1.0, 3.2), true);
+      part(st, 'cabine', 'la cabine', anchor(T.cab, 0, 1.9, 0), true);
+      st.focusAt = anchor(m, -0.8, 1.2, 1.4); st.size = { w: 11.5, h: 7 }; st.tagAt = anchor(m, 0.5, 3.6, 0);
+      st.update = (dt) => {
+        roll(st, dt);
+        if (st.mowing) {
+          discs.forEach((d, i) => (d.rotation.y += dt * (i % 2 ? 18 : -18)));
+          const bx = m.position.x - 1.15; let a = false, b = false;
+          tall.forEach((g) => { if (g.k > 0 && g.x > bx) { g.k = Math.max(0, g.k - 0); } if (g.k > 0 && g.x < bx + 0.2 && g.x > bx - 0.4) { g.k = 0; a = true; } });
+          cut.forEach((c) => { if (c.k === 0 && c.x < bx - 0.2) { c.k = 1; b = true; } });
+          if (a) tim.write(); if (b) cim.write();
+          if (Math.random() < 0.5) throwClod(wp(bar, 0).add(new V3(0, 0, 0)), wp(bar, 0).add(new V3(rnd(-0.6, 0.6), 0, rnd(-0.6, 0.6))), rnd(0.05, 0.09), 0x6ac06a);
+        }
+      };
+      st.action = async function () {
+        if (st.done) {
+          engineOn(46); st.reversing = true; st.beepT = 0;
+          await Promise.all([step("L'herbe a repoussé dans le pré. On recommence !", 'herbe'), to(m.position, 'x', START, 3),
+            tw(1.2, (k) => { tall.forEach((g) => (g.k = k)); cut.forEach((c) => (c.k = 1 - k)); tim.write(); cim.write(); })]);
+          st.reversing = false; st.done = false;
+        }
+        engineOn(48);
+        await Promise.all([step('Le bras de la faucheuse se déplie sur le côté.', 'bras'), to(arm.rotation, 'x', 0, 1.8, easeSine)]);
+        st.mowing = true;
+        await Promise.all([to(m.position, 'x', END, 7, easeSine), (async () => { await step('Ses disques tournent très, très vite et coupent l’herbe.', 'disques'); await step('L’herbe coupée reste par terre pour sécher au soleil.', 'herbe'); })()]);
+        st.mowing = false;
+        await Promise.all([step('Le bras se replie. Quand l’herbe sera sèche, ce sera du foin !', 'bras'), to(arm.rotation, 'x', -Math.PI / 2 + 0.15, 1.6)]);
+        st.done = true;
+      };
+    })();
+
+    /* ---- andaineur ---- */
+    (function () {
+      const st = makeStation('andaineur'), S = st.g, X0 = -7, X1 = 5, START = X0 + 1.2, END = X1 + 4.0;
+      const hay = []; for (let i = 0; i < 300; i++) hay.push({ x: rnd(X0, X1), y: 0.05, z: rnd(-1.7, 1.7), sx: rnd(0.3, 0.45), sy: 0.08, sz: rnd(0.3, 0.45), ry: rnd(0, 3), k: 1 });
+      const him = fieldItems(S, ICO, hay, [0xc9c27a, 0xd9cf88, 0xb8b06a]);
+      const RG = new THREE.CylinderGeometry(0.42, 0.42, 1, 12, 1, false, 0, Math.PI); RG.rotateZ(Math.PI / 2); RG.translate(0.5, 0, 0);
+      const row = add(S, RG, std(0xd9cf88, 0.9, 0), X0, 0.02, 0); row.scale.set(0.001, 1, 1); row.rotation.y = 0;
+      const m = grp(S, START, 0, 0); st.m = m; st.lastX = START;
+      const T = tractor(st, m, FM.red, MT.grey); st.wheels = T.wheels; st.links = T.links;
+      // a trailed rotary rake: a big wheel of tines that sweeps the hay into one line
+      const rk = grp(m, -3.3, 0, 0);
+      beam(m, new V3(-1.0, 0.65, 0), new V3(-3.2, 0.95, 0), 0.12, FM.amber);
+      rbox(rk, 0.5, 0.3, 0.5, 0.06, FM.amber, 0, 1.05, 0);
+      [1, -1].forEach((s) => { rod(rk, new V3(0, 0.95, 0), new V3(0.1, 0.35, s * 0.7), 0.05, FM.amber); st.wheels.push(tire(rk, 0.3, 0.18, 0.1, 0.3, s * 0.8, MT.grey, s)); });
+      const rotor = grp(rk, 0, 1.25, 0); cylY(rotor, 0.22, 0.5, FM.amber, 0, 0, 0, 12);
+      for (let k = 0; k < 10; k++) { const a = (k / 10) * Math.PI * 2, c = Math.cos(a), s = Math.sin(a); rod(rotor, new V3(c * 0.2, 0, s * 0.2), new V3(c * 1.7, -0.25, s * 1.7), 0.03, MT.dark, 5); [1.3, 1.6].forEach((r) => rod(rotor, new V3(c * r, -0.22, s * r), new V3(c * r, -0.85, s * r), 0.016, MT.steel, 4)); }
+      const curtain = grp(rk, 0, 0, 0); rbox(curtain, 0.06, 0.6, 2.2, 0.02, std(0x3a7a3a, 0.8, 0), -0.6, 0.55, 0, 0.01); curtain.visible = true;
+      rotor.position.y = 1.65;
+      part(st, 'rateaux', 'les râteaux qui tournent', anchor(rotor, 0, 0.6, 1.2), true);
+      part(st, 'foin', 'le foin', anchor(S, 2.5, 0.6, 1.4), true);
+      part(st, 'andain', "l'andain", anchor(S, -3, 0.9, 0), false);
+      part(st, 'tracteur', 'le tracteur', anchor(T.cab, 0, 1.9, 0), true);
+      st.focusAt = anchor(m, -1.6, 1.2, 0); st.size = { w: 12, h: 7 }; st.tagAt = anchor(m, 0, 3.6, 0);
+      st.update = (dt) => {
+        roll(st, dt);
+        if (st.raking) {
+          rotor.rotation.y += dt * 4;
+          const cx = m.position.x - 3.3; let dirty = false;
+          hay.forEach((h) => { if (h.k > 0 && h.x > cx - 1.3 && h.x < cx + 1.6) { h.z *= 1 - dt * 3; if (h.x < cx - 0.3) h.k = 0; dirty = true; } });
+          if (dirty) him.write();
+          row.scale.x = clamp(cx - 0.6 - X0, 0.001, X1 - X0);
+        }
+      };
+      st.action = async function () {
+        if (st.done) {
+          engineOn(46); st.reversing = true; st.beepT = 0;
+          await Promise.all([step('On étale du foin tout neuf. On recommence !', 'foin'), to(m.position, 'x', START, 3),
+            tw(1.2, (k) => { hay.forEach((h) => { h.k = k; h.z = h.z0 != null ? h.z0 : h.z; }); him.write(); row.scale.x = Math.max(0.001, row.scale.x * (1 - k)); })]);
+          st.reversing = false; st.done = false;
+        }
+        hay.forEach((h) => (h.z0 = h.z0 != null ? h.z0 : h.z));
+        engineOn(46);
+        await Promise.all([step("Les râteaux de l'andaineur descendent près du sol.", 'rateaux'), to(rotor.position, 'y', 1.25, 1.3)]);
+        st.raking = true;
+        await Promise.all([to(m.position, 'x', END, 7.5, easeSine), (async () => { await step('Ils tournent comme un manège, et poussent le foin.', 'rateaux'); await step("Tout le foin se range en une longue ligne : l'andain.", 'andain'); })()]);
+        st.raking = false;
+        await Promise.all([step('Maintenant, la presse pourra le ramasser facilement.', 'andain'), to(rotor.position, 'y', 1.65, 1.2)]);
+        st.done = true;
+      };
+    })();
+
+    /* ---- enrubanneuse ---- */
+    (function () {
+      const st = makeStation('enrubanneuse'), S = st.g;
+      const filmM = std(0x3f8f5a, 0.25, 0.1), FILM_G = new THREE.CylinderGeometry(0.9, 0.9, 1.5, 28); FILM_G.rotateX(Math.PI / 2);
+      const m = grp(S, 0, 0, 0); st.m = m;
+      const T = tractor(st, m, FM.blue, MT.grey); st.wheels = T.wheels; st.links = T.links;
+      const wr = grp(m, -3.2, 0, 0);
+      beam(m, new V3(-1.0, 0.65, 0), new V3(-2.2, 0.75, 0), 0.12, MT.dark);
+      rbox(wr, 2.0, 0.2, 1.6, 0.05, MT.dark, 0, 0.62, 0); [1, -1].forEach((s) => st.wheels.push(tire(wr, 0.38, 0.24, 0, 0.38, s * 0.95, MT.grey, s)));
+      const table = grp(wr, 0, 0.85, 0); [0.45, -0.45].forEach((x) => cylZ(table, 0.16, 1.5, MT.steel, x, 0, 0, 12)); rbox(table, 1.4, 0.08, 0.2, 0.02, FM.amber, 0, -0.1, 0.8); rbox(table, 1.4, 0.08, 0.2, 0.02, FM.amber, 0, -0.1, -0.8);
+      // the film arm that goes round and round
+      const ring = grp(wr, 0, 0, 0); cylY(ring, 0.06, 2.9, FM.amber, 0, 1.45, 0, 8);
+      const sat = grp(ring, 0, 0, 0); rod(sat, new V3(0, 2.9, 0), new V3(1.3, 2.9, 0), 0.05, FM.amber); rod(sat, new V3(1.3, 2.9, 0), new V3(1.3, 1.0, 0), 0.05, FM.amber);
+      const roll0 = cylY(sat, 0.14, 0.75, MT.white, 1.3, 1.7, 0, 14); cylY(sat, 0.06, 0.8, MT.dark, 1.3, 1.7, 0, 8);
+      sat.visible = true; ring.position.set(0, 0, 0);
+      // the loading arm on the side
+      const la = grp(wr, 0.2, 0.5, 0.9); const laArm = grp(la); rod(laArm, new V3(0, 0, 0), new V3(0, 0, 1.9), 0.06, FM.amber); [0.75, -0.75].forEach((x) => rod(laArm, new V3(0, 0, 1.9), new V3(x, -0.2, 2.1), 0.05, FM.amber));
+      // bales waiting in a row on the side, wrapped ones stand behind
+      const W0 = new V3(-3.1, 0.85, 3.4);
+      const pending = [], wrapped = [];
+      const fresh = () => { pending.length = 0; for (let i = 0; i < 3; i++) { const b = newBale(S, W0.x + 2.2 * i, 0.85, W0.z); pending.push(b); } };
+      fresh();
+      let cur = null, film = null;
+      part(st, 'bras', 'le bras qui attrape', anchor(laArm, 0, 0.3, 1.6), false);
+      part(st, 'film', 'le film plastique', anchor(sat, 1.3, 2.3, 0.2), true);
+      part(st, 'balle', 'la balle de foin', anchor(table, 0, 1.2, 0), false);
+      part(st, 'balles', 'les balles enrubannées', anchor(S, -6.6, 2.0, -0.3), false);
+      part(st, 'tracteur', 'le tracteur', anchor(T.cab, 0, 1.9, 0), true);
+      st.focus = new V3(-2.4, 1.6, 1.2); st.size = { w: 12, h: 8 }; st.tagAt = anchor(m, 0, 3.8, 0);
+      st.update = (dt) => { st.links.forEach((l) => l.update()); if (st.spin) { ring.rotation.y += dt * 5.5; if (cur) cur.rotation.z += dt * 1.2; } };
+      st.action = async function () {
+        if (!pending.length) {
+          await Promise.all([step('On range les balles emballées, et on en apporte de nouvelles.', 'balles'), tw(0.8, (k) => wrapped.forEach((b) => b.scale.setScalar(Math.max(0.01, 1 - k))))]);
+          wrapped.forEach((b) => S.remove(b)); wrapped.length = 0; fresh(); pending.forEach((b) => pop(b, 0.5)); await sleep(0.5);
+        }
+        engineOn(60);
+        cur = pending.shift(); const p0 = cur.position.clone();
+        const tgt = S.worldToLocal(wp(table, 0.85));
+        await Promise.all([step('Le bras attrape une balle de foin...', 'bras'), to(la.rotation, 'x', 0.35, 0.6)]);
+        await Promise.all([step('...et la pose sur la table.', 'balle'), tw(1.6, (k) => { cur.position.set(p0.x + (tgt.x - p0.x) * k, p0.y + (tgt.y - p0.y) * k + Math.sin(k * Math.PI) * 1.4, p0.z + (tgt.z - p0.z) * k); la.rotation.x = 0.35 - k * 1.3; }, easeSine)]);
+        table.attach(cur); await to(la.rotation, 'x', 0, 0.8);
+        film = new THREE.Mesh(FILM_G, filmM); film.scale.setScalar(0.98); cur.add(film); film.material = filmM.clone(); film.material.transparent = true; film.material.opacity = 0;
+        st.spin = true;
+        await Promise.all([step('La balle tourne, et le bras fait le tour avec son film.', 'film'), tw(3.2, (k) => (film.material.opacity = Math.min(1, k * 1.2)), lin)]);
+        await Promise.all([step('Elle est toute emballée, comme un bonbon !', 'balle'), sleep(0.8)]);
+        st.spin = false; film.material.opacity = 1; film.material.transparent = false; film.scale.setScalar(1.02);
+        S.attach(cur); const q0 = cur.position.clone(), n = wrapped.length, dest = new V3(-6.6 - n * 2.0, 0.75, -0.3);
+        await Promise.all([step('Hop ! Elle tombe derrière, et reste debout.', 'balles'),
+          tw(1.2, (k) => { cur.position.set(q0.x + (dest.x - q0.x) * k, q0.y + (dest.y - q0.y) * k + Math.sin(k * Math.PI) * 0.6, q0.z + (dest.z - q0.z) * k); cur.rotation.set((Math.PI / 2) * k, 0, 0); }, easeIn).then(thud)]);
+        wrapped.push(cur); cur = null; film = null;
+        await step("Bien enfermé dans son film, le foin se gardera tout l'hiver.", 'balles');
+      };
+    })();
+
+    buildLife(scene, onUpdate);
   }
 };
+
+/* ================= the farm around the machines ================= */
+const AM = { white: std(0xf4f2ee, 0.8, 0), black: std(0x26242c, 0.8, 0), pink: std(0xf2a8a8, 0.7, 0), brown: std(0x8a5a3a, 0.8, 0), horn: std(0xe8dcc0, 0.6, 0),
+  hen: std(0xc86a2a, 0.8, 0), comb: std(0xe5302a, 0.6, 0), beak: std(0xf2b21c, 0.6, 0), hedge: std(0x2f7a4a, 0.95, 0), hedge2: std(0x3f8f5a, 0.95, 0), shed: std(0x8a5a3a, 0.85, 0), tin: std(0x8f96a6, 0.5, 0.4) };
+function at(p, h, d, yaw = YAW) { const [x, z] = Q(h, d); const g = grp(p, x, 0, z); g.rotation.y = yaw; return g; }
+/** A black-and-white cow facing +x. userData.graze(t) nods the head. */
+function cow(p) {
+  const g = grp(p);
+  rbox(g, 1.6, 0.8, 0.8, 0.25, AM.white, 0, 1.05, 0);
+  [[0.3, 1.3, 0.41, 0.5], [-0.4, 1.0, -0.41, 0.4], [-0.5, 1.25, 0.41, 0.35]].forEach(([x, y, z, s]) => { const b = box(g, s, s * 0.8, 0.04, AM.black, x, y, z); });
+  [[0.55, 0.25], [0.55, -0.25], [-0.55, 0.25], [-0.55, -0.25]].forEach(([x, z]) => { rbox(g, 0.18, 0.7, 0.18, 0.06, AM.white, x, 0.4, z); rbox(g, 0.19, 0.12, 0.19, 0.04, AM.black, x, 0.07, z); });
+  sph(g, 0.16, AM.pink, -0.35, 0.62, 0).scale.set(0.2, 0.12, 0.16);
+  const head = grp(g, 0.85, 1.25, 0);
+  rbox(head, 0.55, 0.45, 0.45, 0.15, AM.white, 0.2, 0, 0); rbox(head, 0.22, 0.28, 0.42, 0.1, AM.pink, 0.5, -0.12, 0);
+  [0.12, -0.12].forEach((z) => { sph(head, 0.04, AM.black, 0.38, 0.1, z * 1.6); rod(head, new V3(0.05, 0.22, z), new V3(0.05, 0.42, z * 2.2), 0.035, AM.horn, 5); rbox(head, 0.08, 0.14, 0.24, 0.04, AM.black, 0.02, 0.12, z * 3); });
+  rod(g, new V3(-0.8, 1.3, 0), new V3(-0.95, 0.65, 0), 0.03, AM.white, 4);
+  g.userData.graze = (t) => { head.rotation.z = -0.6 - Math.max(0, Math.sin(t)) * 0.35; head.position.y = 1.15 - Math.max(0, Math.sin(t)) * 0.2; };
+  shadows(g); return g;
+}
+function hen(p) {
+  const g = grp(p); sph(g, 0.22, AM.hen, 0, 0.3, 0).scale.set(0.24, 0.2, 0.18); const h = grp(g, 0.18, 0.45, 0);
+  sph(h, 0.1, AM.hen, 0, 0, 0); add(h, new THREE.ConeGeometry(0.04, 0.1, 5), AM.beak, 0.11, 0, 0).rotation.z = -Math.PI / 2; box(h, 0.08, 0.08, 0.03, AM.comb, 0, 0.09, 0);
+  [0.05, -0.05].forEach((z) => rod(g, new V3(0, 0.15, z), new V3(0, 0, z), 0.015, AM.beak, 4));
+  g.userData.peck = (t) => { h.rotation.z = -Math.max(0, Math.sin(t * 3)) * 0.9; }; shadows(g); return g;
+}
+/** A hedge along a straight line between two layout points. */
+function hedge(p, a, b, m) {
+  const dh = b[0] - a[0], dd = b[1] - a[1], n = Math.ceil(Math.hypot(dh, dd) / 0.9);
+  instanced(p, ICO, n, (i, dm) => { const t = i / n; const [x, z] = Q(a[0] + dh * t, a[1] + dd * t); const s = rnd(0.32, 0.45); dm.position.set(x, s * 0.75, z); dm.rotation.set(rnd(0, 3), rnd(0, 3), 0); dm.scale.set(s * 1.3, s, s * 1.3); return pick([0x2f7a4a, 0x3f8f5a, 0x2a6a40, 0x4a9a5a]); });
+}
+/** Instanced crops filling a rectangle of the layout, leaving out `holes` ([h0,h1,d0,d1]). */
+function crop(p, h0, h1, d0, d1, step, geo, colors, size, holes = []) {
+  const pts = []; for (let h = h0; h < h1; h += step) for (let d = d0; d < d1; d += step) { const hh = h + rnd(-0.1, 0.1), dd = d + rnd(-0.1, 0.1); if (holes.some(([a, b, c, e]) => hh > a && hh < b && dd > c && dd < e)) continue; pts.push([hh, dd]); }
+  instanced(p, geo, pts.length, (i, dm) => { const [x, z] = Q(pts[i][0], pts[i][1]); dm.position.set(x, 0, z); dm.rotation.set(rnd(-0.15, 0.15), rnd(0, 3), rnd(-0.15, 0.15)); const s = rnd(size[0], size[1]); dm.scale.set(1, s, 1); return pick(colors); });
+}
+
+function buildFarm(scene) {
+  // ---- the farmyard ----
+  { const [x, z] = Q(0, -27.5); barn(scene, x, z, YAW); }
+  { const [x, z] = Q(-7, -20); silo(scene, x, z, 7.5); } { const [x, z] = Q(-7.4, -15.8); silo(scene, x, z, 6); }
+  { const [x, z] = Q(9, -29); farmhouse(scene, x, z, YAW); }
+  { const g = at(scene, -7.5, -28.5); [[-2.2, -1.4], [2.2, -1.4], [-2.2, 1.4], [2.2, 1.4]].forEach(([x, z]) => cylY(g, 0.12, 3.2, AM.shed, x, 1.6, z, 8)); rbox(g, 5.2, 0.15, 3.6, 0.03, AM.tin, 0, 3.25, 0, 0.01); rbox(g, 4.4, 2.0, 0.1, 0.03, AM.shed, 0, 1.0, -1.6, 0.01); shadows(g);
+    [-0.9, 0.9].forEach((x) => newBale(g, x, 0.85, 0.2)); newBale(g, 0, 2.45, 0.2); }
+  { const [x, z] = Q(-4, -11.5); lamp(scene, x, z, YAW); }
+  { const [x, z] = Q(13, -14); pond(scene, x, z, 2.4); }
+  [[-2.2, -11.4], [1.6, -11.6]].forEach(([h, d]) => { const [x, z] = Q(h, d); worker(scene, x, z, YAW + 2.4, FM.cap); });
+  // cows in their paddock behind the barn
+  { const a = Q(-8, -32.5), b = Q(8, -32.5), c = Q(8, -38), d = Q(-8, -38); fence(scene, a, b, 8); fence(scene, b, c, 3); fence(scene, d, a, 3); }
+  // ---- hedges between the fields, trees on the corners ----
+  hedge(scene, [-38, -10.2], [-6, -10.2]); hedge(scene, [6, -10.2], [38, -10.2]);
+  hedge(scene, [-38, 10.8], [-2, 10.8]); hedge(scene, [2, 10.8], [38, 10.8]);
+  hedge(scene, [-38, 14.2], [-2, 14.2]); hedge(scene, [2, 14.2], [38, 14.2]);
+  hedge(scene, [-36, -6.8], [-2, -6.8]); hedge(scene, [2, -6.8], [36, -6.8]);
+  [[-6, -12], [6, -12], [-2, 36], [2.4, 30], [-38, 4], [38, -2], [-36, -14], [36, -14], [-3, 12.5], [3, 12.5]].forEach(([h, d], i) => { const [x, z] = Q(h, d); autumnTree(scene, x, z, i % 3 === 0 ? [0xf2b21c, 0xe8901e, 0xf6cf3a] : i % 3 === 1 ? [0x5aa85a, 0x4a9a4a, 0x6ab86a] : [0xe8721e, 0xd13f1f, 0xf2a12a]); });
+  // ---- crops filling the fields around each machine ----
+  const STEM = new THREE.CylinderGeometry(0.03, 0.05, 1.1, 4); STEM.translate(0, 0.55, 0);
+  crop(scene, -36, -5, 15.5, 33, 0.42, STEM, [0xd9a838, 0xe8b840, 0xc99a30], [0.85, 1.15], [[-37, -13, 19.4, 26.6], [-27, -14, 15.5, 19]]);
+  const LEAF = new THREE.ConeGeometry(0.16, 0.45, 5); LEAF.translate(0, 0.22, 0);
+  crop(scene, 6, 37, -5.5, 7, 0.5, LEAF, [0x4caf3a, 0x5ac04a, 0x3f9a34], [0.8, 1.2], [[14, 31, -0.8, 2.8]]);
+  const GRASS = new THREE.ConeGeometry(0.1, 0.7, 4); GRASS.translate(0, 0.35, 0);
+  crop(scene, -36, -10, -31, -14.5, 0.55, GRASS, [0x5ab05a, 0x6ac06a, 0x4c9a4a], [0.7, 1.2], [[-31, -10.5, -28.6, -23], [-31, -9.5, -21.2, -16.8]]);
+  crop(scene, 6, 36, 16, 33, 0.7, GRASS, [0x8aa85a, 0x9ab86a, 0x7a9a4a], [0.3, 0.5], [[9, 31, 20.5, 25.6]]);
+  // round bales lying in the dried meadow, a stack by the yard
+  [[28, -31], [33, -22.5], [33, -15], [14, -33]].forEach(([h, d]) => { const [x, z] = Q(h, d); const b = newBale(scene, x, 0.85, z); b.rotation.y = rnd(0, 3); });
+}
+
+/* ================= life ================= */
+function buildLife(scene, onUpdate) {
+  const all = [];
+  // a tractor with its trailer and the farm pick-up going round the middle fields
+  const loop = route([[-38, -8.5], [38, -8.5], [38, 12.5], [-38, 12.5]].map(([h, d]) => Q(h, d)), true, 0.12);
+  const tg = grp(scene); const T = tractor({}, tg, FM.green, MT.yel); const trl = grp(tg, -3.4, 0, 0);
+  rbox(trl, 3.4, 0.1, 1.9, 0.03, FM.red, 0, 0.95, 0); [0.95, -0.95].forEach((z) => rbox(trl, 3.4, 0.7, 0.08, 0.03, FM.red, 0, 1.35, z)); [1.66, -1.66].forEach((x) => rbox(trl, 0.08, 0.7, 1.9, 0.03, FM.red, x, 1.35, 0));
+  [1, -1].forEach((s) => tire(trl, 0.45, 0.28, 0, 0.45, s * 0.85, MT.grey, s)); beam(tg, new V3(-1.0, 0.65, 0), new V3(-1.7, 0.75, 0), 0.1, MT.dark);
+  tg.userData.wheels = [...T.wheels]; shadows(tg);
+  const van = miniCar(scene, 'van', 0xf2f2f6);
+  all.push(tg, van);
+  const tt = traffic(loop, [tg, van], 3.2, { gap: 6 });
+  // cows grazing, hens pecking, the farmer and his dog walking round the yard
+  const cows = [[-5, -35.5], [-1, -34], [3, -36], [6, -34.5]].map(([h, d], i) => { const c = cow(scene); const [x, z] = Q(h, d); c.position.set(x, 0, z); c.rotation.y = YAW + rnd(-1, 1) + (i % 2) * Math.PI; return c; });
+  const hens = [[5.5, -24], [6.5, -23], [4.8, -22.6], [7, -24.6]].map(([h, d]) => { const c = hen(scene); const [x, z] = Q(h, d); c.position.set(x, 0, z); c.rotation.y = rnd(0, 6); return c; });
+  const yard = route([[-4, -21], [5, -21.5], [6, -17.5], [-3.5, -17]].map(([h, d]) => Q(h, d)), true, 0.4);
+  const farmer = walker(scene, 0, 0, { top: 0x2f5fd0, bottom: 0x2a3550, hat: FM.cap });
+  const dog = grp(scene); { const b = std(0xc8823a, 0.8, 0); rbox(dog, 0.6, 0.28, 0.25, 0.1, b, 0, 0.42, 0); rbox(dog, 0.26, 0.24, 0.22, 0.08, b, 0.36, 0.6, 0); [[0.22, 0.08], [0.22, -0.08], [-0.22, 0.08], [-0.22, -0.08]].forEach(([x, z]) => rbox(dog, 0.08, 0.3, 0.08, 0.03, b, x, 0.15, z)); rod(dog, new V3(-0.3, 0.5, 0), new V3(-0.5, 0.7, 0), 0.03, b, 4); sph(dog, 0.03, MT.black, 0.5, 0.6, 0); shadows(dog); }
+  const tw2 = traffic(yard, [farmer, dog], 0.9, { gap: 0.6 });
+  let T0 = 0;
+  onUpdate((dt) => {
+    T0 += dt; tt.update(dt, all); tw2.update(dt, [farmer, dog]);
+    cows.forEach((c, i) => c.userData.graze(T0 * 0.8 + i * 1.7)); hens.forEach((h, i) => { h.userData.peck(T0 + i); h.rotation.y += Math.sin(T0 * 0.7 + i) * dt * 0.6; });
+  });
+}
