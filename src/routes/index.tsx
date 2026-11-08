@@ -839,6 +839,65 @@ const worlds = [
           <circle cx="170" cy="121" r="1.4" fill={INK} />
         </svg>
       )
+    },
+  {
+      to: '/fete' as const,
+      title: 'La Fête foraine',
+      text: 'La grande roue, le carrousel, les autos tamponneuses, les montagnes russes, les chaises volantes, la barbe à papa…',
+      art: (
+        <svg viewBox="0 0 240 150" aria-hidden="true">
+          <defs>
+            <linearGradient id="fete-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#c9b6ff" /><stop offset="1" stopColor="#ffd9ec" /></linearGradient>
+          </defs>
+          <rect width="240" height="150" fill="url(#fete-sky)" />
+          <g fill="#fff" opacity=".85"><ellipse cx="38" cy="24" rx="16" ry="6" /><ellipse cx="50" cy="19" rx="10" ry="7" /></g>
+          {/* the roller coaster in the back */}
+          <path d="M120 112L136 54Q142 44 148 56L164 92Q170 100 176 90L190 66Q196 58 202 68L240 112" fill="none" stroke={INK} strokeWidth="7" strokeLinejoin="round" strokeLinecap="round" />
+          <path d="M120 112L136 54Q142 44 148 56L164 92Q170 100 176 90L190 66Q196 58 202 68L240 112" fill="none" stroke="#e0383a" strokeWidth="3.5" strokeLinejoin="round" strokeLinecap="round" />
+          <g stroke={INK} strokeWidth="2"><path d="M136 112V56M148 112V58M164 112V92M190 112V68M202 112V70" /></g>
+          <rect {...ol} x="138" y="44" width="14" height="9" rx="3" fill="#f6c22a" transform="rotate(60 145 48)" />
+          {/* string of lights */}
+          <path d="M0 40Q60 58 120 40T240 40" fill="none" stroke={INK} strokeWidth="1.5" />
+          <g>{[12, 32, 52, 72, 92, 112, 132, 152, 172, 192, 212, 232].map((x, i) => <circle key={x} cx={x} cy={42 + Math.sin((x / 240) * Math.PI * 2) * 9} r="3.2" fill={['#fff1a0', '#ff8f7a', '#9fdcff', '#ffb4e6'][i % 4]} stroke={INK} strokeWidth="1" />)}</g>
+          <path d="M0 112Q120 102 240 112V150H0Z" fill="#e8d6aa" />
+          <path d="M0 130Q120 122 240 132V150H0Z" fill="#d8c393" />
+          {/* a balloon */}
+          <path d="M222 120V92" stroke={INK} strokeWidth="1.5" />
+          <ellipse {...ol} cx="222" cy="84" rx="8" ry="10" fill="#f27aa8" />
+          <g className="bob">
+            {/* the big wheel */}
+            <g {...ol} fill="none">
+              <path d="M44 124L74 64L104 124" stroke="#f7f5ef" strokeWidth="5" />
+              <path d="M44 124L74 64L104 124" strokeWidth="1.5" />
+              <circle cx="74" cy="64" r="42" stroke="#e0383a" strokeWidth="5" />
+              <circle cx="74" cy="64" r="42" strokeWidth="1.5" />
+              <path d="M74 22V106M32 64H116M44 34L104 94M104 34L44 94" strokeWidth="2" />
+            </g>
+            <circle {...ol} cx="74" cy="64" r="7" fill="#f6c22a" />
+            <g {...ol}>
+              <rect x="66" y="104" width="16" height="13" rx="4" fill="#2f6fe0" />
+              <rect x="108" y="66" width="16" height="13" rx="4" fill="#f6c22a" />
+              <rect x="24" y="66" width="16" height="13" rx="4" fill="#4fc4a4" />
+              <rect x="66" y="24" width="16" height="13" rx="4" fill="#f27aa8" />
+              <rect x="96" y="96" width="16" height="13" rx="4" fill="#8a52d0" />
+              <rect x="36" y="96" width="16" height="13" rx="4" fill="#e0383a" />
+              <rect x="96" y="34" width="16" height="13" rx="4" fill="#e0383a" />
+              <rect x="36" y="34" width="16" height="13" rx="4" fill="#2f6fe0" />
+            </g>
+          </g>
+          {/* the merry-go-round in front */}
+          <g {...ol}>
+            <path d="M136 112L166 96L196 112Z" fill="#e0383a" />
+            <path d="M151 104L166 96L181 104Z" fill="#fff" />
+            <rect x="136" y="112" width="60" height="6" fill="#f6c22a" />
+            <path d="M146 118V136M186 118V136" strokeWidth="2" />
+            <rect x="163" y="118" width="6" height="18" fill="#8a52d0" />
+            <rect x="132" y="136" width="68" height="6" rx="2" fill="#c08a50" />
+            <path d="M140 128q2-5 8-4h6l3-4 3 3-3 5-8 1-2 5h-3z" fill="#fff" strokeWidth="1.5" />
+            <path d="M178 126q2-5 8-4h6l3-4 3 3-3 5-8 1-2 5h-3z" fill="#fff" strokeWidth="1.5" />
+          </g>
+        </svg>
+      )
     }
 ];
 function Home() {

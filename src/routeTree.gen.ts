@@ -15,6 +15,7 @@ import { Route as CarriereRouteImport } from './routes/carriere'
 import { Route as ChantierRouteImport } from './routes/chantier'
 import { Route as EspaceRouteImport } from './routes/espace'
 import { Route as FermeRouteImport } from './routes/ferme'
+import { Route as FeteRouteImport } from './routes/fete'
 import { Route as ForetRouteImport } from './routes/foret'
 import { Route as GarageRouteImport } from './routes/garage'
 import { Route as LivraisonRouteImport } from './routes/livraison'
@@ -57,6 +58,11 @@ const EspaceRoute = EspaceRouteImport.update({
 const FermeRoute = FermeRouteImport.update({
   id: '/ferme',
   path: '/ferme',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeteRoute = FeteRouteImport.update({
+  id: '/fete',
+  path: '/fete',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ForetRoute = ForetRouteImport.update({
@@ -132,6 +138,7 @@ export interface FileRoutesByFullPath {
   '/chantier': typeof ChantierRoute
   '/espace': typeof EspaceRoute
   '/ferme': typeof FermeRoute
+  '/fete': typeof FeteRoute
   '/foret': typeof ForetRoute
   '/garage': typeof GarageRoute
   '/livraison': typeof LivraisonRoute
@@ -153,6 +160,7 @@ export interface FileRoutesByTo {
   '/chantier': typeof ChantierRoute
   '/espace': typeof EspaceRoute
   '/ferme': typeof FermeRoute
+  '/fete': typeof FeteRoute
   '/foret': typeof ForetRoute
   '/garage': typeof GarageRoute
   '/livraison': typeof LivraisonRoute
@@ -175,6 +183,7 @@ export interface FileRoutesById {
   '/chantier': typeof ChantierRoute
   '/espace': typeof EspaceRoute
   '/ferme': typeof FermeRoute
+  '/fete': typeof FeteRoute
   '/foret': typeof ForetRoute
   '/garage': typeof GarageRoute
   '/livraison': typeof LivraisonRoute
@@ -198,6 +207,7 @@ export interface FileRouteTypes {
     | '/chantier'
     | '/espace'
     | '/ferme'
+    | '/fete'
     | '/foret'
     | '/garage'
     | '/livraison'
@@ -219,6 +229,7 @@ export interface FileRouteTypes {
     | '/chantier'
     | '/espace'
     | '/ferme'
+    | '/fete'
     | '/foret'
     | '/garage'
     | '/livraison'
@@ -240,6 +251,7 @@ export interface FileRouteTypes {
     | '/chantier'
     | '/espace'
     | '/ferme'
+    | '/fete'
     | '/foret'
     | '/garage'
     | '/livraison'
@@ -262,6 +274,7 @@ export interface RootRouteChildren {
   ChantierRoute: typeof ChantierRoute
   EspaceRoute: typeof EspaceRoute
   FermeRoute: typeof FermeRoute
+  FeteRoute: typeof FeteRoute
   ForetRoute: typeof ForetRoute
   GarageRoute: typeof GarageRoute
   LivraisonRoute: typeof LivraisonRoute
@@ -319,6 +332,13 @@ declare module '@tanstack/react-router' {
       path: '/ferme'
       fullPath: '/ferme'
       preLoaderRoute: typeof FermeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/fete': {
+      id: '/fete'
+      path: '/fete'
+      fullPath: '/fete'
+      preLoaderRoute: typeof FeteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/foret': {
@@ -422,6 +442,7 @@ const rootRouteChildren: RootRouteChildren = {
   ChantierRoute: ChantierRoute,
   EspaceRoute: EspaceRoute,
   FermeRoute: FermeRoute,
+  FeteRoute: FeteRoute,
   ForetRoute: ForetRoute,
   GarageRoute: GarageRoute,
   LivraisonRoute: LivraisonRoute,
