@@ -479,6 +479,53 @@ const worlds = [
           </g>
         </svg>
       )
+    },
+  {
+      to: '/mer' as const,
+      title: 'Sous la mer',
+      text: 'Le sous-marin qui plonge, le robot au bout de son câble, le chalutier, l’éolienne en mer… et une baleine qui passe !',
+      art: (
+        <svg viewBox="0 0 240 150" aria-hidden="true">
+          <defs>
+            <linearGradient id="me-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#bfe6ff" /><stop offset="1" stopColor="#e8f6ff" /></linearGradient>
+            <linearGradient id="me-sea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#4aa8e8" /><stop offset="1" stopColor="#1f5fae" /></linearGradient>
+          </defs>
+          <rect width="240" height="150" fill="url(#me-sky)" />
+          <g fill="#fff"><ellipse cx="40" cy="18" rx="16" ry="5" /><ellipse cx="52" cy="14" rx="10" ry="6" /></g>
+          {/* the research ship on the surface */}
+          <g {...ol}>
+            <path d="M136 40h84l-8 12h-68z" fill="#1f3f86" />
+            <rect x="184" y="26" width="26" height="14" rx="2" fill="#f4f5f8" />
+            <rect x="190" y="18" width="16" height="8" rx="2" fill="#f4f5f8" />
+            <path d="M144 40l8-22h4l-6 22" fill="none" stroke="#f4b81c" strokeWidth="3.5" />
+          </g>
+          <path d="M0 46Q15 42 30 46T60 46T90 46T120 46T150 46T180 46T210 46T240 46V150H0Z" fill="url(#me-sea)" />
+          <path d="M154 46V92" stroke={INK} strokeWidth="2" />
+          <g {...ol}><rect x="146" y="92" width="16" height="12" rx="3" fill="#b8bdc8" /></g>
+          {/* the sea floor, coral and seaweed */}
+          <path d="M0 126Q120 114 240 128V150H0Z" fill="#e2c890" />
+          <g {...ol}>
+            <path d="M200 128q-2-14 4-22M206 128q2-12 10-18M212 128q4-8 2-14" fill="none" stroke="#ff6a8a" strokeWidth="4" />
+            <path d="M30 128q-6-20 2-36q6 16-2 36z" fill="#3f9a5a" />
+            <path d="M22 128q-4-12 0-24q4 12 0 24z" fill="#5ab06a" />
+            <path d="M60 106l18-6v12z" fill="#f2d24a" /><ellipse cx="86" cy="106" rx="10" ry="6" fill="#f2d24a" />
+          </g>
+          {/* the yellow submarine, bobbing */}
+          <g className="bob">
+            <path d="M150 86l60-14v34z" fill="#fff1b8" opacity=".55" />
+            <g {...ol}>
+              <path d="M84 86q0-16 26-16h18q22 0 24 16-2 14-24 14h-18q-26 0-26-14z" fill="#f4b81c" />
+              <rect x="104" y="60" width="18" height="10" rx="3" fill="#f4b81c" />
+              <path d="M84 80l-12-8v26l12-8z" fill="#f06a26" />
+              <circle cx="138" cy="90" r="9" fill="#f4f5f8" />
+              <circle cx="141" cy="90" r="4" fill="#7fd0ff" />
+              <circle cx="112" cy="82" r="4" fill="#7fd0ff" /><circle cx="124" cy="82" r="4" fill="#7fd0ff" />
+              <rect x="96" y="100" width="40" height="4" rx="2" fill="#9aa4b6" />
+            </g>
+            <g fill="none" stroke="#fff" strokeWidth="2" opacity=".85"><circle cx="112" cy="50" r="3" /><circle cx="118" cy="40" r="4" /><circle cx="112" cy="30" r="2.5" /></g>
+          </g>
+        </svg>
+      )
     }
 ];
 function Home() {
