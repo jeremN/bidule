@@ -92,11 +92,11 @@ Puis une route dans `src/routes/` (copier `ferme.tsx`) et une carte sur l'accuei
 - [TanStack Start](https://tanstack.com/start) + React 19, Vite 8, Node 26.
 - [three.js](https://threejs.org) r128 pour la 3D, sans surcouche.
 - Aucun modèle 3D externe : tout est construit en code (profils extrudés, pièces instanciées). Ça permet d'animer chaque pièce séparément.
-- Style : matériaux « toon » à trois tons, et une seconde passe (normales + profondeur) qui dessine les contours à l'encre.
+- Style : matériaux PBR et une passe d'étalonnage « technicolor » (grain, demi-teintes, vignettage). Les contours à l'encre restent disponibles avec `?ink`.
 
 ## Idées pour la suite
 
-- D'autres mondes : le cycle de l'eau, le corps humain, les volcans, le port…
+- D'autres mondes : le cycle de l'eau, le corps humain, les volcans…
 - Relier chaque étape aux notions du programme (cycle 1, 2, 3…).
 - Passer l'interface des mondes (fiche, barre d'engins) en composants React.
 - Monter de version de three.js (r128 → actuel : gestion des couleurs et de la lumière à recalibrer).
