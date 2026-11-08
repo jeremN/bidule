@@ -1,6 +1,7 @@
 // The stage: DOM shell, renderer + "technicolour" post pass, painterly island, camera, UI and main loop.
 // A world module describes its machines; createStage() does everything else.
 import * as THREE from 'three';
+import { lampBudget } from './props.js';
 import { V3, rad, clamp, rnd, pick, reduceMotion } from './util.js';
 import { updateTweens, clearTweens, tw, lin } from './tween.js';
 import { audio, say, stopVoice, initAudio, pickVoice, engineOff, hornSound, beep } from './audio.js';
@@ -156,7 +157,7 @@ export function createStage(world, root, opts = {}) {
     }
     const t = new THREE.CanvasTexture(cv); t.anisotropy = renderer.capabilities.getMaxAnisotropy(); return t;
   })();
-  const ground = new THREE.Mesh(new THREE.CircleGeometry(RAD, 96), toonMat({ map: gtex }));
+  const ground = new THREE.Mesh(new THREE.CircleGeometry(RAD, 96), new THREE.MeshLambertMaterial({ map: gtex }));
   ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
   if (world.floating) {
     // a floating island: rocky underside, stars all around
@@ -242,8 +243,13 @@ export function createStage(world, root, opts = {}) {
 
   const updaters = [];
   const ctx = { THREE, scene, renderer, makeStation, part, roll, step, throwClod, isClear, stations, radius: RAD, onUpdate: (fn) => updaters.push(fn) };
+  lampBudget(world.lampLights != null ? world.lampLights : 0);
   world.build(ctx);
-  if (/[?&]debug/.test(location.search)) window.__bidule = { renderer, scene };
+  // ?solo=<id>: only that machine on an empty ground, to look at the model closely
+  const solo = (id) => { const keep = stations.find((s) => s.id === id);
+    scene.children.forEach((o) => { if (o !== ground && !o.isLight) o.visible = !keep || o === keep.g || !!(o.userData && o.userData.st === keep); }); };
+  if (/[?&]debug/.test(location.search)) window.__bidule = { renderer, scene, shot: null, solo };
+  { const m = /[?&]solo=([a-z]+)/.exec(location.search); if (m) solo(m[1]); }
   stations.forEach((st) => shadows(st.g));
 
   /* ---------- camera ---------- */
@@ -446,6 +452,12 @@ export function createStage(world, root, opts = {}) {
     if (!startEl.hidden && !reduceMotion && !drag) azT += dt * 0.07;
     if (fc % (busy ? 6 : 20) === 0) computeView();
     updateCam(dt);
+    const SH0 = window.__bidule && window.__bidule.shot; // ?debug showroom: frame one machine from a given angle
+    if (SH0) { const s = stations.find((x) => x.id === SH0.id), o = s && (s.m || s.g);
+      if (o) { const bb = new THREE.Box3().setFromObject(o), c = bb.getCenter(new V3()), R = bb.getSize(new V3()).length() * 0.5 * (SH0.d || 1.1), r = 60, A = SW / SH;
+        cam.left = -R * A; cam.right = R * A; cam.top = R; cam.bottom = -R; cam.clearViewOffset(); cam.updateProjectionMatrix();
+        const f = new V3(1, 0, 0).transformDirection(o.matrixWorld), a = Math.atan2(f.z, f.x) + SH0.az; // az relative to the machine's nose
+        cam.position.set(c.x + Math.cos(SH0.el) * Math.cos(a) * r, c.y + Math.sin(SH0.el) * r, c.z + Math.cos(SH0.el) * Math.sin(a) * r); cam.lookAt(c); cam.updateMatrixWorld(); } }
     postMat.uniforms.uTime.value = now / 1000;
     renderer.shadowMap.autoUpdate = false; renderer.shadowMap.needsUpdate = true; // every frame: moving shadows must not lag
     if (INK) {

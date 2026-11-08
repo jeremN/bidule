@@ -4,11 +4,11 @@ import { V3, clamp, rnd, pick } from '../kit/util.js';
 import { tw, to, sleep, pop, easeIn, easeSine, easeBack, lin } from '../kit/tween.js';
 import { engineOn, engineOff, thud, ding, chime, tone } from '../kit/audio.js';
 import { MT, ICO, std, add, box, grp, cylY, cylZ, cylX, rod, rail, sph, rbox, ext, anchor, beam, wp, shadows, instanced, freeze } from '../kit/geo.js';
-import { tire, operator, beacon, truckCab } from '../kit/parts.js';
+import { tire, operator, beacon, truckCab, glassCab, fender, hydraulic } from '../kit/parts.js';
 import { createFx } from '../kit/fx.js';
 import { lamp, autumnTree } from '../kit/props.js';
 import { route, placeOn, person as walker, miniCar, traffic } from '../kit/life.js';
-import { airliner, propPlane, AM } from '../kit/aircraft.js';
+import { airliner, propPlane, AM, decal } from '../kit/aircraft.js';
 
 const S2 = Math.SQRT1_2, YAW = Math.PI / 4;
 const Q = (h, d) => [(h + d) * S2, (d - h) * S2];
@@ -166,10 +166,18 @@ export default {
       const st = makeStation('pushback'), S = st.g;
       const P = gatePlane(S, XM.red); P.position.set(0, 0, 0);
       const tug = grp(S); st.m = tug;
-      rbox(tug, 3.2, 0.7, 2.0, 0.15, XM.yel, 0, 0.6, 0, 0.03); rbox(tug, 1.0, 0.6, 1.6, 0.1, XM.dark, -0.8, 1.15, 0, 0.02); box(tug, 0.9, 0.45, 1.5, XM.glass, -0.8, 1.35, 0);
-      rbox(tug, 0.1, 0.14, 1.6, 0.03, MT.stripes, 1.62, 0.6, 0, 0.01); beacon(st, tug, -0.8, 1.55, 0);
-      const tw0 = []; [[0.9, 1], [0.9, -1], [-0.9, 1], [-0.9, -1]].forEach(([x, s]) => tw0.push(tire(tug, 0.4, 0.3, x, 0.4, s * 0.95, XM.grey, s)));
-      operator(tug, -0.8, 0.85, 0).scale.setScalar(0.8);
+      // a low, heavy tug: the hitch end (+x) faces the plane; the driver sits in a small glazed cab
+      ext(tug, [[-1.7, 0.3], [1.7, 0.3], [1.82, 0.55], [1.7, 0.95], [-1.6, 0.95], [-1.8, 0.62]], 0.1, 2.1, XM.yel, 0, 0, 0, 0.03);
+      rbox(tug, 3.3, 0.06, 2.0, 0.02, XM.dark, -0.05, 0.97, 0, 0.01); // anti-slip deck
+      [1.84, -1.86].forEach((x) => { rbox(tug, 0.14, 0.24, 1.9, 0.04, MT.stripes, x, 0.62, 0, 0.01); [0.7, -0.7].forEach((z) => rbox(tug, 0.16, 0.3, 0.3, 0.05, MT.black, x + Math.sign(x) * 0.05, 0.42, z, 0.02)); });
+      [0.62, -0.62].forEach((z) => { rbox(tug, 0.06, 0.12, 0.26, 0.03, MT.lamp, 1.84, 0.8, z, 0.01); rbox(tug, 0.06, 0.1, 0.18, 0.03, MT.tail, -1.86, 0.8, z, 0.01); });
+      const hitch = grp(tug, 1.95, 0.5, 0); rbox(hitch, 0.3, 0.2, 0.5, 0.04, XM.dark, 0, 0, 0, 0.02); cylY(hitch, 0.06, 0.4, MT.steel, 0.08, 0.05, 0, 8);
+      glassCab(tug, -0.55, 0.95, -0.35, { len: 1.25, wid: 1.15, h: 1.05, mat: XM.yel, roof: XM.yelD, hat: XM.yel });
+      rbox(tug, 1.6, 0.42, 0.62, 0.1, XM.yelD, -0.2, 1.17, 0.62, 0.02); for (let i = 0; i < 6; i++) box(tug, 0.06, 0.03, 0.5, XM.dark, -0.7 + i * 0.2, 1.39, 0.62); // engine cover + grille
+      cylY(tug, 0.05, 0.9, MT.steel, -1.15, 1.5, 0.75, 8); cylY(tug, 0.07, 0.06, MT.black, -1.15, 1.96, 0.75, 8); // exhaust
+      [1, -1].forEach((s) => { box(tug, 2.6, 0.04, 0.04, MT.steel, 0, 1.0, s * 1.07); rbox(tug, 0.5, 0.06, 0.25, 0.02, MT.black, -1.3, 0.35, s * 1.1, 0.01); }); // grab rails, step
+      beacon(st, tug, -0.55, 2.08, -0.35);
+      const tw0 = []; [[0.9, 1], [0.9, -1], [-0.9, 1], [-0.9, -1]].forEach(([x, s]) => { tw0.push(tire(tug, 0.4, 0.3, x, 0.4, s * 0.95, XM.grey, s)); fender(tug, 0.5, 0.36, x, 0.4, s * 0.95, XM.dark, Math.PI * 0.7); });
       const bar = grp(S); const barM = rod(bar, new V3(0, 0, 0), new V3(1, 0, 0), 0.08, XM.yelD, 6); bar.visible = false;
       // the tug drives up to the nose, couples, and pushes the plane back onto the taxiway
       const NOSE = 9.4;
@@ -251,16 +259,29 @@ export default {
     (function () {
       const st = makeStation('bagages'), S = st.g; const P = G1.plane, cargo = P.userData.doors.cargo;
       const bl = grp(S, cargo.x - 0.6, 0, 5.6); bl.rotation.y = Math.PI / 2 - 0.05; st.m = bl;
-      rbox(bl, 3.6, 0.5, 1.5, 0.1, XM.yel, 0, 0.6, 0, 0.02); [[1.2, 1], [1.2, -1], [-1.2, 1], [-1.2, -1]].forEach(([x, s]) => tire(bl, 0.3, 0.22, x, 0.3, s * 0.75, XM.grey, s));
-      rbox(bl, 0.9, 0.9, 1.1, 0.1, XM.yelD, -1.3, 1.25, 0.1, 0.02); operator(bl, -1.3, 1.0, 0.1).scale.setScalar(0.8);
-      const belt = grp(bl, -0.6, 1.0, -0.2); const beltB = grp(belt); rbox(beltB, 4.6, 0.18, 0.8, 0.06, XM.dark, 2.3, 0, 0, 0.02); [0.42, -0.42].forEach((z) => rbox(beltB, 4.6, 0.12, 0.06, 0.02, XM.yel, 2.3, 0.12, z, 0.01));
+      // chassis, the driver's seat at the back under a little roof, the belt on top
+      ext(bl, [[-1.9, 0.35], [1.8, 0.35], [1.95, 0.6], [1.8, 0.85], [-1.9, 0.85]], 0.08, 1.5, XM.yel, 0, 0, 0, 0.02);
+      [[1.2, 1], [1.2, -1], [-1.2, 1], [-1.2, -1]].forEach(([x, s]) => { tire(bl, 0.3, 0.22, x, 0.3, s * 0.75, XM.grey, s); fender(bl, 0.38, 0.26, x, 0.3, s * 0.75, XM.dark, Math.PI * 0.7); });
+      rbox(bl, 0.12, 0.2, 1.4, 0.04, MT.black, 1.98, 0.55, 0, 0.02); rbox(bl, 0.08, 0.16, 1.3, 0.02, MT.stripes, -1.95, 0.6, 0, 0.01);
+      rbox(bl, 0.9, 0.5, 0.65, 0.08, XM.yelD, -1.3, 1.1, 0.42, 0.02); operator(bl, -1.3, 0.85, 0.42).scale.setScalar(0.8);
+      [[-0.9, 0.78], [-0.9, 0.06], [-1.75, 0.78], [-1.75, 0.06]].forEach(([x, z]) => box(bl, 0.05, 1.3, 0.05, XM.dark, x, 1.5, z)); rbox(bl, 1.0, 0.06, 0.85, 0.03, XM.yelD, -1.32, 2.17, 0.42, 0.01);
+      box(bl, 0.03, 0.5, 0.65, XM.glass, -0.88, 1.6, 0.42); beacon(st, bl, -1.32, 2.2, 0.42);
+      const belt = grp(bl, -0.6, 1.0, -0.2); const beltB = grp(belt); rbox(beltB, 4.6, 0.18, 0.8, 0.06, XM.dark, 2.3, 0, 0, 0.02);
+      [0.42, -0.42].forEach((z) => { rbox(beltB, 4.6, 0.16, 0.06, 0.02, XM.yel, 2.3, 0.12, z, 0.01); for (let x = 0.3; x < 4.5; x += 0.55) cylZ(beltB, 0.06, 0.04, MT.steel, x, -0.04, z * 1.05, 8); rail(beltB, [[0.2, 0.2, z * 1.1], [0.2, 0.55, z * 1.1], [4.4, 0.55, z * 1.1], [4.4, 0.2, z * 1.1]], 0.02, XM.yel); });
+      { const CL = new THREE.BoxGeometry(0.04, 0.05, 0.7); const cl = []; for (let x = 0.15; x < 4.5; x += 0.3) cl.push(x); instanced(beltB, CL, cl.length, (i, d) => { d.position.set(cl[i], 0.1, 0); d.rotation.set(0, 0, 0); d.scale.set(1, 1, 1); return 0x1d1f26; }); }
+      rbox(beltB, 0.16, 0.3, 0.9, 0.06, MT.black, 4.62, 0.05, 0, 0.02); // rubber bumper against the plane
+      const ramA = anchor(bl, 0.6, 0.85, -0.2), ramB = anchor(beltB, 2.6, -0.1, 0); const ram = hydraulic(bl, ramA, ramB, { barrel: 0.7, mat: XM.yelD, rb: 0.08 });
       belt.rotation.z = 0.05;
       // the baggage tractor and its carts
       const train = grp(S); const trw = [];
-      rbox(train, 1.8, 0.6, 1.2, 0.12, XM.blue, 0, 0.5, 0, 0.02); rbox(train, 0.7, 0.7, 1.0, 0.1, XM.dark, -0.3, 1.1, 0, 0.02); operator(train, -0.2, 0.75, 0).scale.setScalar(0.75);
+      ext(train, [[-0.95, 0.25], [0.9, 0.25], [1.0, 0.45], [0.85, 0.8], [0.3, 0.85], [-0.95, 0.85]], 0.08, 1.2, XM.blue, 0, 0, 0, 0.02);
+      operator(train, -0.35, 0.8, 0).scale.setScalar(0.75); rbox(train, 0.16, 0.18, 1.1, 0.04, MT.black, 1.0, 0.4, 0, 0.02);
+      [[0.6, 0.55], [0.6, -0.55], [-0.85, 0.55], [-0.85, -0.55]].forEach(([x, z]) => box(train, 0.05, 1.05, 0.05, XM.dark, x, 1.35, z)); rbox(train, 1.65, 0.07, 1.25, 0.03, XM.white, -0.12, 1.9, 0, 0.01);
+      [0.4, -0.4].forEach((z) => rbox(train, 0.05, 0.1, 0.2, 0.02, MT.lamp, 1.0, 0.68, z, 0.01)); beacon(st, train, -0.12, 1.93, 0);
       [[0.6, 1], [0.6, -1], [-0.6, 1], [-0.6, -1]].forEach(([x, s]) => trw.push(tire(train, 0.25, 0.2, x, 0.25, s * 0.62, XM.grey, s)));
       const bags = [];
       [-2.6, -5.2].forEach((cx) => { const c = grp(train, cx, 0, 0); rbox(c, 2.2, 0.15, 1.3, 0.03, XM.grey, 0, 0.55, 0, 0.01); rail(c, [[-1.1, 0.6, 0.65], [-1.1, 1.4, 0.65], [1.1, 1.4, 0.65], [1.1, 0.6, 0.65]], 0.03, XM.grey); rail(c, [[-1.1, 0.6, -0.65], [-1.1, 1.4, -0.65], [1.1, 1.4, -0.65], [1.1, 0.6, -0.65]], 0.03, XM.grey); rbox(c, 2.3, 0.08, 1.35, 0.02, XM.blue, 0, 1.45, 0, 0.01); rod(c, new V3(1.1, 0.5, 0), new V3(1.5, 0.5, 0), 0.04, XM.dark);
+          [0.66, -0.66].forEach((z) => { rbox(c, 0.55, 0.85, 0.03, 0.03, XM.blue, -0.82, 1.0, z, 0.01); rbox(c, 0.55, 0.85, 0.03, 0.03, XM.blue, 0.82, 1.0, z, 0.01); });
         [[0.3, 0.8, 0], [-0.4, 0.8, 0.1], [0.4, 1.15, 0.05]].forEach(([x, y, z], i) => { const b = rbox(c, 0.6, 0.38, 0.42, 0.06, XM.bag[(bags.length + i) % 5], x, y, z, 0.02); b.userData.home = { parent: c, pos: b.position.clone() }; bags.push(b); });
         [[0.75, 1], [0.75, -1], [-0.75, 1], [-0.75, -1]].forEach(([x, s]) => trw.push(tire(c, 0.2, 0.15, x, 0.2, s * 0.55, XM.grey, s))); });
       const TR = route([[-34, 10.4], [-20, 10.4], [-12, 8], [-8, 6.6], [-6, 6.5]], false, 0.3); placeOn(train, TR, 0);
@@ -270,7 +291,7 @@ export default {
       part(st, 'soute', 'la soute', anchor(P, cargo.x, cargo.y + 0.3, cargo.z + 0.1), true);
       part(st, 'tracteur', 'le petit tracteur', anchor(train, 0, 1.8, 0), false);
       st.focus = new V3(cargo.x - 2, 1.6, 5); st.size = { w: 16, h: 9 }; st.el = 1.05; st.tagAt = anchor(bl, 0, 2.8, 0);
-      st.update = () => spinT();
+      st.update = () => { spinT(); ram.update(); };
       st.action = async function () {
         if (st.done) { bags.forEach((b) => { b.userData.home.parent.add(b); b.position.copy(b.userData.home.pos); b.rotation.set(0, 0, 0); b.visible = true; }); placeOn(train, TR, 0); st.done = false; }
         engineOn(60);
@@ -297,10 +318,21 @@ export default {
       const truck = grp(S); st.m = truck;
       [0.42, -0.42].forEach((z) => rbox(truck, 6.4, 0.3, 0.16, 0.03, MT.black, -0.3, 0.97, z));
       truckCab(truck, XM.white, 1.45);
-      const tank = cylX(truck, 1.05, 4.6, XM.white, -1.1, 2.0, 0, 20); rbox(truck, 4.6, 0.22, 2.12, 0.04, XM.red, -1.1, 1.9, 0, 0.01);
-      const reel = grp(truck, -3.6, 1.7, 0); cylZ(reel, 0.45, 1.4, XM.dark, 0, 0, 0, 16);
-      const plat = grp(truck, -2.2, 3.1, 0); rbox(plat, 1.2, 0.08, 1.2, 0.02, XM.grey, 0, 0, 0, 0.01); rail(plat, [[-0.6, 0, 0.6], [-0.6, 0.7, 0.6], [0.6, 0.7, 0.6], [0.6, 0, 0.6]], 0.025, XM.yel);
-      const tw1 = []; [1, -1].forEach((s) => { tw1.push(tire(truck, 0.55, 0.4, 2.3, 0.55, s * 0.9, XM.grey)); [-1.2, -2.4].forEach((x) => tw1.push(tire(truck, 0.55, 0.3, x, 0.55, s * 0.95, XM.grey, s))); });
+      // oval tank with domed ends, a red band, the walkway and its folding rails on top
+      const tank = grp(truck, -1.0, 2.05, 0); tank.scale.set(1, 0.92, 1); cylX(tank, 1.05, 4.3, XM.white, 0, 0, 0, 28);
+      [2.15, -2.15].forEach((x) => { const d = sph(tank, 1.05, XM.white, x, 0, 0); d.scale.set(0.28, 1, 1); });
+      [-1.1, 0.0, 1.1].forEach((x) => cylX(tank, 1.075, 0.06, XM.grey, x, 0, 0, 28)); // tank rings
+      [1, -1].forEach((s) => { rbox(tank, 4.5, 0.2, 0.05, 0.02, XM.red, 0, -0.1, s * 1.04, 0.01); const D = grp(tank); if (s < 0) D.rotation.y = Math.PI; decal(D, 'JET A-1', 1.6, 0.36, '#d8302a', s * 0.6, 0.38, 1.0, null).rotation.x = -0.35; });
+      rbox(truck, 3.6, 0.06, 0.6, 0.02, XM.grey, -1.0, 3.04, 0, 0.01); [0.32, -0.32].forEach((z) => rail(truck, [[-2.7, 3.06, z], [-2.7, 3.45, z], [0.7, 3.45, z], [0.7, 3.06, z]], 0.02, XM.yel));
+      for (let i = 0; i < 4; i++) cylY(truck, 0.16, 0.08, XM.grey, -2.2 + i * 0.85, 3.05, 0, 12); // manholes
+      // rear cabinet with the hose reel, ladder, bumper and lights
+      rbox(truck, 0.9, 1.5, 2.2, 0.06, XM.white, -3.75, 1.75, 0, 0.02); box(truck, 0.04, 1.2, 1.9, XM.dark, -4.21, 1.8, 0);
+      const reel = grp(truck, -3.75, 1.8, 0); cylZ(reel, 0.5, 1.5, XM.red, 0, 0, 0, 18); cylZ(reel, 0.35, 1.56, XM.dark, 0, 0, 0, 18);
+      rail(truck, [[-4.24, 1.0, 0.75], [-4.24, 3.1, 0.75]], 0.025, XM.grey); rail(truck, [[-4.24, 1.0, 0.45], [-4.24, 3.1, 0.45]], 0.025, XM.grey); for (let y = 1.2; y < 3.1; y += 0.3) rod(truck, new V3(-4.24, y, 0.75), new V3(-4.24, y, 0.45), 0.02, XM.grey);
+      rbox(truck, 0.16, 0.22, 2.2, 0.03, MT.stripes, -4.25, 0.72, 0, 0.01); [0.85, -0.85].forEach((z) => rbox(truck, 0.06, 0.14, 0.24, 0.02, MT.tail, -4.3, 0.95, z, 0.01));
+      // side lockers between the axles, under-run guards
+      [1, -1].forEach((s) => { rbox(truck, 1.2, 0.55, 0.06, 0.03, XM.grey, 0.5, 1.15, s * 1.05, 0.01); box(truck, 1.0, 0.03, 0.07, XM.dark, 0.5, 1.15, s * 1.07); [0.7, 0.4].forEach((y) => box(truck, 1.0, 0.06, 0.05, MT.steel, 0.5 - 0.0, y, s * 1.02)); });
+      const tw1 = []; [1, -1].forEach((s) => { tw1.push(tire(truck, 0.55, 0.4, 2.3, 0.55, s * 0.9, XM.grey)); [-1.2, -2.4].forEach((x) => tw1.push(tire(truck, 0.55, 0.3, x, 0.55, s * 0.95, XM.grey, s))); [-1.2, -2.4].forEach((x) => fender(truck, 0.66, 0.36, x, 0.55, s * 0.95, XM.dark, Math.PI * 0.6)); });
       beacon(st, truck, 3.0, 3.0, 0);
       const man = walker(S, 0, 0, { vest: true, hat: XM.yel }); man.visible = false;
       const hose = new THREE.Mesh(new THREE.TubeGeometry(new THREE.LineCurve3(new V3(), new V3(1, 0, 0)), 8, 0.06, 6), XM.dark); S.add(hose); hose.visible = false;
@@ -343,9 +375,15 @@ export default {
       const sc = grp(truck, -1.6, 1.15, 0); const bars = [];
       for (let i = 0; i < 2; i++) [0.8, -0.8].forEach((z) => { bars.push(add(sc, new THREE.BoxGeometry(1, 0.1, 0.08), XM.grey, 0, 0, z)); bars.push(add(sc, new THREE.BoxGeometry(1, 0.1, 0.08), XM.grey, 0, 0, z * 0.9)); });
       const boxG = grp(sc, 0, 0.2, 0); rbox(boxG, 3.6, 2.2, 2.1, 0.08, XM.white, 0, 1.1, 0, 0.02); rbox(boxG, 3.62, 0.3, 2.12, 0.02, XM.blue, 0, 1.6, 0, 0.01);
+      rbox(boxG, 3.7, 0.18, 2.2, 0.04, XM.grey, 0, 0.05, 0, 0.01); rbox(boxG, 1.2, 0.3, 1.0, 0.08, XM.grey, 0.6, 2.33, 0, 0.02); // floor frame, roof cooling unit
+      for (let x = -1.4; x <= 1.4; x += 0.7) [1, -1].forEach((s) => box(boxG, 0.03, 2.0, 0.03, XM.grey, x, 1.1, s * 1.06)); // side posts
+      [1, -1].forEach((s) => { const D = grp(boxG); if (s < 0) D.rotation.y = Math.PI; decal(D, 'REPAS', 1.8, 0.45, '#2f6fe0', 0, 0.95, 1.07, null); rbox(boxG, 0.1, 0.08, 0.1, 0.02, MT.amber, s * 1.75, 2.24, 0.95, 0.01); });
       const front = grp(boxG, -1.82, 0.05, 0); rbox(front, 0.9, 0.06, 1.1, 0.02, XM.grey, -0.45, 0, 0, 0.01); front.rotation.z = -Math.PI / 2;
+      [0.52, -0.52].forEach((z) => rail(front, [[-0.08, 0.03, z], [-0.08, 0.6, z], [-0.85, 0.6, z], [-0.85, 0.03, z]], 0.022, XM.yel));
       const trolley = rbox(boxG, 0.5, 0.9, 0.4, 0.04, XM.grey, -1.2, 0.55, 0, 0.02);
-      const tw1 = []; [1, -1].forEach((s) => { tw1.push(tire(truck, 0.5, 0.36, 2.1, 0.5, s * 0.9, XM.grey)); tw1.push(tire(truck, 0.5, 0.3, -2.2, 0.5, s * 0.95, XM.grey, s)); });
+      const tw1 = []; [1, -1].forEach((s) => { tw1.push(tire(truck, 0.5, 0.36, 2.1, 0.5, s * 0.9, XM.grey)); tw1.push(tire(truck, 0.5, 0.3, -2.2, 0.5, s * 0.95, XM.grey, s)); fender(truck, 0.62, 0.36, -2.2, 0.5, s * 0.95, XM.dark, Math.PI * 0.6);
+        [0.75, 0.45].forEach((y) => box(truck, 2.6, 0.06, 0.05, MT.steel, -0.2, y, s * 1.0)); });
+      rbox(truck, 0.14, 0.22, 2.1, 0.03, MT.stripes, -3.38, 0.75, 0, 0.01); [0.8, -0.8].forEach((z) => rbox(truck, 0.06, 0.14, 0.22, 0.02, MT.tail, -3.44, 0.98, z, 0.01));
       let lift = 0; const setLift = (h) => { lift = h; const n = 2, seg = Math.max(0.1, h / n), L = 2.6, ang = Math.asin(Math.min(0.95, seg / L));
         bars.forEach((b, i) => { const lvl = Math.floor(i / 4), a = i % 2 ? -ang : ang; b.position.y = lvl * seg + seg / 2; b.rotation.z = a; b.scale.x = L; }); boxG.position.y = 0.2 + h; };
       setLift(0);
@@ -380,17 +418,36 @@ export default {
       const pit = grp(S, 9, 0, -3); rbox(pit, 6, 0.1, 4, 0.05, std(0x3a3240, 0.9, 0), 0, 0.05, 0, 0.02);
       const mock = grp(pit); cylX(mock, 0.8, 5, XM.grey, 0, 1.0, 0, 12); rbox(mock, 1.2, 0.1, 5, 0.03, XM.grey, 0, 0.9, 0, 0.01); rbox(mock, 0.6, 1.4, 0.1, 0.03, XM.grey, -2.3, 1.6, 0, 0.01);
       const truck = grp(S); st.m = truck;
-      rbox(truck, 7.6, 2.4, 2.5, 0.35, XM.red, -0.3, 2.0, 0, 0.04); rbox(truck, 7.62, 0.22, 2.52, 0.04, XM.yel, -0.3, 1.4, 0, 0.01);
-      rbox(truck, 1.8, 1.2, 2.3, 0.3, XM.red, 2.6, 3.6, 0, 0.03); box(truck, 0.06, 0.8, 2.1, MT.glassD, 3.52, 3.6, 0); [1, -1].forEach((s) => box(truck, 1.4, 0.7, 0.04, MT.glassD, 2.6, 3.6, s * 1.16));
-      const lights = []; [0.6, -0.6].forEach((z) => { const L = std(0x3a6aff, 0.3, 0, { emissive: 0x2a4aff, emissiveIntensity: 0.2 }); rbox(truck, 0.3, 0.16, 0.3, 0.05, L, 2.6, 4.3, z, 0.02); lights.push(L); });
-      const tw1 = []; [3.0, 0.4, -2.2].forEach((x) => [1, -1].forEach((s) => tw1.push(tire(truck, 0.75, 0.5, x, 0.75, s * 1.15, XM.grey, s))));
-      const mon = grp(truck, 1.2, 3.3, 0); cylY(mon, 0.25, 0.4, XM.dark, 0, 0.2, 0, 12); const barrel = grp(mon, 0, 0.45, 0); cylX(barrel, 0.12, 1.4, XM.grey, 0.7, 0, 0, 10);
+      // a big airport crash tender: forward cab with a huge windscreen, body with roll-up shutters, roof monitor
+      ext(truck, [[1.55, 1.0], [3.45, 1.0], [3.75, 1.35], [3.7, 2.2], [3.35, 3.35], [3.1, 3.45], [1.55, 3.45]], [0.05, 0.1, 0.12, 0.25, 0.25, 0.1, 0.05], 2.5, XM.red, 0, 0, 0, 0.04);
+      { const ws = box(truck, 0.05, 1.1, 2.2, MT.glassD, 3.55, 2.8, 0); ws.rotation.z = 0.32; box(truck, 0.06, 0.05, 2.2, XM.dark, 3.56, 2.78, 0).rotation.z = 0.32; }
+      [1, -1].forEach((s) => {
+        rbox(truck, 1.25, 0.85, 0.04, 0.08, MT.glassD, 2.55, 2.85, s * 1.25, 0.01); rbox(truck, 0.45, 0.7, 0.04, 0.06, MT.glassD, 3.3, 2.0, s * 1.25, 0.01);
+        box(truck, 0.03, 2.3, 0.03, XM.dark, 1.95, 2.2, s * 1.26); box(truck, 0.18, 0.04, 0.04, MT.chrome, 2.2, 2.2, s * 1.28); // door seam, handle
+        rod(truck, new V3(3.3, 3.0, s * 1.25), new V3(3.55, 3.15, s * 1.55), 0.025, XM.dark); rbox(truck, 0.06, 0.4, 0.2, 0.03, XM.dark, 3.58, 2.95, s * 1.6, 0.01); // mirror
+        rbox(truck, 0.5, 0.06, 0.32, 0.02, MT.black, 2.6, 1.0, s * 1.15, 0.01); rbox(truck, 0.5, 0.06, 0.32, 0.02, MT.black, 2.6, 0.55, s * 1.15, 0.01); // steps
+        rbox(truck, 0.06, 0.18, 0.4, 0.03, MT.lamp, 3.76, 1.45, s * 0.85, 0.01); rbox(truck, 0.06, 0.12, 0.16, 0.03, MT.amber, 3.76, 1.45, s * 1.13, 0.01);
+      });
+      rbox(truck, 0.2, 0.3, 2.5, 0.06, XM.dark, 3.8, 1.05, 0, 0.02); for (let i = 0; i < 3; i++) box(truck, 0.03, 0.06, 1.2, MT.chrome, 3.77, 1.55 + i * 0.12, 0);
+      const bumperGun = grp(truck, 3.9, 1.25, 0); cylY(bumperGun, 0.12, 0.2, XM.dark, 0, 0, 0, 10); cylX(bumperGun, 0.05, 0.4, MT.chrome, 0.2, 0.08, 0, 8);
+      // the body: lockers with roll-up shutters, a reflective band, rear ladder
+      rbox(truck, 5.6, 2.45, 2.5, 0.25, XM.red, -1.3, 2.2, 0, 0.04); rbox(truck, 5.62, 0.22, 2.52, 0.04, XM.yel, -1.3, 1.4, 0, 0.01);
+      [1, -1].forEach((s) => [[0.55, 0.9], [-0.6, 1.0], [-1.85, 1.0], [-3.1, 1.0]].forEach(([x, w]) => {
+        rbox(truck, w, 1.4, 0.04, 0.05, XM.grey, x, 2.45, s * 1.25, 0.01); for (let y = 1.85; y < 3.15; y += 0.14) box(truck, w - 0.04, 0.02, 0.05, std(0x9aa0b0, 0.4, 0.5), x, y, s * 1.26);
+        box(truck, 0.25, 0.04, 0.06, MT.chrome, x, 1.82, s * 1.27);
+      }));
+      rail(truck, [[-4.12, 0.9, 0.6], [-4.12, 3.45, 0.6]], 0.03, MT.steel); rail(truck, [[-4.12, 0.9, 0.2], [-4.12, 3.45, 0.2]], 0.03, MT.steel); for (let y = 1.1; y < 3.4; y += 0.3) rod(truck, new V3(-4.12, y, 0.6), new V3(-4.12, y, 0.2), 0.02, MT.steel);
+      [0.95, -0.95].forEach((z) => rbox(truck, 0.06, 0.2, 0.25, 0.03, MT.tail, -4.12, 1.35, z, 0.01)); rbox(truck, 5.2, 0.05, 2.0, 0.02, XM.dark, -1.5, 3.44, 0, 0.01);
+      const lights = []; [0.75, 0.25, -0.25, -0.75].forEach((z) => { const L = std(0x3a6aff, 0.3, 0, { emissive: 0x2a4aff, emissiveIntensity: 0.2 }); rbox(truck, 0.22, 0.16, 0.42, 0.05, L, 2.9, 3.53, z, 0.02); lights.push(L); });
+      box(truck, 0.26, 0.08, 2.0, XM.dark, 2.9, 3.46, 0);
+      const tw1 = []; [3.0, 0.4, -2.2].forEach((x) => [1, -1].forEach((s) => { tw1.push(tire(truck, 0.75, 0.5, x, 0.75, s * 1.15, XM.grey, s)); fender(truck, 0.86, 0.55, x, 0.75, s * 1.15, XM.dark, Math.PI * 0.55); }));
+      const mon = grp(truck, 1.0, 3.42, 0); cylY(mon, 0.25, 0.4, XM.dark, 0, 0.2, 0, 12); const barrel = grp(mon, 0, 0.45, 0); cylX(barrel, 0.12, 1.4, XM.grey, 0.7, 0, 0, 10);
       const nozzle = anchor(barrel, 1.45, 0, 0);
       const DR = route([[-3, 0], [0.5, 0]], false, 0); placeOn(truck, DR, 0); const spinT = spin(st, truck, tw1, 0.75);
       part(st, 'canon', 'le canon à eau', anchor(barrel, 0.8, 0.4, 0), true);
       part(st, 'camion', 'le gros camion', anchor(truck, -1.5, 3.6, 1.2), true);
       part(st, 'exercice', "l'exercice", anchor(mock, 0, 2.6, 0), false);
-      part(st, 'gyrophares', 'les gyrophares', anchor(truck, 2.6, 4.6, 0.6), false);
+      part(st, 'gyrophares', 'les gyrophares', anchor(truck, 2.9, 3.9, 0.75), false);
       st.focus = new V3(4.5, 2.4, -1); st.size = { w: 17, h: 9 }; st.tagAt = anchor(truck, 0, 5.4, 0);
       let T = 0, spray = 0;
       st.update = (dt) => {

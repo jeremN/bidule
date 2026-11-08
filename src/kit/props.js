@@ -13,11 +13,14 @@ export function autumnTree(scene, x, z, cols) {
   }
   shadows(g); return g;
 }
+// Point lights are expensive (every lit pixel pays for each one), so only the first few lamps of a world really shine.
+let LIGHTS = 4;
+export function lampBudget(n) { LIGHTS = n; }
 export function lamp(scene, x, z, ry) {
   const g = grp(scene, x, 0, z); g.rotation.y = ry || 0;
   cylY(g, 0.08, 4.2, 0x30354a, 0, 2.1, 0, 8); box(g, 0.9, 0.08, 0.08, 0x30354a, 0.4, 4.15, 0);
   add(g, new THREE.SphereGeometry(0.17, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffd796 }), 0.8, 4.0, 0);
-  const L = new THREE.PointLight(0xffa04a, 1.3, 11, 2); L.position.set(0.8, 3.7, 0); g.add(L);
+  if (LIGHTS > 0) { LIGHTS--; const L = new THREE.PointLight(0xffa04a, 1.3, 11, 2); L.position.set(0.8, 3.7, 0); g.add(L); }
   shadows(g); return g;
 }
 export function cone(scene, x, z) {

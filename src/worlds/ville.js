@@ -4,7 +4,7 @@ import { V3, rad, clamp, rnd, pick } from '../kit/util.js';
 import { tw, to, sleep, pop, easeIn, easeSine, easeBack, lin } from '../kit/tween.js';
 import { engineOn, engineOff, thud, ding, chime, tone } from '../kit/audio.js';
 import { C, MT, UB, ICO, dummy, tmpCol, mat, std, add, box, grp, cylY, cylZ, cylX, rod, rail, sph, rbox, ext, extY, arc, anchor, beam, wp, shadows, instanced, toonMat, freeze } from '../kit/geo.js';
-import { tire, operator, beacon, truckCab } from '../kit/parts.js';
+import { tire, operator, beacon, truckCab, fender } from '../kit/parts.js';
 import { createFx } from '../kit/fx.js';
 import { lamp } from '../kit/props.js';
 import { route, person as walker, miniCar, traffic } from '../kit/life.js';
@@ -114,7 +114,13 @@ function railcar(p, x, L, o) {
   [1, -1].forEach((s) => {
     rbox(g, L - inset - 0.6, (H - b) * 0.28, 0.04, 0.08, MT.glassD, o.ends === 'nose' ? -inset / 2 + 0.1 : o.ends === 'tail' ? inset / 2 - 0.1 : 0, winY, s * (W / 2 + 0.005), 0.01);
     if (o.stripe) rbox(g, L - 0.4, 0.14, 0.03, 0.03, o.stripe, 0, b + (H - b) * 0.3, s * (W / 2 + 0.01), 0.01);
+    // window pillars, rain gutter
+    const x0 = o.ends === 'nose' ? -half + 0.6 : o.ends === 'tail' ? -half + inset + 0.3 : -half + 0.6, x1 = o.ends === 'nose' ? half - inset - 0.3 : half - 0.6;
+    for (let x = x0 + 1.05; x < x1 - 0.3; x += 1.05) box(g, 0.09, (H - b) * 0.3, 0.05, o.body, x, winY, s * (W / 2 + 0.012));
+    box(g, L - (o.ends === 'flat' ? 0.5 : 1.0), 0.05, 0.05, MT.dark, o.ends === 'nose' ? -0.5 : o.ends === 'tail' ? 0.5 : 0, H - 0.08, s * (W / 2 + 0.01));
   });
+  rbox(g, L - 1.0, 0.22, W - 0.12, 0.05, MT.dark, 0, b - 0.02, 0, 0.02); // underframe
+  if (o.bogies !== false) [-L / 4, L / 4].forEach((rx) => rbox(g, 1.3, 0.22, W * 0.6, 0.08, std(0xc2c5ce, 0.5, 0.3), rx, H + 0.08, 0, 0.02)); // roof units
   if (o.ends === 'nose') { const ws = rbox(g, 1.2, 0.35, W * 0.7, 0.12, MT.glassD, half - 2.2, H - 0.42, 0, 0.02); ws.rotation.z = -0.38; [0.35, -0.35].forEach((zz) => rbox(g, 0.1, 0.12, 0.25, 0.04, MT.lamp, half - 0.25, b + 0.35, zz, 0.01)); }
   if (o.ends === 'flat' || o.ends === 'round') { if (o.front) { rbox(g, 0.05, (H - b) * 0.38, W * 0.8, 0.08, MT.glassD, half + 0.01, winY, 0, 0.01); [0.45, -0.45].forEach((zz) => rbox(g, 0.05, 0.12, 0.22, 0.03, MT.lamp, half + 0.02, b + 0.3, zz * W / 1.5, 0.01)); } }
   const doors = (o.doors || []).map((dx) => [1, -1].map((s) => { const d = grp(g, dx, 0, s * (W / 2 + 0.025)); rbox(d, o.doorW || 0.9, (H - b) * 0.82, 0.03, 0.04, o.doorM || VM.grey, 0, b + (H - b) * 0.45, 0, 0.01); rbox(d, (o.doorW || 0.9) * 0.6, (H - b) * 0.32, 0.035, 0.04, MT.glassD, 0, b + (H - b) * 0.6, 0, 0.01); return d; })).flat();
@@ -275,9 +281,15 @@ export default {
       const m = grp(S, START, 0, -0.9); st.m = m; st.lastX = START;
       const bus = railcar(m, 0, 8.4, { body: VM.green, stripe: VM.cream, ends: 'flat', front: true, w: 2.1, h: 2.9, base: 0.4, doors: [2.9, -0.6], doorW: 1.0, doorM: VM.cream, bogies: false });
       rbox(m, 0.06, 0.32, 1.2, 0.04, VM.paper, 4.22, 2.6, 0, 0.01);
+      rbox(m, 1.8, 0.3, 1.4, 0.1, std(0xdfe2ea, 0.5, 0.2), -1.5, 3.0, 0, 0.02); // air conditioning on the roof
+      rbox(m, 0.05, 0.7, 1.5, 0.08, MT.glassD, -4.22, 2.0, 0, 0.01); // rear window
+      [4.25, -4.25].forEach((x) => rbox(m, 0.16, 0.3, 2.15, 0.06, MT.dark, x, 0.55, 0, 0.02)); // bumpers
+      [0.3, -0.3].forEach((z) => rod(m, new V3(4.23, 1.45, z), new V3(4.23, 1.95, z - 0.25), 0.02, MT.black)); // wipers
+      [0.75, -0.75].forEach((z) => rbox(m, 0.05, 0.12, 0.22, 0.03, MT.tail, -4.23, 0.95, z, 0.01));
       [1, -1].forEach((s) => { rod(m, new V3(4.1, 2.3, s * 1.0), new V3(4.5, 2.2, s * 1.25), 0.03, MT.black); rbox(m, 0.06, 0.4, 0.18, 0.04, MT.black, 4.5, 1.9, s * 1.27, 0.01); });
       operator(m, 3.4, 0.55, -0.45).scale.setScalar(0.9);
       st.wheels = [[2.8, 1], [2.8, -1], [-2.6, 1], [-2.6, -1]].map(([x, s]) => tire(m, 0.5, 0.32, x, 0.5, s * 0.92, MT.grey, s));
+      [[2.8, 1], [2.8, -1], [-2.6, 1], [-2.6, -1]].forEach(([x, s]) => fender(m, 0.6, 0.12, x, 0.5, s * 1.04, MT.dark, Math.PI * 0.9));
       const doorsCurb = bus.doors.filter((d) => d.position.z > 0);
       const riders = [[1.5, 3.9], [0.6, 4.2], [-0.4, 3.8]].map(([x, z], i) => person(S, x, z, Math.PI, { kid: i === 1, hat: i === 1 ? MT.hat : null, bag: i === 1 ? VM.cab : null }));
       const riderHome = riders.map((r) => r.position.clone());

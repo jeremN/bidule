@@ -10,15 +10,11 @@ import { createFx } from '../kit/fx.js';
 import { lamp, autumnTree } from '../kit/props.js';
 import { route, placeOn, person as walker, miniCar, traffic } from '../kit/life.js';
 import { fighter, transport, helicopter, AM } from '../kit/aircraft.js';
+import { KM, tankHull, mbtTurret, armyTruck, amphib } from '../kit/military.js';
 
 const S2 = Math.SQRT1_2, YAW = Math.PI / 4;
 const Q = (h, d) => [(h + d) * S2, (d - h) * S2];
 const CF = (h, d, yaw = YAW) => { const [x, z] = Q(h, d); return { x, z, yaw }; };
-const KM = {
-  olive: std(0x5f6e3a, 0.6, 0.1), oliveD: std(0x46522a, 0.6, 0.1), sand: std(0xc8b07a, 0.7, 0), dark: std(0x2a2f2a, 0.6, 0.1), grey: std(0x8f96a6, 0.5, 0.3),
-  white: std(0xf4f5f8, 0.4, 0.1), red: std(0xd8302a, 0.4, 0.1), blue: std(0x2f4fa8, 0.4, 0.1), glass: MT.glassD, water: std(0x3f7fd0, 0.15, 0.2),
-  mud: std(0x7a5a3a, 0.9, 0), concrete: std(0xb7b9c3, 0.9, 0)
-};
 
 const DATA = {
   char: { short: 'Le char', full: 'Le char', verb: 'Rouler', horn: 'horn',
@@ -93,23 +89,11 @@ export default {
     const spin = (obj, wheels, R = 0.4) => { const prev = obj.position.clone(); return () => { const dx = obj.position.x - prev.x, dz = obj.position.z - prev.z, ry = obj.rotation.y; const d = dx * Math.cos(ry) - dz * Math.sin(ry); prev.copy(obj.position); if (d) wheels.forEach((w) => (w.rotation.z -= d / (w.userData.r || R))); return d; }; };
     const along = (obj, r, s0, s1, d, ease = easeSine, yOff = 0) => tw(d, (k) => placeOn(obj, r, s0 + (s1 - s0) * k, yOff), ease);
     const dust = (p, n = 2, col = 0xb8a07a) => { for (let i = 0; i < n; i++) fx.smoke(p.clone().add(new V3(rnd(-0.5, 0.5), 0.2, rnd(-0.5, 0.5))), new V3(rnd(-0.5, 0.5), rnd(0.4, 1), rnd(-0.5, 0.5)), rnd(0.3, 0.6), col, 1.2); };
-    // a tank hull with tracks, facing +x; returns { g, tracks }
-    function hull(p, L = 6.4) {
-      const g = grp(p); const tracks = [trackUnit(g, { len: L * 0.78, r: 0.42, w: 0.6, z: 1.25 }), trackUnit(g, { len: L * 0.78, r: 0.42, w: 0.6, z: -1.25 })];
-      ext(g, [[-L / 2, 0.55], [L / 2 - 0.6, 0.55], [L / 2 + 0.2, 0.95], [L / 2 - 0.4, 1.5], [-L / 2 + 0.2, 1.55], [-L / 2, 1.2]], 0.06, 2.2, KM.olive, 0, 0, 0, 0.03);
-      [1, -1].forEach((s) => rbox(g, L * 0.9, 0.12, 0.7, 0.03, KM.oliveD, 0, 1.15, s * 1.25, 0.01));
-      rbox(g, 0.5, 0.2, 1.6, 0.05, KM.dark, -L / 2 + 0.5, 1.6, 0, 0.02);
-      shadows(g); return { g, tracks };
-    }
-
     /* ---- le char : le parcours de bosses ---- */
     (function () {
       const st = makeStation('char'), S = st.g;
-      const H = hull(S); const m = H.g; st.m = m; st.tracks = H.tracks; st.lastX = 0;
-      const tur = grp(m, -0.3, 1.55, 0); ext(tur, [[-1.6, 0], [1.2, 0], [1.6, 0.35], [1.1, 0.8], [-1.4, 0.85], [-1.8, 0.4]], 0.08, 2.1, KM.olive, 0, 0, 0, 0.03);
-      const gun = grp(tur, 1.4, 0.45, 0); cylX(gun, 0.12, 4.2, KM.oliveD, 2.1, 0, 0, 10); cylX(gun, 0.18, 0.6, KM.oliveD, 0.3, 0, 0, 10);
-      const hatch = grp(tur, -0.4, 0.86, 0.45); cylY(hatch, 0.32, 0.08, KM.oliveD, 0, 0, 0, 12); const cmd = operator(tur, -0.4, 0.3, 0.45); cmd.visible = false;
-      rod(tur, new V3(-1.2, 0.85, -0.5), new V3(-1.4, 2.2, -0.6), 0.02, KM.dark);
+      const H = tankHull(S); const m = H.g; st.m = m; st.tracks = H.tracks; st.lastX = 0;
+      const T = mbtTurret(m, -0.3, 1.55), tur = T.g, hatch = T.hatch; const cmd = operator(tur, -0.6, 0.25, 0.45); cmd.visible = false;
       // the course: two bumps and a mud puddle
       const bumps = [[6, 1.1, 2.6], [12.5, 0.8, 2.2]].map(([x, h, r]) => { const b = add(S, new THREE.SphereGeometry(1, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), KM.mud, x, 0, 0); b.scale.set(r, h, 2.6); return { x, h, r }; });
       const mud = add(S, new THREE.CircleGeometry(2.2, 20), std(0x5a4028, 0.3, 0.1), 17.5, 0.03, 0); mud.rotation.x = -Math.PI / 2; mud.scale.y = 0.7;
@@ -145,12 +129,15 @@ export default {
       const DX = 7.5, DW = 4.2;
       const ditch = grp(S, DX, 0, 0); rbox(ditch, DW, 0.12, 7, 0.05, std(0x3a2a1c, 0.9, 0), 0, -0.05, 0, 0.02); add(ditch, new THREE.PlaneGeometry(DW - 0.6, 6.6), KM.water, 0, -0.02, 0).rotation.x = -Math.PI / 2;
       [DW / 2, -DW / 2].forEach((x) => rbox(ditch, 0.3, 0.5, 7, 0.1, KM.mud, x, 0.1, 0, 0.02));
-      const H = hull(S); const m = H.g; st.m = m; st.tracks = H.tracks; st.lastX = 0;
-      rbox(m, 1.6, 0.6, 1.8, 0.1, KM.oliveD, -1.6, 1.85, 0, 0.02); operator(m, 2.0, 1.2, 0.5).scale.setScalar(0.85);
+      const H = tankHull(S); const m = H.g; st.m = m; st.tracks = H.tracks; st.lastX = 0;
+      ext(m, [[-2.6, 0], [-0.4, 0], [-0.2, 0.5], [-2.5, 0.6]], 0.06, 1.9, KM.oliveD, 0, 1.55, 0, 0.02); // armoured superstructure
+      cylY(m, 0.3, 0.06, KM.oliveD, 2.1, 1.53, 0.55, 12); operator(m, 2.1, 1.05, 0.55).scale.setScalar(0.85);
+      [0.9, -0.9].forEach((z) => { rbox(m, 0.5, 0.5, 0.2, 0.04, KM.olive, 2.95, 1.6, z, 0.02); cylZ(m, 0.12, 0.3, KM.dark, 2.95, 1.75, z, 10); }); // arm pivots
+      ext(m, [[2.6, 0], [3.3, 0], [3.3, 0.25]], 0.02, 1.0, KM.oliveD, 0, 1.55, 0, 0.01);
       // folding bridge: arm pivot at the front, half A on the arm, half B hinged at A's far end
       const BL = 4.6, BT = 0.3, BW = 3.0;
       const arm = grp(m, 3.0, 1.7, 0); const A = grp(arm); const B = grp(A, -BL, 0, 0);
-      const deck = (g) => { rbox(g, BL, BT, BW, 0.05, KM.sand, -BL / 2, 0, 0, 0.02); for (let x = -BL + 0.3; x < 0; x += 0.45) box(g, 0.08, 0.02, BW - 0.2, KM.oliveD, x, BT / 2 + 0.01, 0); [BW / 2, -BW / 2].forEach((z) => rbox(g, BL, 0.4, 0.12, 0.03, KM.oliveD, -BL / 2, 0.1, z, 0.01)); };
+      const deck = (g) => { rbox(g, BL, BT, BW, 0.05, KM.sand, -BL / 2, 0, 0, 0.02); for (let x = -BL + 0.3; x < 0; x += 0.45) box(g, 0.08, 0.02, BW - 0.2, KM.oliveD, x, BT / 2 + 0.01, 0); [BW / 2, -BW / 2].forEach((z) => { rbox(g, BL, 0.4, 0.12, 0.03, KM.oliveD, -BL / 2, 0.1, z, 0.01); for (let x = -BL + 0.4; x < 0; x += 0.8) box(g, 0.05, 0.36, 0.14, KM.dark, x, 0.1, z); }); [0.7, -0.7].forEach((z) => rbox(g, BL - 0.2, 0.04, 0.9, 0.02, KM.sand, -BL / 2, BT / 2 + 0.01, z, 0.01)); };
       deck(A); deck(B); B.rotation.z = Math.PI; B.position.y = BT + 0.02; // folded on top of A, pointing back
       const span = 2 * BL;
       part(st, 'pont', 'le pont pliant', anchor(A, -BL / 2, 0.6, BW / 2), true);
@@ -183,13 +170,8 @@ export default {
       const POND = 9, PW = 6;
       const water = add(S, new THREE.CircleGeometry(1, 32), KM.water, 7, 0.04, 0); water.rotation.x = -Math.PI / 2; water.scale.set(POND / 2 + 1, PW / 2 + 1, 1);
       const bank = add(S, new THREE.RingGeometry(1, 1.2, 32), KM.mud, 7, 0.03, 0); bank.rotation.x = -Math.PI / 2; bank.scale.set(POND / 2 + 0.8, PW / 2 + 0.8, 1);
-      const m = grp(S, -4, 0, 0); st.m = m; st.lastX = -4;
-      ext(m, [[-3.0, 0.5], [2.4, 0.5], [3.4, 1.3], [2.8, 1.9], [-3.0, 1.9]], 0.1, 2.4, KM.olive, 0, 0, 0, 0.03);
-      rbox(m, 1.6, 0.6, 1.4, 0.2, KM.oliveD, -0.4, 2.2, 0, 0.02); cylX(m, 0.07, 1.2, KM.dark, 0.9, 2.3, 0, 8);
-      [1, -1].forEach((s) => box(m, 0.6, 0.3, 0.04, KM.glass, 2.4, 1.55, s * 1.12));
-      st.wheels = []; [2.0, 0.6, -0.8, -2.2].forEach((x) => [1, -1].forEach((s) => st.wheels.push(tire(m, 0.48, 0.38, x, 0.48, s * 1.2, KM.oliveD, s))));
-      const props = [0.6, -0.6].map((z) => { const p = grp(m, -3.1, 0.7, z); for (let k = 0; k < 3; k++) { const b = box(p, 0.04, 0.5, 0.14, KM.dark, 0, 0.2, 0); const h = grp(p); h.add(b); h.rotation.x = (k / 3) * Math.PI * 2; } return p; });
-      operator(m, 1.6, 1.6, 0.5).scale.setScalar(0.8);
+      const A = amphib(S); const m = A.g; m.position.x = -4; st.m = m; st.lastX = -4; st.wheels = A.wheels; const props = A.props, vane = A.vane;
+      operator(m, 2.0, 1.25, 0.55).scale.setScalar(0.8);
       const shoreA = 7 - POND / 2 - 1, shoreB = 7 + POND / 2 + 1;
       const depth = (x) => (x > shoreA - 1 && x < shoreB + 1 ? clamp(Math.min(x - (shoreA - 1), (shoreB + 1) - x) * 0.35, 0, 0.9) : 0);
       part(st, 'coque', 'la coque étanche', anchor(m, 0, 2.0, 1.3), true);
@@ -209,9 +191,9 @@ export default {
         await Promise.all([step("Le véhicule roule tout droit vers l'eau...", 'roues'), to(m.position, 'x', shoreA + 0.5, 3.4, easeIn)]);
         thud(); for (let i = 0; i < 12; i++) fx.smoke(m.localToWorld(new V3(3, 0.4, rnd(-1.2, 1.2))), new V3(rnd(0, 2), rnd(1, 2.5), rnd(-1, 1)), 0.3, 0xe8f4ff, 0.9);
         st.swim = true;
-        await Promise.all([step('Plouf ! Il flotte, comme un bateau.', 'coque'), to(m.position, 'x', shoreA + 3, 2.4, easeSine)]);
+        await Promise.all([step('Plouf ! Il flotte, comme un bateau.', 'coque'), to(m.position, 'x', shoreA + 3, 2.4, easeSine), to(vane.rotation, 'z', 0.5, 1.2)]);
         await Promise.all([step("Ses hélices, à l'arrière, le font avancer sur l'eau.", 'helices'), to(m.position, 'x', shoreB - 1, 5, lin)]);
-        st.swim = false;
+        st.swim = false; to(vane.rotation, 'z', -0.35, 1.2);
         await Promise.all([step("Il ressort de l'autre côté. Il sait rouler et nager !", 'eau'), to(m.position, 'x', shoreB + 3.5, 3, easeSine)]);
         chime(); st.done = true;
       };
@@ -220,14 +202,8 @@ export default {
     /* ---- le camion de transport ---- */
     (function () {
       const st = makeStation('camion'), S = st.g;
-      const m = grp(S, -6, 0, 0); st.m = m; st.lastX = -6;
-      [0.42, -0.42].forEach((z) => rbox(m, 7.0, 0.3, 0.16, 0.03, MT.black, -0.4, 1.05, z));
-      const cab = grp(m, 2.3, 1.2, 0); rbox(cab, 1.8, 1.7, 2.3, 0.15, KM.olive, 0, 0.85, 0, 0.03); box(cab, 0.05, 0.7, 1.9, KM.glass, 0.91, 1.25, 0); [1, -1].forEach((s) => box(cab, 0.8, 0.6, 0.04, KM.glass, 0.2, 1.25, s * 1.16)); rbox(cab, 0.9, 0.9, 2.1, 0.1, KM.oliveD, 1.25, 0.3, 0, 0.02);
-      operator(cab, 0.1, 0.25, 0.5).scale.setScalar(0.85);
-      rbox(m, 4.8, 0.2, 2.3, 0.04, KM.oliveD, -1.6, 1.35, 0, 0.01);
-      const tarp = grp(m, -1.6, 1.45, 0); const tg = new THREE.CylinderGeometry(1.15, 1.15, 4.8, 18, 1, false, -Math.PI / 2, Math.PI); tg.rotateZ(Math.PI / 2); add(tarp, tg, std(0x7a8a52, 0.8, 0), 0, 0.85, 0).scale.y = 1.1; rbox(tarp, 4.8, 0.9, 2.3, 0.05, std(0x7a8a52, 0.8, 0), 0, 0.45, 0, 0.01);
-      const flap = grp(m, -4.0, 2.75, 0); rbox(flap, 0.06, 1.3, 2.2, 0.02, std(0x6a7a48, 0.8, 0), 0, -0.65, 0, 0.01);
-      st.wheels = []; [2.6, -1.0, -2.6].forEach((x) => [1, -1].forEach((s) => st.wheels.push(tire(m, 0.6, 0.45, x, 0.6, s * 1.05, KM.oliveD, s))));
+      const TK = armyTruck(S); const m = TK.g; m.position.x = -6; st.m = m; st.lastX = -6; st.wheels = TK.wheels; const flap = TK.flap, tarp = TK.tarp;
+      operator(m, 2.3, 1.45, 0.5).scale.setScalar(0.85);
       // crates waiting on the right, to be loaded
       const crates = [0, 1, 2].map((i) => rbox(S, 0.9, 0.7, 0.9, 0.05, KM.sand, 3 + i * 1.1, 0.35, 3.2, 0.02));
       const home = crates.map((c) => c.position.clone());

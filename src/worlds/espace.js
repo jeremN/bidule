@@ -17,7 +17,7 @@ const SM = {
   chute: std(0xf26a2a, 0.7, 0), chute2: std(0xffffff, 0.7, 0), mars: std(0xb8572e, 0.9, 0), moonRock: std(0x9a9ca8, 0.9, 0)
 };
 const nose = (r, h, seg) => { const pts = []; for (let i = 0; i <= 10; i++) { const t = i / 10; pts.push(new THREE.Vector2(Math.max(0.001, r * Math.sqrt(1 - t * t * 0.98)), t * h)); } return new THREE.LatheGeometry(pts, seg || 24); };
-const bell = (r, h) => new THREE.LatheGeometry([[r * 0.35, 0], [r * 0.45, -h * 0.3], [r * 0.75, -h * 0.75], [r, -h]].map(([a, b]) => new THREE.Vector2(a, b)), 20);
+const bell = (r, h) => new THREE.LatheGeometry([[r, -h], [r * 0.75, -h * 0.75], [r * 0.45, -h * 0.3], [r * 0.35, 0]].map(([a, b]) => new THREE.Vector2(a, b)), 20); // y increasing: lit from outside
 function flagTex() {
   const c = document.createElement('canvas'); c.width = 128; c.height = 80; const x = c.getContext('2d');
   x.fillStyle = '#ff8a2a'; x.fillRect(0, 0, 128, 80); x.fillStyle = '#fff';
