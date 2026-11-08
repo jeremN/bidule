@@ -268,6 +268,13 @@ export default {
     const foam = (p, n = 1, s = 0.4) => { for (let i = 0; i < n; i++) fx.smoke(new V3(p.x + rnd(-0.4, 0.4), SURF + 0.05, p.z + rnd(-0.4, 0.4)), new V3(rnd(-0.4, 0.4), 0.15, rnd(-0.4, 0.4)), s, 0xffffff, 1.1); };
     const bubbles = (p, n = 1, s = 0.12) => { for (let i = 0; i < n; i++) fx.smoke(p.clone().add(new V3(rnd(-0.2, 0.2), 0, rnd(-0.2, 0.2))), new V3(rnd(-0.15, 0.15), rnd(1.2, 2), rnd(-0.15, 0.15)), s, 0xe8f6ff, rnd(1.6, 2.4)); };
     const wake = (m, x, z = 0) => { if (Math.random() < 0.6) foam(m.localToWorld(new V3(x, 0, z + rnd(-0.8, 0.8))), 1, rnd(0.3, 0.5)); };
+    // the deep: dim the sun, the sky light and the water colour (no new light), so the lamps mean something.
+    // A safety net brings the day back whenever no story is playing (stage blocks switching while busy).
+    const LIT = scene.children.filter((o) => o.isLight).map((l) => [l, l.intensity]);
+    const BG0 = scene.background && scene.background.isColor ? scene.background.clone() : null, BGN = new THREE.Color(0x020812);
+    let dark = 0;
+    const deep = (k) => { dark = k; LIT.forEach(([l, i0]) => (l.intensity = i0 * (1 - 0.82 * k))); if (BG0) scene.background.copy(BG0).lerp(BGN, k * 0.85); };
+    onUpdate((dt) => { if (dark > 0 && !document.body.classList.contains('busy')) deep(Math.max(0, dark - dt * 1.5)); });
     const pingSnd = () => { tone(1500, 0, 0.35, 'sine', 0.07, 1200); tone(1500, 0.5, 0.25, 'sine', 0.025, 1200); };
 
     /* ---- le navire océanographique : sonar, grue en A et rosette ---- */
@@ -370,9 +377,13 @@ export default {
       rod(d, new V3(2.55, -1.2, 0.47), new V3(2.4, -0.9, 0.4), 0.025, SM.steel, 4); rod(d, new V3(2.55, -1.2, -0.47), new V3(2.4, -0.9, -0.4), 0.025, SM.steel, 4);
       rod(d, new V3(2.45, 0.35, 0.75), new V3(2.45, 0.35, -0.75), 0.04, SM.steel, 6);
       bake(d);
-      const lampM = toonMat({ color: 0xfff3c8, emissive: 0xffe6a0, emissiveIntensity: 0.05 }), beams = [];
+      const lampM = toonMat({ color: 0xfff3c8, emissive: 0xffe6a0, emissiveIntensity: 0.05 }), beams = [], BEAMO = 0.42;
       [[2.5, 0.35, 0.55], [2.5, 0.35, -0.55], [2.6, -1.0, 0.25], [2.6, -1.0, -0.25]].forEach(([x, y, z]) => { cylX(m, 0.09, 0.14, MT.dark, x, y, z, 10); cylX(m, 0.075, 0.03, lampM, x + 0.08, y, z, 10); });
       [[2.55, 0.35, 0.4, -0.35], [2.6, -1.0, -0.2, -0.75]].forEach(([x, y, z, tilt]) => { const g = new THREE.ConeGeometry(1.7, 6, 18, 1, true); g.translate(0, -3, 0); g.rotateZ(PI / 2); const bm = BEAMM(); const b = add(m, g, bm, x, y, z); b.rotation.z = tilt; b.visible = false; beams.push(b); });
+      // the pool of light the lamps draw on the sand
+      const spotM = BEAMM(); spotM.map = canvasTex(64, 64, (x, w, h) => { const g = x.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2); g.addColorStop(0, '#ffffff'); g.addColorStop(0.55, 'rgba(255,255,255,.55)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, w, h); });
+      const spot = add(S, new THREE.CircleGeometry(1, 28), spotM, 5.0, 0.06, 0); spot.rotation.x = -PI / 2; spot.scale.set(2.6, 1.7, 1); spot.visible = false;
+      const lamps = (k) => { lampM.emissiveIntensity = 0.05 + 2.4 * k; beams.forEach((b) => { b.visible = k > 0; b.material.opacity = BEAMO * k; }); spot.visible = k > 0; spotM.opacity = 0.5 * k; };
       const prop = grp(m, -2.95, 0, 0); for (let k = 0; k < 4; k++) { const b = grp(prop); b.rotation.x = (k / 4) * PI * 2; rbox(b, 0.06, 0.4, 0.14, 0.02, MT.dark, 0, 0.22, 0, 0.01); } cylX(prop, 0.1, 0.25, MT.dark, 0, 0, 0, 10);
       const A = arm(m, 2.2, -0.95, 0.5, 1, SM.steel); arm(m, 2.2, -0.95, -0.5, 1, SM.steel);
       const weights = [0.45, -0.45].map((z) => { const w = grp(m, -0.2, -1.12, z); rbox(w, 0.95, 0.24, 0.3, 0.04, std(0x5a5e6a, 0.7, 0.3), 0, 0, 0, 0.02); box(w, 0.02, 0.25, 0.31, SM.yel, 0.3, 0, 0); return w; });
@@ -394,13 +405,14 @@ export default {
         if (st.sink && Math.random() < 0.25) bubbles(m.localToWorld(new V3(rnd(-2, 2), 1.1, 0)), 1, 0.1);
       };
       st.action = async function () {
+        deep(0); lamps(0);
         if (st.done) { m.position.set(0, Y0, 0); weights.forEach((w, i) => { m.add(w); w.position.copy(wHome[i]); w.rotation.set(0, 0, 0); }); S.add(rock); rock.position.copy(rHome); rock.rotation.set(0, 0, 0); pop(m, 0.5); st.done = false; await sleep(0.6); }
         await Promise.all([step('Le sous-marin jaune emmène trois personnes. Elles regardent par les hublots.', 'hublots'), sleep(2.5)]);
         st.sink = true; st.rpm = 4; st.float = false;
-        await Promise.all([step('Ses lests, très lourds, le font couler tout doucement vers le fond.', 'lests'), to(m.position, 'y', YB, 7, easeSine)]);
+        // the deeper it goes, the darker it gets
+        await Promise.all([step('Ses lests, très lourds, le font couler tout doucement vers le fond.', 'lests'), to(m.position, 'y', YB, 7, easeSine), tw(7, (k) => deep(k * k), lin)]);
         st.sink = false; thud();
-        lampM.emissiveIntensity = 1.6; beams.forEach((b) => (b.visible = true));
-        await Promise.all([step('Au fond, il fait tout noir. Il allume ses phares !', 'phares'), tw(1.2, (k) => beams.forEach((b) => (b.material.opacity = 0.32 * k)))]);
+        await Promise.all([step('Au fond, il fait tout noir. Il allume ses phares !', 'phares'), (async () => { ding(); await tw(0.6, (k) => lamps(k)); })()]);
         await Promise.all([step('Son bras attrape un joli caillou rose...', 'bras'), to(A.sh.rotation, 'z', REACH[0], 2, easeSine), to(A.el.rotation, 'z', REACH[1], 2, easeSine)]);
         A.claw.attach(rock); ding();
         await Promise.all([step('...et le range dans son panier.', 'bras'), to(A.sh.rotation, 'z', -0.05, 1.6, easeSine), to(A.el.rotation, 'z', -1.25, 1.6, easeSine)]);
@@ -408,8 +420,10 @@ export default {
         weights.forEach((w) => S.attach(w)); thud();
         await Promise.all([step('Il lâche ses lests... et il remonte, comme un bouchon !', 'lests'),
           ...weights.map((w) => to(w.position, 'y', 0.12, 1.2, easeIn)),
-          (async () => { await sleep(0.6); st.sink = true; await tw(1, (k) => beams.forEach((b) => (b.material.opacity = 0.32 * (1 - k)))); beams.forEach((b) => (b.visible = false)); lampM.emissiveIntensity = 0.05; })(),
+          (async () => { await sleep(0.6); st.sink = true; await tw(5, (k) => lamps(1 - k)); lamps(0); })(),
+          tw(8, (k) => deep(1 - k), easeSine),
           to(m.position, 'y', Y0, 8, easeSine)]);
+        deep(0); lamps(0);
         st.sink = false; st.rpm = 0; st.float = true; chime(); st.done = true;
       };
     })();

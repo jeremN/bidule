@@ -291,7 +291,7 @@ export default {
       part(st, 'caisse', 'la caisse de la voiture', anchor(m, 0.4, 1.0, 0.95), true);
       part(st, 'toit', 'le toit', anchor(roof, 0, 0.1, 0.6), false);
       part(st, 'coude', 'le coude', anchor(W[3].a3, 0, 0.3, 0), false);
-      st.focus = new V3(0, 1.6, 0); st.size = { w: 13.5, h: 8 }; st.tagAt = anchor(S, 0, 4.2, 0);
+      st.focus = new V3(0, 1.6, 0); st.size = { w: 13.5, h: 8 }; st.el = 0.82; st.tagAt = anchor(S, 0, 4.2, 0);
       const robots = [...W, Hd];
       st.update = () => robots.forEach((R) => { if (R.spark) sparks(wp(R.tip), 3); });
       st.action = async function () {
@@ -339,12 +339,23 @@ export default {
       [[-0.6, -2.35], [1.6, -2.35], [2.85, 2.4]].forEach(([x, z]) => rbox(dec, 1.0, 0.8, 1.0, 0.05, UM.light, x, 0.4, z, 0.02));
       // the oven: insulated tunnel with a warm glow, chimney
       const O0 = 3.8, O1 = 8.6, OC = (O0 + O1) / 2;
-      [-1, 1].forEach((s) => rbox(dec, O1 - O0, 2.7, 0.3, 0.05, UM.alu, OC, 1.35, s * 1.5, 0.02));
-      rbox(dec, O1 - O0 + 0.2, 0.35, 3.4, 0.06, UM.alu, OC, 2.85, 0, 0.02); for (let x = O0 + 0.4; x < O1; x += 0.8) box(dec, 0.06, 2.72, 3.36, UM.light, x, 1.4, 0);
+      const ovenIn = toonMat({ color: 0xff9a4a, emissive: 0xff6a1a, emissiveIntensity: 0.35 });
+      const ovenGlass = std(0xffc890, 0.05, 0.1, { transparent: true, opacity: 0.22, depthWrite: false });
+      // back wall solid; the wall facing us is a low band, a big window and a top band, so we see the car bake inside
+      rbox(dec, O1 - O0, 2.7, 0.3, 0.05, UM.alu, OC, 1.35, -1.5, 0.02);
+      rbox(dec, O1 - O0, 0.55, 0.3, 0.05, UM.alu, OC, 0.275, 1.5, 0.02); rbox(dec, O1 - O0, 0.5, 0.3, 0.05, UM.alu, OC, 2.45, 1.5, 0.02);
+      [O0 + 0.1, O1 - 0.1].forEach((x) => rbox(dec, 0.2, 2.7, 0.3, 0.03, UM.alu, x, 1.35, 1.5, 0.01));
+      box(dec, O1 - O0 - 0.3, 1.62, 0.03, ovenGlass, OC, 1.38, 1.6);
+      rbox(dec, O1 - O0 + 0.2, 0.35, 3.4, 0.06, UM.alu, OC, 2.85, 0, 0.02);
+      for (let x = O0 + 0.4; x < O1; x += 0.8) { box(dec, 0.08, 2.72, 0.06, UM.light, x, 1.4, -1.68); box(dec, 0.08, 0.06, 3.4, UM.light, x, 3.05, 0); box(dec, 0.06, 1.62, 0.05, UM.light, x, 1.38, 1.64); }
+      // inside: warm glowing walls, ceiling heaters and the hot floor
+      box(dec, O1 - O0 - 0.1, 2.3, 0.03, ovenIn, OC, 1.4, -1.33); box(dec, O1 - O0 - 0.1, 0.03, 2.6, ovenIn, OC, 2.66, 0); box(dec, O1 - O0 - 0.1, 0.03, 2.6, ovenIn, OC, 0.14, 0);
+      for (let x = O0 + 0.6; x < O1 - 0.3; x += 0.9) box(dec, 0.5, 0.06, 2.4, UM.glow, x, 2.6, 0);
       [O0, O1].forEach((x) => { box(dec, 0.05, 0.12, 2.6, UM.glow, x, 2.6, 0); [-1.3, 1.3].forEach((z) => box(dec, 0.05, 2.5, 0.1, UM.glow, x, 1.3, z)); });
       cylY(dec, 0.3, 1.8, UM.alu, OC + 1.2, 3.9, -0.8, 14); cylY(dec, 0.36, 0.15, UM.rgrey, OC + 1.2, 4.8, -0.8, 14);
-      rbox(dec, 1.4, 0.7, 0.05, 0.05, UM.white, OC, 1.9, 1.67, 0.01); decal(dec, 'FOUR', 1.2, 0.5, '#e0402a', OC, 1.9, 1.7);
-      sph(dec, 0.18, UM.white, OC + 1.0, 1.9, 1.66).scale.z = 0.3;
+      rbox(dec, 1.4, 0.6, 0.08, 0.04, UM.white, OC - 0.6, 3.38, 1.55, 0.01); decal(dec, 'FOUR', 1.2, 0.45, '#e0402a', OC - 0.6, 3.38, 1.6);
+      [-0.45, 0.45].forEach((dx) => box(dec, 0.06, 0.4, 0.06, UM.rgrey, OC - 0.6 + dx, 2.95, 1.55));
+      sph(dec, 0.18, UM.white, OC + 1.0, 2.45, 1.66).scale.z = 0.3;
       bake(dec);
       const shut = [X0, X1].map((x) => rbox(S, 0.08, 2.25, 2.55, 0.03, UM.light, x, 3.3, 0, 0.01));
       // the car (own material: it changes colour)
@@ -364,12 +375,13 @@ export default {
       part(st, 'pistolet', 'le pistolet à peinture', anchor(P[1].tool, 0.4, 0.15, 0), false);
       part(st, 'four', 'le four', anchor(S, OC, 3.1, 1.6), true);
       part(st, 'caisse', 'la voiture', anchor(m, 0.6, 1.2, 0.9), false);
-      st.focus = new V3(2.4, 2.0, 0); st.size = { w: 17, h: 8.5 }; st.tagAt = anchor(S, CX, HH + 1.2, 0);
+      st.focus = new V3(2.4, 1.6, 0); st.size = { w: 17, h: 8.5 }; st.el = 0.72; st.tagAt = anchor(S, CX, HH + 1.2, 0);
       st.update = (dt) => {
         P.forEach((R) => { if (R.spray) for (let i = 0; i < 2; i++) { const a = wp(R.tip), b = wp(R.tip2); tmp.subVectors(a, b).normalize().multiplyScalar(rnd(1.8, 2.6)).add(new V3(rnd(-0.4, 0.4), rnd(-0.4, 0.4), rnd(-0.4, 0.4))); fx.smoke(a, tmp, 0.12, c1.getHex(), 0.55); } });
         if (st.bake && Math.random() < 0.3) fx.smoke(S.localToWorld(new V3(OC + 1.2, 4.9, -0.8)), new V3(rnd(-0.2, 0.2), 1, rnd(-0.2, 0.2)), 0.35, 0xf4e8e0, 1.6);
       };
       st.action = async function () {
+        ovenIn.emissiveIntensity = 0.35;
         if (st.done) { m.position.x = -4.6; pm.color.copy(c0); pm.roughness = 0.28; pm.metalness = 0.4; pop(m, 0.5); st.done = false; await sleep(0.5); }
         const [name, hex] = COLS[ci++ % COLS.length]; c1.setHex(hex);
         await to(shut[0].position, 'y', 3.3, 0.8);
@@ -385,10 +397,10 @@ export default {
         P.forEach((R) => go(R, ...restOf(R), 1.2));
         await to(shut[1].position, 'y', 3.3, 1);
         st.bake = true;
-        await Promise.all([step('Maintenant, la voiture passe au four, pour que la peinture sèche. Comme un gâteau !', 'four'), to(m.position, 'x', OC, 3.5, easeSine)]);
+        await Promise.all([step('Maintenant, la voiture passe au four, pour que la peinture sèche. Comme un gâteau !', 'four'), to(m.position, 'x', OC, 3.5, easeSine), to(ovenIn, 'emissiveIntensity', 1.0, 3.5)]);
         await Promise.all([to(shut[1].position, 'y', 1.2, 0.8), sleep(1.6)]); await to(shut[1].position, 'y', 3.3, 0.8);
-        await Promise.all([step('La voilà toute belle et toute brillante !', 'caisse'), to(m.position, 'x', 10.0, 3, easeSine)]);
-        st.bake = false; to(shut[1].position, 'y', 1.2, 1); chime(); st.done = true;
+        await Promise.all([step('La voilà toute belle et toute brillante !', 'caisse'), to(m.position, 'x', 10.0, 3, easeSine), to(ovenIn, 'emissiveIntensity', 0.35, 3)]);
+        st.bake = false; ovenIn.emissiveIntensity = 0.35; to(shut[1].position, 'y', 1.2, 1); chime(); st.done = true;
       };
       shut[0].position.y = 1.2; shut[1].position.y = 1.2;
     })();
