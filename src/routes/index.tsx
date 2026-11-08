@@ -678,6 +678,60 @@ const worlds = [
           </g>
         </svg>
       )
+    },
+  {
+      to: '/livraison' as const,
+      title: 'Le Colis',
+      text: "Suis le cadeau de Léo : le camion au quai, le transpalette, les robots de l'entrepôt, la trieuse, la camionnette, le vélo cargo, le drone et le petit robot livreur…",
+      art: (
+        <svg viewBox="0 0 240 150" aria-hidden="true">
+          <defs>
+            <linearGradient id="livraison-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#a8dcff" /><stop offset="1" stopColor="#fff1d8" /></linearGradient>
+          </defs>
+          <rect width="240" height="150" fill="url(#livraison-sky)" />
+          <g fill="#fff"><ellipse cx="44" cy="26" rx="18" ry="6" /><ellipse cx="58" cy="21" rx="11" ry="7" /></g>
+          {/* the drone bringing a little parcel */}
+          <g {...ol}>
+            <path d="M92 22h52" /><path d="M96 16h12M128 16h12" strokeWidth="2" />
+            <path d="M106 22h24l-3 8h-18z" fill="#f4f5f8" />
+            <path d="M118 30v14" strokeWidth="1.5" />
+            <rect x="111" y="44" width="14" height="12" rx="2" fill="#c99a5e" />
+          </g>
+          {/* Léo's house: pink walls, red roof, the open door and Léo with his teddy */}
+          <g {...ol}>
+            <rect x="164" y="58" width="62" height="52" fill="#f2d4c8" />
+            <path d="M158 60l37-28 37 28z" fill="#c4583a" />
+            <rect x="172" y="68" width="14" height="14" fill="#2a3f58" /><rect x="206" y="68" width="14" height="14" fill="#2a3f58" />
+            <rect x="190" y="84" width="16" height="26" fill="#2a2f40" />
+            <path d="M190 84l-8 4v26l8-4z" fill="#1f3a7a" />
+            <circle cx="198" cy="94" r="5" fill="#f0c39a" />
+            <rect x="193" y="99" width="10" height="11" rx="3" fill="#f2b21c" />
+            <circle cx="208" cy="102" r="4" fill="#a8703c" /><circle cx="208" cy="96" r="3.5" fill="#a8703c" />
+          </g>
+          <path d="M0 110H240V150H0Z" fill="#8a8ea0" />
+          <path d="M0 128H240" stroke="#f3efe2" strokeWidth="3" strokeDasharray="14 10" />
+          <path d="M0 106Q60 100 120 106L160 108H240V112H0Z" fill="#8cc46a" />
+          {/* the little sidewalk robot with its orange flag */}
+          <g {...ol}>
+            <path d="M146 82v24" strokeWidth="2" />
+            <path d="M146 82l10 3-10 3z" fill="#f2781c" />
+            <rect x="140" y="100" width="28" height="12" rx="4" fill="#f4f5f8" />
+            <circle cx="145" cy="114" r="3" fill="#2a2f40" /><circle cx="154" cy="114" r="3" fill="#2a2f40" /><circle cx="163" cy="114" r="3" fill="#2a2f40" />
+          </g>
+          <g className="bob">
+            <g {...ol}>
+              {/* the delivery van */}
+              <path d="M14 76h76q6 0 10 4l16 16q10 2 12 8v18H14z" fill="#f4f5f8" />
+              <path d="M92 82l14 14H92z" fill="#2a3f58" />
+              <rect x="14" y="104" width="114" height="6" fill="#f2781c" />
+              <rect x="24" y="86" width="40" height="10" rx="2" fill="#1f3a7a" />
+              <rect x="70" y="84" width="14" height="12" rx="2" fill="#c99a5e" />
+              <circle cx="34" cy="124" r="10" fill="#3a3550" /><circle cx="34" cy="124" r="4" fill="#c9ced8" />
+              <circle cx="104" cy="124" r="10" fill="#3a3550" /><circle cx="104" cy="124" r="4" fill="#c9ced8" />
+            </g>
+          </g>
+        </svg>
+      )
     }
 ];
 function Home() {
