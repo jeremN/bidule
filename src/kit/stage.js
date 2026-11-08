@@ -7,6 +7,7 @@ import { audio, say, stopVoice, initAudio, pickVoice, engineOff, hornSound, beep
 import { C, ICO, mat, add, grp, instanced, shadows } from './geo.js';
 
 const ICON_AGAIN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a8.5 8.5 0 0 1 0 12"/></svg>';
+const ICON_TAGS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v10H10l-4 4v-4H4z"/><path d="M8 9h8M8 12h5"/><path id="tagsX" d="M3 3l18 18" opacity="0"/></svg>';
 const ICON_MUTE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path id="muteX" d="M17 9l5 6M22 9l-5 6" opacity="0"/></svg>';
 const ICON_HORN = '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13v6h5l11 7V6L9 13H4z"/><path d="M24 11l4-3M24 16h5M24 21l4 3"/></svg>';
 const ICON_HOME = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>';
@@ -22,6 +23,7 @@ function shell(world, root, homeHref) {
     <button class="pill" id="back" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>${world.backLabel || 'Tout voir'}</button>
     <span class="spacer"></span>
     <button class="icon-btn" id="again" aria-label="Réécouter">${ICON_AGAIN}</button>
+    <button class="icon-btn" id="tagsBtn" aria-pressed="false" aria-label="Cacher les bulles" title="Bulles d'info">${ICON_TAGS}</button>
     <button class="icon-btn" id="mute" aria-pressed="false" aria-label="Couper le son">${ICON_MUTE}</button>
   </header>
   <p class="caption" id="caption">${world.hint || 'Touche un engin pour le découvrir.'}</p>
@@ -315,6 +317,14 @@ export function createStage(world, root, opts = {}) {
   $('#back').addEventListener('click', overview);
   root.querySelectorAll('#brand,[data-home]').forEach((a) => a.addEventListener('click', (e) => { if (opts.onHome) { e.preventDefault(); opts.onHome(); } }));
   $('#again').addEventListener('click', () => { initAudio(); if (audio.lastLine) say(audio.lastLine); });
+  // info bubbles on/off, remembered on this device
+  const setTags = (off) => {
+    root.classList.toggle('no-tags', off); const b = $('#tagsBtn');
+    b.setAttribute('aria-pressed', String(off)); b.setAttribute('aria-label', off ? 'Montrer les bulles' : 'Cacher les bulles'); $('#tagsX').setAttribute('opacity', off ? '1' : '0');
+    try { localStorage.setItem('bidule.tags', off ? 'off' : 'on'); } catch (e) { /* private mode */ }
+  };
+  { let off = false; try { off = localStorage.getItem('bidule.tags') === 'off'; } catch (e) { /* */ } setTags(off); }
+  $('#tagsBtn').addEventListener('click', () => setTags(!root.classList.contains('no-tags')));
   $('#mute').addEventListener('click', (e) => {
     audio.muted = !audio.muted; const b = e.currentTarget;
     b.setAttribute('aria-pressed', String(audio.muted)); b.setAttribute('aria-label', audio.muted ? 'Remettre le son' : 'Couper le son');

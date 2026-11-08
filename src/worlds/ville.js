@@ -6,6 +6,8 @@ import { engineOn, engineOff, thud, ding, chime, tone } from '../kit/audio.js';
 import { C, MT, UB, ICO, dummy, tmpCol, mat, std, add, box, grp, cylY, cylZ, cylX, rod, rail, sph, rbox, ext, extY, arc, anchor, beam, wp, shadows, instanced } from '../kit/geo.js';
 import { tire, operator, beacon } from '../kit/parts.js';
 import { createFx } from '../kit/fx.js';
+import { lamp } from '../kit/props.js';
+import { route, person as walker, miniCar, traffic } from '../kit/life.js';
 
 const S2 = Math.SQRT1_2;
 const P = (u, v) => [(u + v) * S2, (u - v) * S2];
@@ -156,69 +158,58 @@ const ICONS = {
   telepherique: GND + `<path d="M70 75L96 30l20 45z" fill="#2f6a4a"/><path class="ln" d="M6 30L114 10"/><rect class="k" x="56" y="20" width="3" height="10"/>
     <rect x="44" y="28" width="28" height="22" rx="5" fill="#d8402a"/><rect class="g" x="48" y="32" width="9" height="9" rx="1"/><rect class="g" x="60" y="32" width="9" height="9" rx="1"/><rect class="c" x="4" y="30" width="18" height="44"/>`
 };
-const U = { telepherique: -28, shinkansen: -22, metro: -13, tram: -5, voiture: 4, car: 13 };
-const CFG = {};
-Object.entries(U).forEach(([id, u]) => { const [x, z] = P(u, id === 'telepherique' ? -14 : 0); CFG[id] = { x, z, yaw: YAW }; });
+// Layout coordinates (like the building site): h runs left → right on screen in the overview, d from the back (−) to the front (+).
+const Q = (h, d) => [(h + d) * S2, (d - h) * S2];
+const YAWF = -Math.PI / 4;           // along a street that comes towards the front
+const FACE = { front: YAW, back: YAW + Math.PI, right: 3 * Math.PI / 4, left: -Math.PI / 4 }; // which way a building's street side (+z) looks
+const CF = (h, d, yaw = YAW) => { const [x, z] = Q(h, d); return { x, z, yaw }; };
+const CFG = {
+  voiture: CF(10, 9, YAWF), car: CF(28, 15.5), tram: CF(0, -17), metro: CF(0, 31), shinkansen: CF(4, -27), telepherique: CF(17, -4)
+};
+
+// painted ground
+const GR = [], GB = [];
+const rect = (h, d, len, wid, along, col, al = 1, stripes) => { const [cx, cz] = Q(h, d); GR.push({ cx, cz, len, wid, rot: along === 'h' ? -Math.PI / 4 : Math.PI / 4, col, al, stripes }); };
+const blob = (h, d, r, col) => { const [x, z] = Q(h, d); GB.push([x, z, r, col]); };
+const ROAD = '#34364a', WALK = '#c9c4d8', LINE = '#f3efe2';
+// avenue (cars in front, tram behind), market street, side streets, the cross street
+rect(-14, -11.5, 68, 4.4, 'h', ROAD); rect(-14, -8.6, 68, 1.6, 'h', WALK); rect(-14, -14.4, 68, 1.6, 'h', WALK);
+rect(12, 15.5, 72, 4.4, 'h', ROAD); rect(12, 12.6, 72, 1.6, 'h', WALK); rect(12, 18.4, 72, 1.6, 'h', WALK);
+[-22, -2].forEach((h) => { rect(h, 2, 4.4, 30, 'h', ROAD); rect(h - 2.9, 2, 1.4, 30, 'h', WALK); rect(h + 2.9, 2, 1.4, 30, 'h', WALK); });
+rect(10, -9.6, 3.6, 4.2, 'd', ROAD);
+for (let h = -46; h < 20; h += 3) rect(h, -11.5, 1.4, 0.14, 'h', LINE, 0.85);
+for (let h = -24; h < 48; h += 3) rect(h, 15.5, 1.4, 0.14, 'h', LINE, 0.85);
+[[-5, 15.5], [-19, 15.5]].forEach(([h, d]) => rect(h, d, 2.2, 4.4, 'h', LINE, 0.95, ROAD));
+[[-2, 1], [-2, 7]].forEach(([h, d]) => rect(h, d, 2.2, 4.4, 'd', LINE, 0.95, ROAD));
+// the river and its stone promenades
+rect(-10, 4, 76, 7.4, 'h', '#b9b2cc'); rect(-10, 4, 76, 5, 'h', '#3f7fd0');
+// plazas, park, gardens
+blob(4, -21, 7, 'rgba(230,226,240,.55)'); blob(24, 23, 6, 'rgba(120,200,140,.5)'); blob(35, -4, 10, 'rgba(90,170,110,.55)'); blob(0, 26, 6, 'rgba(230,226,240,.5)');
+blob(-34, -20, 8, 'rgba(120,200,140,.4)'); blob(-32, 22, 8, 'rgba(120,200,140,.4)');
 
 export default {
   id: 'ville', title: 'La Ville', titleHtml: 'La <span>Ville</span>',
-  subtitle: 'Une ville japonaise pleine de transports : voiture, car, tramway, métro, train à grande vitesse et téléphérique.',
+  subtitle: 'Une ville japonaise pleine de vie : des rues, une rivière, une gare, un temple. Et plein de transports !',
   welcome: 'Bienvenue en ville ! Touche un transport pour voir comment il marche.',
   hint: 'Touche un transport pour le découvrir.', backLabel: 'Toute la ville',
   brandIcon: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="7" width="22" height="16" rx="4"/><path d="M5 16h22M10 27l2-4M22 27l-2-4M11 3h10"/><circle cx="10" cy="19.5" r="1"/><circle cx="22" cy="19.5" r="1"/></svg>',
   data: DATA, order: ORDER, icons: ICONS, cfg: CFG,
-  radius: 38, outerColor: 0x1d3f7a,
+  radius: 46, outerColor: 0x1d3f7a, tufts: false,
   forest: { dark: [0x1f4a3a, 0x2a5a44, 0x173a30], bush: [0xf4b2cc, 0xe99ab8, 0xf7c6d8, 0x2f8a5a] },
-  tuftColors: [0x3f9a6a, 0x2f7f5a, 0x5ab07a, 0x4c78ff],
-  overview: { w: 66, h: 46, focus: [0, 3, 0] },
-  zones: [[...P(-28, 10), 9.5], [...P(20, 0), 3]],
-  segs: [[...P(-28, -18), ...P(-28, 10), 3], [...P(-22, -40), ...P(-22, 40), 3], [...P(-13, -28), ...P(-13, 30), 3.5], [...P(-5, -18), ...P(-5, 18), 3.5],
-    [...P(4, -18), ...P(4, 18), 4], [...P(13, -18), ...P(13, 18), 4.5], [...P(-17, -18), ...P(-17, 18), 2.6], [...P(-9, -18), ...P(-9, 18), 2], [...P(0, -18), ...P(0, 18), 2.2], [...P(8.5, -18), ...P(8.5, 18), 2.4]],
-  ground: {
-    base: ['#8a92c8', '#6a73ad', '#4c5488'],
-    rects: [
-      { cx: P(4, 0)[0], cz: P(4, 0)[1], len: 40, wid: 7, rot: -Math.PI / 4, col: '#b9b6c8', al: 0.7 },
-      { cx: P(13, 0)[0], cz: P(13, 0)[1], len: 40, wid: 7, rot: -Math.PI / 4, col: '#b9b6c8', al: 0.7 },
-      { cx: P(-5, 0)[0], cz: P(-5, 0)[1], len: 40, wid: 6, rot: -Math.PI / 4, col: '#c9c4d4', al: 0.6 }
-    ],
-    blobs: [[...P(20, 0), 9, 'rgba(120,200,140,.45)'], [...P(-28, 10), 10, 'rgba(90,170,110,.55)']]
-  },
+  overview: { w: 74, h: 52, focus: [0, 3, 0] },
+  ground: { base: ['#8a92c8', '#6a73ad', '#4c5488'], rects: GR, blobs: GB },
 
   build(ctx) {
     const { scene, makeStation, part, roll, step, onUpdate } = ctx;
     const fx = createFx(scene, 120);
     onUpdate((dt) => fx.update(dt));
-    const at = (u, v) => P(u, v);
-
-    /* ---------- the town ---------- */
-    // Mount Fuji far behind the island
-    { const f = grp(scene, -62, 0, -62); add(f, new THREE.ConeGeometry(34, 26, 28), std(0x5a6aa8, 0.9, 0), 0, 13, 0); const cap = add(f, new THREE.ConeGeometry(11.5, 8.8, 28), std(0xf4f6fb, 0.6, 0), 0, 21.6, 0); }
-    // houses, shops and towers between the lines
-    const rows = [[8.4, true]];
-    rows.forEach(([u, shops]) => {
-      for (let v = -17; v <= 17; v += 3.6) {
-        if (Math.abs(v) < 3.2 && u > 0) continue;
-        const [x, z] = at(u, v), r = Math.random();
-        house(scene, x, z, YAW, { shop: shops && r < 0.5, roof: r < 0.25 ? VM.roofRed : VM.slate, w: 3.0, d: 2.2, h: rnd(1.5, 1.9) });
-      }
-    });
-    [[18, -24, 3, 7], [22, -21, 2.6, 5], [14, 24, 3, 8], [19, 22, 2.4, 6], [6, 25, 2.6, 9], [-6, 26, 2.8, 7], [8, -25, 2.6, 6], [-4, -27, 3, 8]].forEach(([u, v, w, h]) => { const [x, z] = at(u, v); tower(scene, x, z, YAW, w, w, h); });
-    for (let v = -17; v <= 17; v += 4.2) { const [x, z] = at(-1.15, v); const k = Math.round((v + 17) / 4.2) % 3; if (k === 0) sakuraTree(scene, x, z, 0.75); else if (k === 1) lanternPost(scene, x, z); else vending(scene, x, z, YAW); }
-    [[-9, -16], [-9, -8], [-9, 8], [-9, 16]].forEach(([u, v]) => { const [x, z] = at(u, v); sakuraTree(scene, x, z, 0.8); });
-    [[-9, -12], [-9, 12], [-9, 0]].forEach(([u, v]) => { const [x, z] = at(u, v); lanternPost(scene, x, z); });
-    // front park with a torii and cherry trees
-    { const [x, z] = at(20, 0); torii(scene, x, z, YAW - Math.PI / 2, 1.1); }
-    [[19, -6], [22, -10], [24, 4], [19, 7], [25, -3], [21, 12], [17, -14], [26, 9]].forEach(([u, v], i) => { const [x, z] = at(u, v); sakuraTree(scene, x, z, rnd(0.9, 1.2)); });
-    [[18, -2.5], [18, 2.5]].forEach(([u, v]) => { const [x, z] = at(u, v); lanternPost(scene, x, z); });
-    [[22, -16], [24, 15], [16, 18], [16, -19]].forEach(([u, v]) => { const [x, z] = at(u, v); house(scene, x, z, YAW + Math.PI, { roof: VM.roofRed }); });
-    [[10.5, -4], [10.5, 5]].forEach(([u, v]) => { const [x, z] = at(u, v); vending(scene, x, z, YAW); });
-    [[20, -4, true], [21, 3, false], [23, 0, true]].forEach(([u, v, kid]) => { const [x, z] = at(u, v); person(scene, x, z, rnd(0, 6), { kid, hat: kid ? MT.hat : null, bag: kid ? VM.cab : null }); });
+    buildTown(scene, onUpdate);
 
     /* ---- voiture + feux ---- */
     (function () {
       const st = makeStation('voiture'), S = st.g, START = -12, STOP = -4.2, END = 14;
-      rbox(S, 40, 0.06, 4.2, 0.02, 0x30333d, 0, 0.03, 0, 0.01); [2.6, -2.6].forEach((z) => rbox(S, 40, 0.18, 1.0, 0.02, 0xc9c6d6, 0, 0.09, z, 0.01));
-      for (let x = -19; x < 19; x += 2) if (Math.abs(x) > 2) box(S, 1.0, 0.02, 0.12, 0xf3efe2, x, 0.07, 0);
+      rbox(S, 34, 0.06, 4.2, 0.02, 0x30333d, 0, 0.03, 0, 0.01); [2.6, -2.6].forEach((z) => rbox(S, 34, 0.18, 1.0, 0.02, 0xc9c6d6, 0, 0.09, z, 0.01));
+      for (let x = -16; x < 16; x += 2) if (Math.abs(x) > 2) box(S, 1.0, 0.02, 0.12, 0xf3efe2, x, 0.07, 0);
       for (let z = -1.8; z <= 1.8; z += 0.6) box(S, 1.6, 0.02, 0.36, 0xf3efe2, 0, 0.07, z);
       box(S, 0.12, 0.02, 4.2, 0xf3efe2, -1.5, 0.07, 0);
       const lights = [];
@@ -419,11 +410,10 @@ export default {
 
     /* ---- téléphérique ---- */
     (function () {
-      const st = makeStation('telepherique'), S = st.g, TOP = 22, HT = 9.5;
+      const st = makeStation('telepherique'), S = st.g, TOP = 16, HT = 9.5;
       const hill = grp(S, TOP + 2, 0, 0); add(hill, new THREE.CylinderGeometry(4.5, 8.5, HT, 18), std(0x3f7a52, 0.9, 0), 0, HT / 2, 0);
       [[-3, 2.5, -4], [4, 1.2, 5], [-6, 0.5, 4], [5, 2.2, -5], [1, 3.5, -6]].forEach(([x, y, z]) => pine(hill, x, z, 1.1).position.y = y);
       pagoda(hill, 1.5, -2, 0.8).position.y = HT;
-      torii(S, TOP - 7.5, -2.6, Math.PI / 2, 0.8);
       sakuraTree(hill, 2.6, -3.4, 0.8).position.y = HT; sakuraTree(hill, -1.2, -3.8, 0.7).position.y = HT;
       const bot = grp(S, 0, 0, 0); rbox(bot, 3.6, 7.4, 3.6, 0.1, VM.cream, -2.3, 3.7, 0, 0.02); for (let y = 1.5; y < 7; y += 1.6) box(bot, 3.62, 0.08, 3.62, VM.woodD, -2.3, y, 0); ext(bot, [[-2.2, 0], [2.2, 0], [0, 0.9]], 0.05, 4.0, VM.slate, -2.3, 7.4, 0, 0.03).rotation.y = Math.PI / 2;
       const top = grp(S, TOP, HT, 0); rbox(top, 3.2, 2.8, 3.2, 0.1, VM.cream, 1.0, 1.4, 0, 0.02); ext(top, [[-2.0, 0], [2.0, 0], [0, 0.8]], 0.05, 3.6, VM.slate, 1.0, 2.8, 0, 0.03).rotation.y = Math.PI / 2;
@@ -459,5 +449,93 @@ export default {
         await step(up ? 'Arrivée au temple, tout en haut ! Quelle belle vue !' : 'Retour en bas. On remonte ?', up ? 'temple' : 'cabine');
       };
     })();
+    buildLife(scene, onUpdate);
   }
 };
+
+/* ================= the town ================= */
+const TM = { water: std(0x4f8fe0, 0.15, 0.2), bank: std(0xb9b2cc, 0.9, 0), red: std(0xd8402a, 0.5, 0.1), deck: std(0x8a8ea0, 0.8, 0), hall: std(0xeef0f6, 0.6, 0.05) };
+function placeQ(o, h, d, yaw = YAW) { const [x, z] = Q(h, d); o.position.set(x, o.position.y, z); o.rotation.y = yaw; return o; }
+function at(p, h, d, yaw = YAW) { const g = grp(p); return placeQ(g, h, d, yaw); }
+function H(p, h, d, face, o = {}) { const [x, z] = Q(h, d); return house(p, x, z, FACE[face], { w: 3.0, d: 2.4, h: rnd(1.6, 2.1), roof: Math.random() < 0.3 ? VM.roofRed : VM.slate, ...o }); }
+function T(p, h, d, w, ht) { const [x, z] = Q(h, d); return tower(p, x, z, YAW, w, w, ht); }
+function sak(p, h, d, s = 0.9) { const [x, z] = Q(h, d); return sakuraTree(p, x, z, s); }
+function lan(p, h, d) { const [x, z] = Q(h, d); return lanternPost(p, x, z); }
+function carBridge(p, h) {
+  const g = at(p, h, 4, YAWF); rbox(g, 8.4, 0.2, 4.6, 0.04, TM.deck, 0, 0.1, 0, 0.02);
+  [2.4, -2.4].forEach((z) => { rbox(g, 8.6, 0.55, 0.22, 0.06, TM.hall, 0, 0.45, z, 0.02); [-4.3, 4.3].forEach((x) => cylY(g, 0.18, 1.0, TM.red, x, 0.5, z, 10)); });
+  shadows(g); return g;
+}
+function footBridge(p, h) {
+  const g = at(p, h, 4, YAWF); rbox(g, 7.6, 0.22, 1.6, 0.05, std(0x8a5a3a, 0.8, 0), 0, 0.12, 0, 0.02);
+  [0.8, -0.8].forEach((z) => { rail(g, [[-3.8, 0.2, z], [-1.5, 0.95, z], [1.5, 0.95, z], [3.8, 0.2, z]], 0.06, TM.red); for (let x = -3; x <= 3; x += 1.5) rod(g, new V3(x, 0.2, z), new V3(x, 0.85 - Math.abs(x) * 0.05, z), 0.04, TM.red, 6); });
+  shadows(g); return g;
+}
+function duck(p) {
+  const g = grp(p); const w = std(0xffffff, 0.6, 0);
+  sph(g, 0.28, w, 0, 0.18, 0).scale.set(0.32, 0.2, 0.22); sph(g, 0.14, w, 0.22, 0.38, 0);
+  add(g, new THREE.ConeGeometry(0.06, 0.14, 6), std(0xf2a81e, 0.6, 0), 0.36, 0.37, 0).rotation.z = -Math.PI / 2;
+  [0.05, -0.05].forEach((z) => sph(g, 0.02, MT.black, 0.3, 0.42, z));
+  shadows(g); return g;
+}
+
+function buildTown(scene, onUpdate) {
+  // Mount Fuji far behind the island
+  { const f = grp(scene, -62, 0, -62); add(f, new THREE.ConeGeometry(34, 26, 28), std(0x5a6aa8, 0.9, 0), 0, 13, 0); add(f, new THREE.ConeGeometry(11.5, 8.8, 28), std(0xf4f6fb, 0.6, 0), 0, 21.6, 0); }
+  // the river: water, stone banks, bridges, cherry trees and lanterns along the promenades
+  { const g = at(scene, -10, 4); box(g, 76, 0.06, 5, TM.water, 0, 0.03, 0); [2.55, -2.55].forEach((z) => rbox(g, 76, 0.3, 0.25, 0.05, TM.bank, 0, 0.15, z, 0.02)); }
+  [-22, -2].forEach((h) => carBridge(scene, h)); { const g = at(scene, 10, 4, YAWF); [2.4, -2.4].forEach((z) => { rbox(g, 7.0, 0.5, 0.2, 0.05, TM.hall, 0, 0.35, z, 0.02); }); shadows(g); }
+  [-14, 4].forEach((h) => footBridge(scene, h));
+  for (let h = -44; h <= 24; h += 4.5) { if ([-22, -14, -2, 4, 10].some((b) => Math.abs(b - h) < 3)) continue; sak(scene, h, -0.3, rnd(0.75, 0.95)); sak(scene, h + 2, 8.3, rnd(0.75, 0.95)); }
+  [-30, -18, -7, 15, 21].forEach((h) => { lan(scene, h, 0.2); lan(scene, h + 1.5, 7.8); });
+  // avenue and market street: lamp posts
+  for (let h = -40; h <= 20; h += 8) { const [x, z] = Q(h, -9.2); lamp(scene, x, z, YAW - Math.PI / 2); }
+  for (let h = -20; h <= 40; h += 8) { const [x, z] = Q(h, 12.9); lamp(scene, x, z, YAW + Math.PI / 2); }
+  // the tram line goes on to the left of the station
+  { const g = at(scene, -33, -17); rbox(g, 26, 0.05, 3.6, 0.02, 0x8a8ea0, 0, 0.03, 0, 0.01); railTrack(g, -13, 13, 0, { gauge: 0.7, sleepers: false }); }
+  // the station hall under the viaduct
+  { const g = at(scene, 4, -22); rbox(g, 10, 3.0, 2.6, 0.08, TM.hall, 0, 1.5, 0, 0.02); box(g, 6, 2.0, 0.06, MT.glassD, 0, 1.2, 1.31); rbox(g, 3.4, 0.6, 0.12, 0.04, VM.blue, 0, 2.6, 1.36, 0.02); shadows(g); }
+  // downtown towers behind the viaduct
+  [[-24, -31, 3, 9], [-18.5, -33, 3.4, 13], [-13, -31.5, 3, 8], [-7, -34, 3.6, 15], [-1, -32, 3, 10], [10, -33, 3.6, 14], [16, -31, 3, 9], [22, -33, 3.2, 12], [27.5, -29, 2.8, 8]].forEach(([h, d, w, ht]) => T(scene, h, d, w, ht));
+  // block between the avenue and the river
+  [-18, -14.6, -11.2, -7.8].forEach((h, i) => { H(scene, h, -6.9, 'back', { shop: i % 2 === 0 }); H(scene, h, -1.7, 'front'); });
+  H(scene, 3.4, -6.9, 'back', { shop: true }); H(scene, 3.4, -1.7, 'front');
+  H(scene, 20, -7, 'back', { shop: true }); H(scene, 23.4, -7, 'back');
+  // block between the river and the market street
+  [-18, -14.6, -11.2, -7.8].forEach((h) => H(scene, h, 11.2, 'front', { shop: true }));
+  H(scene, 3.4, 11.2, 'front', { shop: true }); [15, 18.4, 21.8].forEach((h) => H(scene, h, 11.2, 'front', { shop: Math.random() < 0.6 }));
+  // shops facing the market street, the park with its torii
+  [-19, -15.6, -12.2, -8.8, -5.4, 0, 3.4].forEach((h, i) => H(scene, h, 20.5, 'back', { shop: i % 3 !== 1 }));
+  [14.5, 18].forEach((h) => H(scene, h, 20.5, 'back', { shop: true }));
+  { const [x, z] = Q(31, 22.4); torii(scene, x, z, YAW, 1.1); }
+  [[24, 23], [30, 24.5], [26.5, 26.5], [33, 21.5], [22.5, 26]].forEach(([h, d]) => sak(scene, h, d, rnd(0.9, 1.15)));
+  [[25.5, 20.5], [28.5, 20.5]].forEach(([h, d]) => lan(scene, h, d));
+  // left side of town: houses along the side street, pines
+  [-7, -3.5, 10, 13].forEach((d) => H(scene, -26.4, d, 'right'));
+  [[-32, -8], [-35, 10], [-30, 14], [-36, -2], [-33, 24], [-28, 27]].forEach(([h, d]) => { const [x, z] = Q(h, d); pine(scene, x, z, rnd(1, 1.4)); });
+  [[-30, 18, 'front'], [-26, 22.5, 'front'], [-34, 16, 'front']].forEach(([h, d, f]) => H(scene, h, d, f));
+  [[-30, -14], [-36, -10], [-28, -20.5], [-34, -18]].forEach(([h, d]) => sak(scene, h, d, 1));
+  // vending machines and lanterns here and there
+  [[-9.6, 13], [1.6, 13], [12.6, 13], [-6.3, -8.8]].forEach(([h, d]) => { const [x, z] = Q(h, d); vending(scene, x, z, YAW + Math.PI); });
+}
+
+/* ================= life ================= */
+function buildLife(scene, onUpdate) {
+  const all = [];
+  const R = (pts, t = 0.08) => route(pts.map(([h, d]) => Q(h, d)), true, t);
+  // cars going round the block, one loop each way
+  const inner = R([[-20.9, -10.4], [-3.1, -10.4], [-3.1, 14.4], [-20.9, 14.4]]), outer = R([[-23.1, -12.6], [-23.1, 16.6], [-0.9, 16.6], [-0.9, -12.6]]);
+  const carsA = ['taxi', 'car', 'kei'].map((k) => miniCar(scene, k)), carsB = ['van', 'car', 'taxi', 'kei'].map((k) => miniCar(scene, k));
+  all.push(...carsA, ...carsB);
+  const t1 = traffic(inner, carsA, 3.6, { gap: 3.8 }), t2 = traffic(outer, carsB, 3.6, { gap: 3.8, offset: 7 });
+  // people strolling along the river (over the little red bridges) and along the shops
+  const river = R([[-14, 1], [4, 1], [4, 7], [-14, 7]], 0.05), market = R([[-19, 13], [-5, 13], [-5, 18], [-19, 18]], 0.05), park = R([[23.5, 21.2], [33, 21.6], [33, 25.5], [23.5, 25.8]], 0.3);
+  const crowd = (n, kids) => Array.from({ length: n }, (_, i) => walker(scene, 0, 0, { kid: kids && i % 3 === 1 }));
+  const pr = crowd(6, true), pm = crowd(5, true), pp = crowd(3, true); all.push(...pr, ...pm, ...pp);
+  const w1 = traffic(river, pr, 1.1, { gap: 1.3 }), w2 = traffic(market, pm, 1.0, { gap: 1.3 }), w3 = traffic(park, pp, 0.8, { gap: 1.3 });
+  // ducks on the river
+  const pond = R([[-21, 3.2], [-15.5, 3.4], [-15.5, 4.8], [-21, 4.6]], 0.4);
+  const ducks = [0, 1, 2].map(() => duck(scene)); const td = traffic(pond, ducks, 0.5, { gap: 0.6 });
+  let T = 0;
+  onUpdate((dt) => { T += dt; t1.update(dt, all); t2.update(dt, all); w1.update(dt, all); w2.update(dt, all); w3.update(dt, all); td.update(dt, ducks); ducks.forEach((d, i) => (d.position.y = Math.sin(T * 2 + i) * 0.03)); });
+}

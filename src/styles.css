@@ -23,6 +23,7 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
 .stage{position:fixed;inset:0}
 .stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
 .tags{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.no-tags #tags{display:none}
 .tag{position:absolute;left:0;top:0;white-space:nowrap;will-change:transform;opacity:0;transition:opacity .3s,background-color .25s,color .25s;pointer-events:none}
 .tag.show{opacity:1}
 .tag.name{translate:-50% -100%;background:var(--card);color:var(--card-ink);font-family:var(--f-display);font-weight:600;font-size:15px;
