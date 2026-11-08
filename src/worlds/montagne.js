@@ -181,7 +181,10 @@ export default {
       part(st, 'phares', 'les phares', anchor(D.cab, 1.0, 1.95, 0), false);
       part(st, 'piste', 'la piste toute lisse', anchor(S, 6, gy(S, 6, 0) + 0.6, 2.2), false);
       const cam = anchor(m, 1.5, 1.5, 0); st.focusAt = cam; st.size = { w: 17, h: 10 }; st.az = YAW + 0.25; st.el = 0.8; st.tagAt = anchor(m, 0, 4.2, 0);
+      // night falls only while the story plays: back to daylight at the end, on replay, and if the story stops for any reason
+      let nightK = 0; const setNight = (k) => { nightK = k; night(k); D.lights(k); };
       st.update = (dt) => {
+        if (!st.playing && nightK > 0) setNight(0);
         roll(st, dt); settle(S, m, 2.2, 2.2); D.update(dt, st.moving);
         const bx = m.position.x + 3.6;
         mounds.forEach((b) => { if (bx > b.userData.x - 1.2 && b.scale.y > 0.06) { b.scale.y = Math.max(0.05, b.scale.y - dt * 0.9); D.roll.scale.setScalar(Math.min(1, D.roll.scale.x + dt * 0.35)); } });
@@ -189,21 +192,26 @@ export default {
         if (st.moving && Math.random() < 0.5) puff(m.localToWorld(new V3(-4.6, 0.3, rnd(-2, 2))), 1, 0xf4f7ff, 0.35);
       };
       st.action = async function () {
+        st.playing = true;
+        try { await story(); } finally { st.playing = false; setNight(0); st.moving = st.till = false; }
+      };
+      async function story() {
+        setNight(0);
         if (st.done) {
           engineOn(55); st.moving = true;
           await Promise.all([step('La dameuse redescend en bas de la piste.', 'chenilles'), to(m.position, 'x', 0, 4, easeSine)]);
           st.moving = false; showTo(X0); mounds.forEach((b) => (b.scale.y = 0.65)); D.roll.scale.setScalar(0.2); st.done = false;
         }
-        await Promise.all([step('Le soir, les skieurs sont rentrés. La dameuse allume ses phares.', 'phares'), tw(2.2, (k) => { night(k); D.lights(k); })]);
+        await Promise.all([step('Le soir, les skieurs sont rentrés. La dameuse allume ses phares.', 'phares'), tw(2.2, (k) => setNight(k))]);
         engineOn(55);
         await Promise.all([step("Elle monte la piste avec ses larges chenilles : elles ne s'enfoncent pas dans la neige.", 'chenilles'),
           to(D.blade.rotation, 'z', 0, 1.5), to(D.tiller.rotation, 'z', 0, 1.5), (st.till = st.moving = true), to(m.position, 'x', 5, 4.5, easeSine)]);
         await Promise.all([step('Devant, sa grande lame pousse la neige et efface les bosses.', 'lame'), to(m.position, 'x', 11, 5.5, lin)]);
         await Promise.all([step('Derrière, la fraise écrase la neige et dessine des petites lignes, comme du velours.', 'fraise'), to(m.position, 'x', 18.5, 6.5, easeSine)]);
         st.moving = false; engineOff();
-        await Promise.all([step('Demain matin, la piste sera toute lisse pour les skieurs !', 'piste'), to(D.blade.rotation, 'z', 0.22, 1.2), to(D.tiller.rotation, 'z', -0.25, 1.2), tw(2.4, (k) => { night(1 - k); D.lights(1 - k); })]);
+        await Promise.all([step('Demain matin, la piste sera toute lisse pour les skieurs !', 'piste'), to(D.blade.rotation, 'z', 0.22, 1.2), to(D.tiller.rotation, 'z', -0.25, 1.2), tw(2.4, (k) => setNight(1 - k))]);
         st.till = false; D.roll.scale.setScalar(0.2); chime(); st.done = true;
-      };
+      }
     })();
 
     /* ---- le télésiège ---- */
@@ -662,13 +670,26 @@ function ropeway(S, o) {
   for (let i = 0; i < N; i++) rod(fixed, pts[i], pts[(i + 1) % N], 0.045, PM.cable, 6);
   tops.forEach((t, i) => tower(fixed, t.x, gy(S, t.x, 0), t.y, g, i));
   const bw0 = terminal(fixed, 0, 0, 0, o, false), bw1 = terminal(fixed, o.L, yT - o.yb, Math.PI, o, true);
-  const carriers = []; for (let i = 0; i < o.n; i++) { const c = o.make(i); S.add(c); carriers.push(c); }
+  // Detachable lift: in the terminals the carriers leave the rope and crawl on tyres, then speed up again to rope speed.
+  // "u" is the rope's own length (the carriers are evenly spaced in u); a terminal stretches u, so the carriers slow down there.
+  const VS = 0.3, eIn = o.kind === 'gondola' ? 1.5 : 1.4, eOut = o.kind === 'gondola' ? 3.9 : 4.0, DS = 0.025;
+  const NS = Math.ceil(total / DS), uT = new Float32Array(NS + 1), Pq = new V3();
+  for (let i = 1; i <= NS; i++) {
+    at((i - 0.5) * (total / NS), Pq); const e = Math.min(Pq.x, o.L - Pq.x);
+    uT[i] = uT[i - 1] + total / NS / (VS + (1 - VS) * sstep(eIn, eOut, e));
+  }
+  const U = uT[NS];
+  const sAt = (u) => { u = ((u % U) + U) % U; let a = 0, b = NS; while (b - a > 1) { const m = (a + b) >> 1; if (uT[m] <= u) a = m; else b = m; } return (a + (u - uT[a]) / (uT[b] - uT[a] || 1)) * (total / NS); };
+  const uOf = (s) => { const f = clamp(s / (total / NS), 0, NS), i = Math.min(NS - 1, Math.floor(f)); return uT[i] + (uT[i + 1] - uT[i]) * (f - i); };
+  // more carriers, so the spacing on the line stays close to what it was at constant speed (they bunch up in the terminals)
+  const n = Math.max(o.n, Math.round((0.85 * o.n * U) / total));
+  const carriers = []; for (let i = 0; i < n; i++) { const c = o.make(i); S.add(c); carriers.push(c); }
   const P = new V3(), T = new V3(); let off = 0;
-  const sOf = (i) => off + (total * i) / o.n;
-  const place = () => carriers.forEach((c, i) => { at(sOf(i), P, T); c.position.copy(P); c.rotation.y = Math.atan2(-T.z, T.x); });
-  const sUp = (x) => { for (let i = 0; i <= tops.length; i++) { const a = pts[i], b = pts[i + 1]; if (x <= b.x) return cum[i] + (cum[i + 1] - cum[i]) * clamp((x - a.x) / (b.x - a.x), 0, 1); } return cum[tops.length + 1]; };
+  const sOf = (i) => off + (U * i) / n;
+  const place = () => carriers.forEach((c, i) => { at(sAt(sOf(i)), P, T); c.position.copy(P); c.rotation.y = Math.atan2(-T.z, T.x); });
+  const sUp = (x) => { for (let i = 0; i <= tops.length; i++) { const a = pts[i], b = pts[i + 1]; if (x <= b.x) return uOf(cum[i] + (cum[i + 1] - cum[i]) * clamp((x - a.x) / (b.x - a.x), 0, 1)); } return uOf(cum[tops.length + 1]); };
   bake(fixed); place();
-  return { carriers, total, at, sUp, sOf, get off() { return off; }, set off(v) { const d = v - off; off = v; bw0.rotation.y += d / g; bw1.rotation.y += d / g; place(); } };
+  return { carriers, total: U, sUp, sOf, get off() { return off; }, set off(v) { const d = v - off; off = v; bw0.rotation.y += d / g; bw1.rotation.y += d / g; place(); } };
 }
 function tower(p, x, y0, yTop, g, i) {
   const t = grp(p, x, 0, 0), M = PM.tower, hgt = yTop - 0.75 - y0;
@@ -963,11 +984,9 @@ function buildMountain(root) {
   for (let i = 0; i < 9000; i++) { x.fillStyle = Math.random() < 0.5 ? 'rgba(80,90,140,.07)' : 'rgba(255,255,255,.12)'; x.fillRect(Math.random() * 1024, Math.random() * 512, 2, 2); }
   const tex = new THREE.CanvasTexture(cv); tex.anisotropy = 4;
   const terr = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ map: tex })); terr.receiveShadow = true; terr.userData.dynamic = true; terr.userData.terrain = true; root.add(terr);
-  // the high peaks behind
-  [[-74, -80, 30], [-42, -88, 42], [-8, -84, 36], [24, -90, 44], [56, -82, 34], [84, -70, 26], [-98, -64, 22]].forEach(([h, d, ht]) => {
-    const g = at(root, h, d, rnd(0, 3)); add(g, new THREE.ConeGeometry(ht * 0.85, ht, 7, 1), SC.rock, 0, ht / 2, 0);
-    const cap = add(g, new THREE.ConeGeometry(ht * 0.85 * 0.48, ht * 0.48, 7, 1), SC.snow, 0, ht - (ht * 0.48) / 2 + 0.3, 0); cap.scale.setScalar(1.04);
-  });
+  // the high peaks: rocky faces and snowy summits, behind the ski area and on its left flank (seen in the overview)
+  const pk = new THREE.Mesh(massifGeo(PEAKS), new THREE.MeshLambertMaterial({ vertexColors: true }));
+  pk.userData.dynamic = true; pk.userData.terrain = true; pk.receiveShadow = true; root.add(pk);
   // run markers: poles along both edges of the blue run, a sign at the top, orange nets at the bottom
   for (let d = -12; d > -58; d -= 4.5) [PH - 10.6, PH + 10.6].forEach((h, i) => { if (h < -12 && d < -17 && d > -25) return; const [px, pz] = Q(h, d), y = H(h, d); cylY(root, 0.06, 1.8, SC.blue, px, y + 0.9, pz, 6); cylY(root, 0.065, 0.3, i ? SC.orange : SC.dark, px, y + 1.65, pz, 6); });
   { const [px, pz] = Q(PH + 11.5, -40), y = H(PH + 11.5, -40), g = grp(root, px, y, pz); g.rotation.y = YAW; cylY(g, 0.06, 2.2, SC.dark, 0, 1.1, 0, 6); cylZ(g, 0.38, 0.06, SC.blue, 0, 2.2, 0.05, 20); cylZ(g, 0.42, 0.04, SC.white, 0, 2.2, 0.02, 20); }
@@ -983,6 +1002,47 @@ function buildMountain(root) {
   return root;
 }
 
+/** [h, d, height, radius along h, radius along d, phase]: the summits around the resort */
+const PEAKS = [
+  [-60, -24, 30, 15, 15, 0.4], [-63, -47, 42, 17, 16, 2.1], [-78, -58, 36, 15, 17, 4.0], [-44, -70, 30, 15, 12, 1.2], // the left flank
+  [76, -30, 30, 13, 15, 3.3], [70, -56, 40, 16, 17, 5.1], // the right flank, kept far out so it never hides the chairlift
+  [-22, -84, 44, 22, 14, 0.9], [8, -88, 52, 22, 15, 2.7], [38, -84, 44, 20, 14, 4.4], [-60, -86, 38, 18, 14, 3.0], [60, -78, 34, 16, 13, 1.7] // the big ones behind
+];
+const massifIn = (h, d, m = 1) => PEAKS.some(([ph, pd, , rh, rd]) => ((h - ph) / (rh * m)) ** 2 + ((d - pd) / (rd * m)) ** 2 < 1);
+/** One faceted mesh for all the peaks: grey rock on the steep faces, snow on the summits and on the gentle slopes. */
+function massifGeo(list) {
+  const pos = [], col = [], R = 10, A = 30, cSnow = new THREE.Color(0xb8c2da), cSnowB = new THREE.Color(0xc8d0e4), cRock = new THREE.Color(0x6a6e84), cRockD = new THREE.Color(0x52566c), c = new THREE.Color();
+  const a = new V3(), b = new V3(), e = new V3(), n = new V3();
+  list.forEach(([ph, pd, ht, rh, rd, f]) => {
+    const V = [];
+    for (let i = 0; i <= R; i++) {
+      const r = i / R, row = [];
+      for (let j = 0; j < A; j++) {
+        const t = (j / A) * Math.PI * 2, wob = 1 + 0.16 * Math.sin(3 * t + f) + 0.09 * Math.sin(7 * t + 2 * f);
+        const h = ph + Math.cos(t) * rh * r * wob, d = pd + Math.sin(t) * rd * r * wob;
+        // ridges running down from the summit, a few jagged shoulders, the foot sunk into the snow
+        const ridge = 0.62 + 0.38 * Math.pow(Math.abs(Math.cos(1.5 * t + f)), 3), shoulder = 1 + 0.12 * Math.sin(5 * t + 3 * f) * Math.sin(Math.PI * r);
+        const prof = i === 0 ? ht : ht * Math.pow(1 - r, 1.15) * (ridge + (1 - ridge) * (1 - r) * (1 - r)) * shoulder * (i < R ? 1 + (Math.random() - 0.5) * 0.12 : 1);
+        const [x, z] = Q(h, d); row.push([x, H(h, d) - 0.8 + prof, z, prof / ht]);
+        if (i === 0) break;
+      }
+      V.push(row);
+    }
+    const tri = (p, q, s) => {
+      a.set(p[0], p[1], p[2]); b.set(q[0], q[1], q[2]); e.set(s[0], s[1], s[2]);
+      n.crossVectors(b.clone().sub(a), e.clone().sub(a)).normalize(); if (n.y < 0) { [q, s] = [s, q]; n.negate(); }
+      const fy = (p[3] + q[3] + s[3]) / 3, k = Math.random();
+      if (fy > 0.52 + 0.12 * k || (n.y > 0.74 - 0.12 * fy && fy > 0.1)) c.copy(fy > 0.75 ? cSnowB : cSnow).multiplyScalar(0.96 + 0.06 * k);
+      else c.copy(k < 0.4 ? cRockD : cRock).multiplyScalar(0.92 + 0.14 * Math.random());
+      [p, q, s].forEach((v) => { pos.push(v[0], v[1], v[2]); col.push(c.r, c.g, c.b); });
+    };
+    for (let j = 0; j < A; j++) tri(V[0][0], V[1][j], V[1][(j + 1) % A]);
+    for (let i = 1; i < R; i++) for (let j = 0; j < A; j++) { const j2 = (j + 1) % A; tri(V[i][j], V[i + 1][j], V[i + 1][j2]); tri(V[i][j], V[i + 1][j2], V[i][j2]); }
+  });
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.computeVertexNormals();
+  return g;
+}
+
 /* ================= trees (instanced): snowy firs on the mountain and around the village ================= */
 const segD = (px, pz, ax, az, bx, bz) => { const dx = bx - ax, dz = bz - az, t = clamp(((px - ax) * dx + (pz - az) * dz) / (dx * dx + dz * dz || 1), 0, 1); return Math.hypot(px - ax - dx * t, pz - az - dz * t); };
 const LANES = [
@@ -990,6 +1050,7 @@ const LANES = [
   [[[-21, 7], [-21, -8], [-20.5, -14], [-21.5, -20], [-22, -26]], 3.2]
 ];
 function blocked(h, d) {
+  if (massifIn(h, d, 0.8)) return true; // on the steep foot of a peak
   if (Math.abs(h - PH) < 12 && d < -4) return true; // the run
   if (h > 11.5 && h < 25 && d > -40 && d < 3) return true; // chairlift
   if (h > -38.5 && h < -25.5 && d > -54 && d < 4) return true; // gondola

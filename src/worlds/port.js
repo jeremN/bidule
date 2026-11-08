@@ -452,7 +452,7 @@ const ICONS = {
 };
 
 const CFG = {
-  navire: CF(2, -20), pilote: CF(36, -36), remorqueur: CF(37, -17.3), portique: CF(0.4, -7, 3 * PI / 4),
+  navire: CF(2, -20), pilote: CF(50, -38), remorqueur: CF(37, -17.3), portique: CF(0.4, -7, 3 * PI / 4),
   cavalier: CF(-16, -7), chariot: CF(-30, 14.5, 3 * PI / 4), camion: CF(-25.7, 24), train: CF(12.5, 31)
 };
 const GR = [], GB = [], GP = [];
@@ -513,7 +513,7 @@ export default {
       part(st, 'capitaine', 'la passerelle du capitaine', anchor(ship, -16.6, 12.6, -5.5), true);
       part(st, 'remorqueurs', 'les remorqueurs', anchor(tugs[0].g, 0, 4.4, 0), false);
       part(st, 'amarres', 'les amarres', anchor(S, 8, 2.4, 6.2), false);
-      st.focusAt = anchor(ship, -2, 5, 0); st.size = { w: 52, h: 22 }; st.az = YAW + PI; st.tagAt = anchor(ship, 0, 17, 0);
+      st.focusAt = anchor(ship, -2, 5, 0); st.size = { w: 52, h: 22 }; st.az = YAW + PI; st.el = 0.78; /* steeper: the waiting ship out at sea must not hide the tugs */ st.tagAt = anchor(ship, 0, 17, 0);
       let T = 0;
       st.update = (dt) => {
         T += dt; if (SH.radar) SH.radar.rotation.y += dt * 1.6;
@@ -547,23 +547,25 @@ export default {
       const st = makeStation('pilote'), S = st.g; S.position.y = SEA;
       const pon = grp(S, 0, 0, 2.4); rbox(pon, 9, 0.5, 1.6, 0.05, PM.wood, 0, 0.25, 0, 0.02); [3.6, -3.6].forEach((x) => [0.7, -0.7].forEach((z) => cylY(pon, 0.18, 0.6, PM.greyL, x, 0.2, z, 10)));
       [-4, 4].forEach((x) => cylY(pon, 0.12, 3.6, PM.dark, x, 0.6, 0.95, 8));
-      { const [bx] = loc(S, 43.6, -33.6); const gw = box(pon, bx - 4.2, 0.08, 1.0, PM.greyL, (4.2 + bx) / 2, 1.5, 0); gw.rotation.z = Math.atan2(1.9, bx - 4.2); }
-      const B = pilotBoat(S); const boat = B.g; st.m = boat; boat.position.set(0, 0, 0);
+      // the pontoon sits on the sea side of the breakwater (the harbour basin is the tug's), a gangway climbs onto the breakwater
+      { const [bx] = loc(S, 43.2, -35.6); const gw = box(pon, -4.2 - bx, 0.08, 1.0, PM.greyL, (bx - 4.2) / 2, 1.5, 0); gw.rotation.z = -Math.atan2(1.9, -4.2 - bx); }
+      const B = pilotBoat(S); const boat = B.g; st.m = boat; const BX = 0.8; boat.position.set(BX, 0, 0); // bow out to sea, stern clear of the rocks
       const pil = walker(boat, 1.9, 0, { top: 0x1d3a7a, bottom: 0x2a3550, vest: true }); pil.position.y = 1.28;
       const SH = containerShip(S, { hull: PM.green, funnel: PM.blue, name: 'MARIN', ladder: true, noKp: true, seed: 3 }); const ship = SH.g; ship.scale.setScalar(0.72);
       const HOME = loc(S, -8, -52); ship.position.set(HOME[0], 0, HOME[1]);
       const side = new V3(HOME[0] - 1.44, 0, HOME[1] + 3.96 + 1.62);
-      const out = route([[0, 0], [1.0, -0.6], [1.6, -2.4], [0, -4.6], [-4, -5.6], [-20, -8], [-34, side.z], [side.x, side.z]], false, 0.4);
-      const back = route([[side.x, side.z], [side.x - 5, side.z - 0.4], [side.x - 9, side.z + 3], [side.x - 5, side.z + 7], [-20, -2], [-6, -2.6], [-2, -0.8], [0, 0]], false, 0.4);
+      // out to sea, round the lighthouse at the tip of the breakwater, then along the big ship's side
+      const out = route([[BX, 0], [BX + 3, -0.5], [BX + 5, -3], [BX + 3.5, -7], [-2, -10.5], [-10, -12.5], [-20, -12], [-34, side.z - 1], [side.x, side.z]], false, 0.4);
+      const back = route([[side.x, side.z], [side.x - 5, side.z - 0.4], [side.x - 9, side.z + 3], [side.x - 5, side.z + 7], [-30, -7], [-18, -12], [-8, -12], [-1, -8], [BX - 1.5, -3.5], [BX - 0.5, -1], [BX, 0]], false, 0.4);
       part(st, 'bateau', 'le grand bateau', anchor(ship, 0, 18, 0), false);
       part(st, 'pilote', 'le pilote', anchor(pil, 0, 1.4, 0), true);
       part(st, 'echelle', "l'échelle de corde", anchor(ship, -2, 3.0, 5.7), false);
       part(st, 'feux', 'les feux blanc et rouge', anchor(boat, -1.0, 4.4, 0), false);
-      st.focusAt = anchor(boat, 0, 1.5, 0); st.size = { w: 30, h: 14 }; st.tagAt = anchor(boat, 0, 5.4, 0);
+      st.focusAt = anchor(boat, 0, 1.5, 0); st.size = { w: 30, h: 14 }; st.az = 0; st.el = 0.9; /* from the north-west, so the big crane and the moored ship never hide the ladder */ st.tagAt = anchor(boat, 0, 5.4, 0);
       let T = 0;
       st.update = (dt) => { T += dt; if (SH.radar) SH.radar.rotation.y += dt * 1.6; ship.position.y = Math.sin(T * 0.6) * 0.06; if (!st.moving) boat.position.y = Math.sin(T * 1.6) * 0.07; else { boat.position.y = 0.05; boat.rotation.z = 0.05; boatWake(boat, 3.6, 1.4); } if (st.shipMoving) boatWake(ship, 16, 3); };
       st.action = async function () {
-        if (st.done) { ship.position.set(HOME[0], 0, HOME[1]); boat.add(pil); pil.position.set(1.9, 1.28, 0); pil.rotation.set(0, 0, 0); boat.position.set(0, 0, 0); boat.rotation.set(0, 0, 0); st.done = false; }
+        if (st.done) { ship.position.set(HOME[0], 0, HOME[1]); boat.add(pil); pil.position.set(1.9, 1.28, 0); pil.rotation.set(0, 0, 0); boat.position.set(BX, 0, 0); boat.rotation.set(0, 0, 0); st.done = false; }
         await Promise.all([step('Un grand bateau attend au large. Il ne connaît pas le chemin du port.', 'bateau'), sleep(0.6)]);
         engineOn(90); st.moving = true;
         await Promise.all([step('Vroum ! Le bateau-pilote fonce vers lui sur les vagues.', 'feux'), along(boat, out, 0, out.len, 7, easeSine)]);
@@ -598,9 +600,10 @@ export default {
       bake(bd);
       const bow = anchor(barge, 7.2, 1.2, 0);
       const TG = tugBoat(S, PM.orange, 'BIDULE'); const tug = TG.g; st.m = tug;
-      const IDLE = new V3(0, 0, -7.3); tug.position.copy(IDLE); tug.rotation.y = -PI / 2;
+      const IDLE = new V3(0, 0, -7.3); tug.position.copy(IDLE); tug.rotation.y = -PI / 2; barge.rotation.y = PI;
       const cable = seg(S, 0.05, PM.rope); cable.visible = false;
-      const IN = route([[-14, -50], [-10, -34], [-8, -16], [0, -9], [14, -9], [24, -9]], false, 0.35), sB = sOf(IN, 0, -9), GAP = 13;
+      // the tow comes in from the open sea, inside the breakwater, then turns along the quay under the big ship's bow
+      const IN = route([[-4, -62], [-4, -30], [-3.5, -20], [-2, -15], [-4, -11.4], [-8, -11], [-16, -11], [-40, -11]], false, 0.35), sB = sOf(IN, -6, -11), GAP = 13;
       part(st, 'nez', 'le nez en caoutchouc', anchor(tug, 4.7, 1.3, 0), true);
       part(st, 'treuil', 'le treuil', anchor(tug, -2.2, 2.6, 0), false);
       part(st, 'barge', 'la barge', anchor(barge, 0, 6, 0), true);
@@ -617,14 +620,15 @@ export default {
         placeOn(barge, IN, 0); placeOn(tug, IN, GAP);
         await Promise.all([step('Le remorqueur tire une grosse barge pleine de conteneurs, avec un câble très solide.', 'cable'),
           tw(10, (k) => { const s = sB * k; placeOn(barge, IN, s); placeOn(tug, IN, s + GAP); }, (k) => 1 - (1 - k) * (1 - k))]);
-        const t0 = tug.position.clone();
-        await Promise.all([step('Son treuil enroule le câble. Il tourne, il tourne...', 'treuil'), tw(2.4, (k) => { TG.drum.rotation.z = -k * 14; tug.position.x = t0.x - 3 * k; TG.drum.scale.set(1.15 + 0.25 * k, 1, 1.15 + 0.25 * k); }, easeSine)]);
+        const b0 = barge.position.clone(), dir = new V3(Math.cos(barge.rotation.y), 0, -Math.sin(barge.rotation.y));
+        await Promise.all([step('Son treuil enroule le câble. Il tourne, il tourne...', 'treuil'), tw(2.4, (k) => { TG.drum.rotation.z = -k * 14; barge.position.x = b0.x + dir.x * k; barge.position.z = b0.z + dir.z * k; TG.drum.scale.set(1.15 + 0.25 * k, 1, 1.15 + 0.25 * k); }, easeSine)]);
         cable.visible = false;
-        const p = tug.position.clone(); const AR = route([[p.x, p.z], [p.x + 4, p.z - 3], [p.x + 1, p.z - 8], [6, -19.5], [0, -18.5], [0, -16.3]], false, 0.35);
+        // round the front of the barge, out on the sea side, then nose against its middle
+        const p = tug.position.clone(), PB = barge.position.clone(); const AR = route([[p.x, p.z], [p.x - 3.5, p.z - 2], [p.x - 4, p.z - 7], [PB.x - 8, PB.z - 10.5], [PB.x - 1, PB.z - 10.2], [PB.x, PB.z - 7.3]], false, 0.35);
         await Promise.all([step('Maintenant, il vient poser son gros nez en caoutchouc contre la barge.', 'nez'), along(tug, AR, 0, AR.len, 6, easeSine)]);
         thud();
         await Promise.all([step('Et il la pousse tout doucement contre le quai. Il est petit, mais très fort !', 'barge'),
-          (() => { const bx = barge.position.x, br = barge.rotation.y, bz = barge.position.z; return tw(6, (k) => { barge.position.set(bx * (1 - k), barge.position.y, bz * (1 - k)); barge.rotation.y = br * (1 - k); tug.position.set(0, tug.position.y, -16.3 + (16.3 - 7.3) * k); if (Math.random() < 0.6) wake(tug, -4.5, 0, 2, 2); }, easeSine); })()]);
+          (() => { const bx = barge.position.x, br = barge.rotation.y, bz = barge.position.z, tr = br >= 0 ? PI : -PI; return tw(6, (k) => { barge.position.set(bx * (1 - k), barge.position.y, bz * (1 - k)); barge.rotation.y = br + (tr - br) * k; tug.position.set(barge.position.x, tug.position.y, barge.position.z - 7.3); tug.rotation.y = -PI / 2; if (Math.random() < 0.6) wake(tug, -4.5, 0, 2, 2); }, easeSine); })()]);
         thud(); st.moving = false; engineOff(); chime();
       };
     })();
@@ -675,7 +679,7 @@ export default {
       part(st, 'cabine', 'la cabine, tout en haut', anchor(SC.cab, 0.4, 1.4, 0.9), false);
       part(st, 'pince', 'la pince', anchor(spr, 1.5, 0.8, 1.2), false);
       part(st, 'pile', 'la pile de conteneurs', anchor(S, K[0], 3.2, K[1] + 1.5), false);
-      st.focusAt = anchor(m, 0, 4, 0); st.size = { w: 22, h: 14 }; st.az = YAW + 0.35; st.tagAt = anchor(m, 0, 10, 0);
+      st.focusAt = anchor(m, 0, 4, 0); st.size = { w: 22, h: 14 }; st.az = YAW + 0.35; st.el = 0.72; st.tagAt = anchor(m, 0, 10, 0);
       st.update = (dt) => { spinW(); SC.update(); if (st.reversing) { st.beepT = (st.beepT || 0) - dt; if (st.beepT <= 0) { tone(1250, 0, 0.2, 'square', 0.035); st.beepT = 0.55; } } };
       st.action = async function () {
         if (st.done) { m.position.set(0, 0, 0); m.rotation.set(0, 0, 0); spr.position.y = CARRY + 0.6; pop(m, 0.5); st.done = false; await sleep(0.5); }
@@ -752,7 +756,7 @@ export default {
       part(st, 'pince', 'la pince', anchor(RS.spr, 0, 0.8, 2.6), false);
       part(st, 'roues', 'les grosses roues', anchor(m, 1.9, 0.9, 1.9), false);
       part(st, 'camion', 'le camion', anchor(TRK.K.R, -4.3, 2.0, 1.4), false);
-      st.focusAt = anchor(m, 0, 3, 0); st.size = { w: 26, h: 13 }; st.az = 3 * PI / 4 + 0.45; st.tagAt = anchor(m, 0, 6.5, 0);
+      st.focusAt = anchor(m, 0, 3, 0); st.size = { w: 26, h: 13 }; st.az = 3 * PI / 4 + 0.45; st.el = 0.9; /* look over the office and the yard cranes */ st.tagAt = anchor(m, 0, 6.5, 0);
       st.update = (dt) => { roll(st, dt); RS.update(); };
       let aimP = new V3(4.0, 3.2, 0);
       const aimTo = (x, y, d) => { const a = aimP.clone(); return tw(d, (k) => { aimP.set(a.x + (x - a.x) * k, a.y + (y - a.y) * k, 0); RS.aim(aimP.x, aimP.y); }, easeSine); };
@@ -773,7 +777,8 @@ export default {
         await aimTo(slot.x, slot.y + CH + 0.6, 1.6 * f);
         await Promise.all([say('Il le pose tout doucement sur la remorque du camion.', 'camion'), aimTo(slot.x, slot.y + CH, 1.4 * f)]);
         thud(); TRK.K.R.attach(T); T.position.copy(TRK.K.slot); T.rotation.set(0, 0, 0); W.tState = 'truck';
-        await aimTo(4.0, 3.2, 1.6 * f); engineOff(); st.done = true;
+        // lift the empty clamp clear of the box and pull it back, so the truck can drive away underneath
+        await aimTo(slot.x, slot.y + CH + 1.0, 0.8 * f); await aimTo(slot.x - 2.4, slot.y + CH + 1.0, 1.2 * f); engineOff(); st.done = true;
       }
       W.rsLoad = async (fast) => { reset(); if (W.tState !== 'stack') restack(); await sleep(0.4); await load(fast); };
       st.action = async function () {
