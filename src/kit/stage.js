@@ -7,6 +7,7 @@ import { audio, say, stopVoice, initAudio, pickVoice, engineOff, hornSound, beep
 import { C, ICO, mat, add, grp, instanced, shadows, toonMat } from './geo.js';
 
 const ICON_AGAIN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a8.5 8.5 0 0 1 0 12"/></svg>';
+const ICON_RECENTER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><circle cx="12" cy="12" r="8"/></svg>';
 const ICON_TAGS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v10H10l-4 4v-4H4z"/><path d="M8 9h8M8 12h5"/><path id="tagsX" d="M3 3l18 18" opacity="0"/></svg>';
 const ICON_MUTE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path id="muteX" d="M17 9l5 6M22 9l-5 6" opacity="0"/></svg>';
 const ICON_HORN = '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13v6h5l11 7V6L9 13H4z"/><path d="M24 11l4-3M24 16h5M24 21l4 3"/></svg>';
@@ -15,13 +16,14 @@ const ICON_PLAY = '<svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8z" fill="curr
 
 function shell(world, root, homeHref) {
   root.innerHTML = `
-<div class="stage" id="stage"><canvas id="c" aria-label="${world.title} en 3D. Glisse le doigt pour tourner autour."></canvas><div class="tags" id="tags"></div></div>
+<div class="stage" id="stage"><canvas id="c" aria-label="${world.title} en 3D. Glisse un doigt pour tourner, deux doigts pour te déplacer et zoomer."></canvas><div class="tags" id="tags"></div></div>
 <div class="hud" id="hud">
   <header class="top" id="top">
     <a class="icon-btn home" data-home href="${homeHref}" aria-label="Accueil" title="Accueil">${ICON_HOME}</a>
     <a class="brand" id="brand" href="${homeHref}">${world.brandIcon || ''}<span>${world.title}</span></a>
     <button class="pill" id="back" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>${world.backLabel || 'Tout voir'}</button>
     <span class="spacer"></span>
+    <button class="icon-btn" id="recenter" hidden aria-label="Recentrer la vue" title="Recentrer">${ICON_RECENTER}</button>
     <button class="icon-btn" id="again" aria-label="Réécouter">${ICON_AGAIN}</button>
     <button class="icon-btn" id="tagsBtn" aria-pressed="false" aria-label="Cacher les bulles" title="Bulles d'info">${ICON_TAGS}</button>
     <button class="icon-btn" id="mute" aria-pressed="false" aria-label="Couper le son">${ICON_MUTE}</button>
@@ -246,7 +248,9 @@ export function createStage(world, root, opts = {}) {
 
   /* ---------- camera ---------- */
   const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 400); cam.layers.enable(1);
-  const ELEV = rad(34);
+  const ELEV0 = rad(34); let el = ELEV0, elT = ELEV0;
+  // what the visitor did with the camera, on top of the automatic framing
+  const pan = new V3(), panT = new V3(); let zoom = 1, zoomT = 1, userMoved = false;
   const OVAZ = (world.overview && world.overview.az) != null ? world.overview.az : Math.PI / 4;
   // the camera turns to see each machine from the side: azimuth = the station's yaw (or st.az)
   const nearAz = (a) => a + Math.round((az - a) / (Math.PI * 2)) * Math.PI * 2;
@@ -256,19 +260,18 @@ export function createStage(world, root, opts = {}) {
   function computeView() {
     const topB = $('#top').getBoundingClientRect().bottom, dockT = dockEl.getBoundingClientRect().top;
     let L = 0, R = SW, T, B;
-    if (!startEl.hidden) { VT = Math.max(34 * SK, (46 * SK * SH) / SW); fxT = 0.5; fyT = 0.5; focusT.set(...ov.focus); azT = nearAz(OVAZ); return; }
+    if (!startEl.hidden) { VT = Math.max(34 * SK, (46 * SK * SH) / SW); fxT = 0.5; fyT = 0.5; focusT.set(...ov.focus); return; }
     if (current) {
       T = topB + 70; const sr = sheetEl.getBoundingClientRect();
       if (SW >= 760 && SW > SH) { L = sr.right + 8; B = dockT - 8; } else B = sr.top - 8;
       const fw = Math.max(80, R - L), fh = Math.max(80, B - T);
       VT = Math.max((current.size.h * SH) / fh, (current.size.w * SH) / fw);
-      azT = nearAz(current.az != null ? current.az : current.g.rotation.y);
       if (current.focusAt) current.focusAt.getWorldPosition(focusT); // follows a moving machine
       else focusT.copy(current.g.localToWorld(current.focus.clone()));
     } else {
       T = (captionEl.hidden ? topB : captionEl.getBoundingClientRect().bottom) + 6; B = dockT - 6;
       const fw = Math.max(80, R - L), fh = Math.max(80, B - T);
-      VT = Math.max((ov.h * SH) / fh, (ov.w * SH) / fw); focusT.set(...ov.focus); azT = nearAz(OVAZ);
+      VT = Math.max((ov.h * SH) / fh, (ov.w * SH) / fw); focusT.set(...ov.focus);
     }
     fxT = (L + R) / 2 / SW; fyT = (T + B) / 2 / SH;
   }
@@ -276,13 +279,22 @@ export function createStage(world, root, opts = {}) {
     SW = stageEl.clientWidth; SH = stageEl.clientHeight; if (!SW || !SH) return;
     renderer.setSize(SW, SH, false); rt.setSize(Math.round(SW * DPR), Math.round(SH * DPR)); nrt.setSize(Math.round(SW * DPR), Math.round(SH * DPR)); postMat.uniforms.uTexel.value.set(1 / Math.round(SW * DPR), 1 / Math.round(SH * DPR)); computeView();
   }
+  const tmpF = new V3();
+  /** Back to the automatic framing: of the selected machine (seen from the side) or of the whole world. */
+  function resetView(turn = true) {
+    panT.set(0, 0, 0); zoomT = 1; elT = ELEV0; userMoved = false; $('#recenter').hidden = true;
+    if (turn) azT = nearAz(current ? (current.az != null ? current.az : current.g.rotation.y) : OVAZ);
+  }
+  function moved() { if (!userMoved && startEl.hidden) { userMoved = true; $('#recenter').hidden = false; } }
   function updateCam(dt) {
     const k = 1 - Math.exp(-dt * 3.2);
-    focus.lerp(focusT, k); V += (VT - V) * k; fx += (fxT - fx) * k; fy += (fyT - fy) * k; az += (azT - az) * (1 - Math.exp(-dt * 2.6));
+    pan.lerp(panT, 1 - Math.exp(-dt * 10)); zoom += (zoomT - zoom) * (1 - Math.exp(-dt * 10)); el += (elT - el) * (1 - Math.exp(-dt * 8));
+    focus.lerp(focusT, k); V += (VT * zoom - V) * k; fx += (fxT - fx) * k; fy += (fyT - fy) * k; az += (azT - az) * (1 - Math.exp(-dt * (drag ? 14 : 2.6)));
     const a = SW / SH;
     cam.left = -fx * V * a; cam.right = (1 - fx) * V * a; cam.top = fy * V; cam.bottom = -(1 - fy) * V; cam.updateProjectionMatrix();
-    cam.position.set(focus.x + Math.sin(az) * Math.cos(ELEV) * 120, focus.y + Math.sin(ELEV) * 120, focus.z + Math.cos(az) * Math.cos(ELEV) * 120);
-    cam.lookAt(focus);
+    const fp = tmpF.copy(focus).add(pan);
+    cam.position.set(fp.x + Math.sin(az) * Math.cos(el) * 120, fp.y + Math.sin(el) * 120, fp.z + Math.cos(az) * Math.cos(el) * 120);
+    cam.lookAt(fp);
   }
 
   /* ---------- UI ---------- */
@@ -311,13 +323,13 @@ export function createStage(world, root, opts = {}) {
     try { st.card.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', inline: 'center', block: 'nearest' }); } catch (e) { /* */ }
     $('#sName').textContent = st.full; $('#sUse').textContent = st.use; $('#sHow').textContent = st.how; $('#goTxt').textContent = st.verb + ' !';
     sheetEl.hidden = false; captionEl.hidden = true; $('#back').hidden = false; $('#brand').hidden = true;
-    computeView(); hop(st); say(`${st.full}. ${st.use} ${st.how}`);
+    resetView(); computeView(); hop(st); say(`${st.full}. ${st.use} ${st.how}`);
   }
   function overview() {
     if (busy) return; current = null; activeKey = null;
     stations.forEach((s) => s.card.setAttribute('aria-pressed', 'false'));
     sheetEl.hidden = true; $('#back').hidden = true; $('#brand').hidden = false;
-    captionEl.textContent = world.hint || 'Touche un engin pour le découvrir.'; captionEl.hidden = false; computeView();
+    captionEl.textContent = world.hint || 'Touche un engin pour le découvrir.'; captionEl.hidden = false; resetView(); computeView();
   }
   async function runAction() {
     if (!current || busy) return; initAudio();
@@ -345,22 +357,60 @@ export function createStage(world, root, opts = {}) {
     $('#muteX').setAttribute('opacity', audio.muted ? '1' : '0'); if (audio.muted) { stopVoice(); engineOff(); }
   });
   root.classList.add('at-start');
-  $('#play').addEventListener('click', () => { initAudio(); pickVoice(); startEl.hidden = true; root.classList.remove('at-start'); computeView(); say(world.welcome); });
+  $('#play').addEventListener('click', () => { initAudio(); pickVoice(); startEl.hidden = true; root.classList.remove('at-start'); resetView(); computeView(); say(world.welcome); });
 
-  const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(); let drag = null;
-  canvas.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY, moved: 0 }; try { canvas.setPointerCapture(e.pointerId); } catch (_) { /* */ } });
-  canvas.addEventListener('pointermove', (e) => {
-    if (!drag) return; const dx = e.clientX - drag.x;
-    drag.moved += Math.abs(dx) + Math.abs(e.clientY - drag.y); drag.x = e.clientX; drag.y = e.clientY; azT -= dx * 0.006;
+  /* ---------- moving around: one finger turns (and tilts), two fingers move and zoom; mouse: drag turns, right-drag or shift moves, wheel zooms ---------- */
+  const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(); let drag = null; const pts = new Map();
+  const RMAX = RAD * 0.85;
+  function panBy(dx, dy) {
+    const u = V / SH, c = Math.cos(az), s = Math.sin(az);
+    // screen right = (cos az, 0, −sin az); screen up on the ground = (−sin az, 0, −cos az), stretched by the tilt
+    const gx = -dx * u, gy = (dy * u) / Math.max(0.35, Math.sin(el));
+    panT.x += gx * c - gy * s; panT.z += -gx * s - gy * c;
+    const p = tmpF.copy(focusT).add(panT); p.y = 0; const r = Math.hypot(p.x, p.z);
+    if (r > RMAX) { panT.x -= (p.x / r) * (r - RMAX); panT.z -= (p.z / r) * (r - RMAX); }
+    moved();
+  }
+  function zoomBy(f) { zoomT = clamp(zoomT * f, 0.22, 2.0); moved(); }
+  function turnBy(dx, dy) { azT -= dx * 0.006; elT = clamp(elT + dy * 0.004, rad(14), rad(72)); if (Math.abs(dx) + Math.abs(dy) > 0) moved(); }
+  const two = () => { const [a, b] = [...pts.values()]; return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, d: Math.hypot(a.x - b.x, a.y - b.y), ang: Math.atan2(b.y - a.y, b.x - a.x) }; };
+  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+  canvas.addEventListener('pointerdown', (e) => {
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    try { canvas.setPointerCapture(e.pointerId); } catch (_) { /* */ }
+    if (pts.size === 1) drag = { x: e.clientX, y: e.clientY, moved: 0, mode: e.button === 2 || e.button === 1 || e.shiftKey || e.ctrlKey ? 'pan' : 'turn' };
+    else if (pts.size === 2) { drag = Object.assign(drag || { moved: 0 }, { mode: 'two', moved: 99 }, { g: two() }); }
   });
-  canvas.addEventListener('pointerup', (e) => {
-    const d = drag; drag = null; if (!d || d.moved > 10 || !startEl.hidden) return;
+  canvas.addEventListener('pointermove', (e) => {
+    if (!pts.has(e.pointerId) || !drag) return; pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (drag.mode === 'two' && pts.size >= 2) {
+      const g = two(), o = drag.g; panBy(g.x - o.x, g.y - o.y); if (o.d > 10 && g.d > 10) zoomBy(o.d / g.d);
+      let da = g.ang - o.ang; if (da > Math.PI) da -= 2 * Math.PI; if (da < -Math.PI) da += 2 * Math.PI; azT -= da; drag.g = g; return;
+    }
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.moved += Math.abs(dx) + Math.abs(dy); drag.x = e.clientX; drag.y = e.clientY;
+    if (drag.moved < 6) return;
+    if (drag.mode === 'pan') panBy(dx, dy); else turnBy(dx, dy);
+  });
+  const up = (e) => {
+    pts.delete(e.pointerId); const d = drag;
+    if (pts.size === 1 && d && d.mode === 'two') { const [p] = [...pts.values()]; drag = { x: p.x, y: p.y, moved: 99, mode: 'turn' }; return; }
+    if (pts.size > 0) return; drag = null;
+    if (!d || d.moved > 10 || !startEl.hidden || e.type === 'pointercancel') return;
     const r = canvas.getBoundingClientRect();
     ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(ndc, cam);
     const hit = ray.intersectObjects(stations.map((s) => s.g), true)[0]; if (!hit) return;
     let o = hit.object; while (o && !o.userData.st) o = o.parent; if (o) select(o.userData.st);
-  });
-  canvas.addEventListener('pointercancel', () => (drag = null));
+  };
+  canvas.addEventListener('pointerup', up);
+  canvas.addEventListener('pointercancel', up);
+  canvas.addEventListener('wheel', (e) => { e.preventDefault(); if (!startEl.hidden) return; if (e.ctrlKey) zoomBy(Math.exp(e.deltaY * 0.01)); else if (e.shiftKey) panBy(-e.deltaY, 0); else zoomBy(Math.exp(e.deltaY * 0.0015)); }, { passive: false });
+  const onKey = (e) => {
+    if (!startEl.hidden || /input|textarea/i.test(e.target.tagName)) return; const st = 40;
+    const k = { ArrowLeft: () => panBy(st, 0), ArrowRight: () => panBy(-st, 0), ArrowUp: () => panBy(0, st), ArrowDown: () => panBy(0, -st), '+': () => zoomBy(0.85), '=': () => zoomBy(0.85), '-': () => zoomBy(1.18), q: () => turnBy(-40, 0), e: () => turnBy(40, 0) }[e.key];
+    if (k) { k(); e.preventDefault(); }
+  };
+  window.addEventListener('keydown', onKey);
+  $('#recenter').addEventListener('click', () => resetView());
 
   const pv = new V3();
   function placeTags() {
@@ -416,6 +466,7 @@ export function createStage(world, root, opts = {}) {
   return function dispose() {
     alive = false; cancelAnimationFrame(raf);
     if (ro) ro.disconnect(); else window.removeEventListener('resize', resize);
+    window.removeEventListener('keydown', onKey);
     clearTweens(); stopVoice(); engineOff();
     scene.traverse((o) => {
       if (o.geometry && !o.geometry.parameters?.shared) o.geometry.dispose?.();
