@@ -146,7 +146,7 @@ export function agriTire(p, R, w, x, y, z, rimM, side) {
 
 export function fender(p, R, w, x, y, z, m, arcLen) {
   const geo = new THREE.CylinderGeometry(R, R, w, 20, 1, true, -Math.PI / 2 + (Math.PI - (arcLen || Math.PI)) / 2, arcLen || Math.PI);
-  geo.rotateX(Math.PI / 2);
+  geo.rotateX(-Math.PI / 2); // arc centred on top of the wheel
   const f = add(p, geo, m, x, y, z); f.material = m.clone(); f.material.side = THREE.DoubleSide; return f;
 }
 
