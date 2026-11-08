@@ -18,6 +18,7 @@ import { Route as FermeRouteImport } from './routes/ferme'
 import { Route as ForetRouteImport } from './routes/foret'
 import { Route as MerRouteImport } from './routes/mer'
 import { Route as MilitaireRouteImport } from './routes/militaire'
+import { Route as MontagneRouteImport } from './routes/montagne'
 import { Route as PortRouteImport } from './routes/port'
 import { Route as RecyclageRouteImport } from './routes/recyclage'
 import { Route as UsineRouteImport } from './routes/usine'
@@ -68,6 +69,11 @@ const MilitaireRoute = MilitaireRouteImport.update({
   path: '/militaire',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MontagneRoute = MontagneRouteImport.update({
+  id: '/montagne',
+  path: '/montagne',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PortRoute = PortRouteImport.update({
   id: '/port',
   path: '/port',
@@ -99,6 +105,7 @@ export interface FileRoutesByFullPath {
   '/foret': typeof ForetRoute
   '/mer': typeof MerRoute
   '/militaire': typeof MilitaireRoute
+  '/montagne': typeof MontagneRoute
   '/port': typeof PortRoute
   '/recyclage': typeof RecyclageRoute
   '/usine': typeof UsineRoute
@@ -114,6 +121,7 @@ export interface FileRoutesByTo {
   '/foret': typeof ForetRoute
   '/mer': typeof MerRoute
   '/militaire': typeof MilitaireRoute
+  '/montagne': typeof MontagneRoute
   '/port': typeof PortRoute
   '/recyclage': typeof RecyclageRoute
   '/usine': typeof UsineRoute
@@ -130,6 +138,7 @@ export interface FileRoutesById {
   '/foret': typeof ForetRoute
   '/mer': typeof MerRoute
   '/militaire': typeof MilitaireRoute
+  '/montagne': typeof MontagneRoute
   '/port': typeof PortRoute
   '/recyclage': typeof RecyclageRoute
   '/usine': typeof UsineRoute
@@ -147,6 +156,7 @@ export interface FileRouteTypes {
     | '/foret'
     | '/mer'
     | '/militaire'
+    | '/montagne'
     | '/port'
     | '/recyclage'
     | '/usine'
@@ -162,6 +172,7 @@ export interface FileRouteTypes {
     | '/foret'
     | '/mer'
     | '/militaire'
+    | '/montagne'
     | '/port'
     | '/recyclage'
     | '/usine'
@@ -177,6 +188,7 @@ export interface FileRouteTypes {
     | '/foret'
     | '/mer'
     | '/militaire'
+    | '/montagne'
     | '/port'
     | '/recyclage'
     | '/usine'
@@ -193,6 +205,7 @@ export interface RootRouteChildren {
   ForetRoute: typeof ForetRoute
   MerRoute: typeof MerRoute
   MilitaireRoute: typeof MilitaireRoute
+  MontagneRoute: typeof MontagneRoute
   PortRoute: typeof PortRoute
   RecyclageRoute: typeof RecyclageRoute
   UsineRoute: typeof UsineRoute
@@ -264,6 +277,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MilitaireRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/montagne': {
+      id: '/montagne'
+      path: '/montagne'
+      fullPath: '/montagne'
+      preLoaderRoute: typeof MontagneRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/port': {
       id: '/port'
       path: '/port'
@@ -305,6 +325,7 @@ const rootRouteChildren: RootRouteChildren = {
   ForetRoute: ForetRoute,
   MerRoute: MerRoute,
   MilitaireRoute: MilitaireRoute,
+  MontagneRoute: MontagneRoute,
   PortRoute: PortRoute,
   RecyclageRoute: RecyclageRoute,
   UsineRoute: UsineRoute,

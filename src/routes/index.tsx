@@ -526,6 +526,53 @@ const worlds = [
           </g>
         </svg>
       )
+    },
+  {
+      to: '/montagne' as const,
+      title: 'La Montagne',
+      text: 'La dameuse qui lisse la piste, le télésiège, la télécabine, le canon à neige, la motoneige, l’hélicoptère de secours…',
+      art: (
+        <svg viewBox="0 0 240 150" aria-hidden="true">
+          <defs>
+            <linearGradient id="mo-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#9cc4f0" /><stop offset="1" stopColor="#e8f1fb" /></linearGradient>
+            <linearGradient id="mo-snow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#f4f7fd" /><stop offset="1" stopColor="#d8e2f4" /></linearGradient>
+          </defs>
+          <rect width="240" height="150" fill="url(#mo-sky)" />
+          <g {...ol}>
+            <path d="M-6 104L60 30L102 78L148 20L246 104Z" fill="#8e98b6" />
+            <path d="M60 30L46 46l8 5 6-7 7 8 9-6zM148 20l-17 19 10 5 7-8 8 8 12-5z" fill="#f4f7fd" />
+          </g>
+          <path d="M24 16L236 78" stroke={INK} strokeWidth="2" />
+          <g {...ol}>
+            <rect x="200" y="67" width="7" height="46" fill="#9aa3b4" />
+            <path d="M190 69h27" fill="none" />
+            <path d="M112 40v16q0 5-5 5H94" fill="none" />
+            <rect x="88" y="58" width="22" height="6" rx="3" fill="#2f62d8" />
+            <rect x="86" y="44" width="6" height="18" rx="3" fill="#2f62d8" />
+          </g>
+          <g fill="#fff"><circle cx="20" cy="40" r="2.5" /><circle cx="186" cy="34" r="2" /><circle cx="214" cy="20" r="2.5" /><circle cx="128" cy="12" r="2" /><circle cx="40" cy="70" r="2" /></g>
+          <path d="M0 104Q120 92 240 106V150H0Z" fill="url(#mo-snow)" />
+          <path d="M0 126Q120 118 240 128V150H0Z" fill="#dfe7f6" />
+          <path d="M0 132h66M0 138h60M0 144h68" stroke="#bccbe8" strokeWidth="2" />
+          <g {...ol}>
+            <path d="M14 116l11-30 11 30z" fill="#2c6e4e" /><path d="M18 102l7-16 7 16-7-3z" fill="#f4f7fd" />
+            <path d="M210 118l12-34 12 34z" fill="#25664a" /><path d="M215 102l7-18 7 18-7-3z" fill="#f4f7fd" />
+          </g>
+          <g className="bob">
+            <g {...ol}>
+              <rect x="72" y="106" width="88" height="20" rx="10" fill="#3a3c48" />
+              <g fill="#b6bbc8"><circle cx="85" cy="116" r="5" /><circle cx="103" cy="116" r="5" /><circle cx="121" cy="116" r="5" /><circle cx="139" cy="116" r="5" /></g>
+              <path d="M76 106V91h40l5-19h26l8 34z" fill="#d62a2a" />
+              <path d="M125 77h17l4 20h-24z" fill="#9fd2ef" />
+              <rect x="118" y="65" width="32" height="6" rx="3" fill="#2a2e3a" />
+              <circle cx="126" cy="61" r="3.5" fill="#ffa53a" />
+              <path d="M162 84q15 4 19 42h-13q-2-32-10-36z" fill="#d62a2a" />
+              <rect x="48" y="106" width="26" height="15" rx="6" fill="#a31e22" />
+              <path d="M40 124h30" fill="none" />
+            </g>
+          </g>
+        </svg>
+      )
     }
 ];
 function Home() {
