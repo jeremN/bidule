@@ -4,7 +4,7 @@ import { V3, rad, clamp, rnd, pick } from '../kit/util.js';
 import { tw, to, sleep, pop, easeIn, easeSine, easeBack, lin } from '../kit/tween.js';
 import { engineOn, engineOff, thud, ding, chime, tone } from '../kit/audio.js';
 import { C, MT, UB, ICO, dummy, tmpCol, mat, std, add, box, grp, cylY, cylZ, cylX, rod, rail, sph, rbox, ext, extY, arc, anchor, beam, wp, shadows, instanced, toonMat, freeze } from '../kit/geo.js';
-import { tire, operator, beacon } from '../kit/parts.js';
+import { tire, operator, beacon, truckCab } from '../kit/parts.js';
 import { createFx } from '../kit/fx.js';
 import { lamp } from '../kit/props.js';
 import { route, person as walker, miniCar, traffic } from '../kit/life.js';
@@ -140,11 +140,25 @@ const DATA = {
     how: 'Son long nez pointu l’aide à fendre l’air. Il roule sur un pont très haut pour aller tout droit.' },
   telepherique: { short: 'Le téléphérique', full: 'Le téléphérique', verb: 'Monter', horn: 'bell',
     use: 'Il monte en haut de la colline, accroché à un câble.',
-    how: 'Une grande roue dans la gare tourne et tire le câble. La cabine glisse le long du câble.' }
+    how: 'Une grande roue dans la gare tourne et tire le câble. La cabine glisse le long du câble.' },
+  poubelle: { short: 'Le camion-poubelle', full: 'Le camion-poubelle', verb: 'Ramasser', horn: 'horn',
+    use: 'Il ramasse les poubelles de toute la ville.',
+    how: "Derrière, un bras soulève la poubelle et la vide. Dedans, une grosse pelle tasse les déchets pour en mettre plus." },
+  pompiers: { short: 'Les pompiers', full: 'Le camion de pompiers', verb: 'Sauver', horn: 'horn',
+    use: 'Il vient au secours des gens... et des petits chats !',
+    how: "Sa grande échelle tourne, se lève et s'allonge pour aller très haut." },
+  bateau: { short: 'Le bateau-bus', full: 'Le bateau-bus', verb: 'Embarquer', horn: 'bell',
+    use: 'Il transporte les passagers sur la rivière.',
+    how: "Il s'arrête aux pontons comme un bus. Son hélice, sous l'eau, le fait avancer." }
 };
-const ORDER = ['voiture', 'car', 'tram', 'metro', 'shinkansen', 'telepherique'];
+const ORDER = ['voiture', 'car', 'poubelle', 'pompiers', 'tram', 'metro', 'bateau', 'shinkansen', 'telepherique'];
 const GND = '<path class="gnd" d="M4 75H116"/>';
 const ICONS = {
+  poubelle: GND + `<rect x="8" y="22" width="66" height="34" rx="8" fill="#3aa46a"/><rect class="w" x="8" y="44" width="66" height="5"/><rect class="w" x="76" y="30" width="30" height="26" rx="3"/><rect class="g" x="90" y="34" width="12" height="10"/>
+    <rect x="0" y="36" width="10" height="18" rx="2" fill="#2a7a4a"/><circle class="k" cx="24" cy="62" r="9"/><circle class="k" cx="46" cy="62" r="9"/><circle class="k" cx="92" cy="62" r="9"/>`,
+  pompiers: GND + `<path class="ln" d="M24 40L96 8" style="stroke:#c9ccd8;stroke-width:6"/><rect class="r" x="6" y="36" width="72" height="20" rx="3"/><rect class="r" x="78" y="28" width="32" height="28" rx="3"/><rect class="g" x="92" y="32" width="14" height="11"/>
+    <rect class="b" x="88" y="22" width="12" height="6" rx="2"/><circle class="k" cx="22" cy="62" r="9"/><circle class="k" cx="44" cy="62" r="9"/><circle class="k" cx="94" cy="62" r="9"/>`,
+  bateau: `<path d="M0 66q30 8 60 0t60 0V80H0z" fill="#4f8fe0"/><path class="w" d="M10 46h96l-10 18H18z"/><rect x="10" y="52" width="96" height="4" fill="#1f4fb8"/><rect class="g" x="28" y="28" width="56" height="18" rx="3"/><rect x="24" y="24" width="64" height="5" rx="2" fill="#1f4fb8"/><path class="ln" d="M14 46V20"/><path d="M14 20h12v8H14z" fill="#d8402a"/>`,
   voiture: GND + `<path class="b" d="M14 60V46l10-4 10-14h40l14 14h14l4 6v12z" style="fill:#2fb3b0"/><path class="g" d="M38 30h16v12H30zM58 30h14l10 12H58z"/>
     <circle class="k" cx="34" cy="62" r="10"/><circle class="s" cx="34" cy="62" r="4"/><circle class="k" cx="88" cy="62" r="10"/><circle class="s" cx="88" cy="62" r="4"/><rect class="r" x="100" y="20" width="10" height="26" rx="3"/><circle cx="105" cy="26" r="3" fill="#ff4a3a"/><circle cx="105" cy="38" r="3" fill="#4ad06a"/>`,
   car: GND + `<rect x="6" y="20" width="106" height="44" rx="6" fill="#2f9a5a"/><rect class="w" x="6" y="46" width="106" height="8"/><rect class="g" x="12" y="26" width="84" height="14" rx="2"/><rect class="g" x="100" y="24" width="10" height="20" rx="2"/>
@@ -164,6 +178,7 @@ const YAWF = -Math.PI / 4;           // along a street that comes towards the fr
 const FACE = { front: YAW, back: YAW + Math.PI, right: 3 * Math.PI / 4, left: -Math.PI / 4 }; // which way a building's street side (+z) looks
 const CF = (h, d, yaw = YAW) => { const [x, z] = Q(h, d); return { x, z, yaw }; };
 const CFG = {
+  poubelle: CF(-30, -11.5), pompiers: CF(16, -11.5), bateau: CF(-31, 4),
   voiture: CF(10, 9, YAWF), car: CF(28, 15.5), tram: CF(0, -17), metro: CF(0, 31), shinkansen: CF(4, -27), telepherique: CF(17, -4)
 };
 
@@ -200,7 +215,7 @@ export default {
   ground: { base: ['#8a92c8', '#6a73ad', '#4c5488'], rects: GR, blobs: GB },
 
   build(ctx) {
-    const { scene, makeStation, part, roll, step, onUpdate } = ctx;
+    const { scene, makeStation, part, roll, step, onUpdate, throwClod } = ctx;
     const fx = createFx(scene, 120);
     onUpdate((dt) => fx.update(dt));
     freeze(buildTown(grp(scene), onUpdate));
@@ -449,6 +464,147 @@ export default {
         await step(up ? 'Arrivée au temple, tout en haut ! Quelle belle vue !' : 'Retour en bas. On remonte ?', up ? 'temple' : 'cabine');
       };
     })();
+    /* ---- camion-poubelle ---- */
+    (function () {
+      const st = makeStation('poubelle'), S = st.g, START = -6, STOP = 0, END = 4;
+      const G = std(0x3aa46a, 0.4, 0.2), GD = std(0x2a7a4a, 0.5, 0.2);
+      const m = grp(S, START, 0, 0.9); st.m = m; st.lastX = START;
+      [0.42, -0.42].forEach((z) => rbox(m, 6.2, 0.3, 0.16, 0.03, MT.black, -0.2, 0.97, z));
+      truckCab(m, MT.white, 1.45);
+      const body = grp(m, -1.2, 1.15, 0); rbox(body, 4.2, 1.9, 2.1, 0.3, G, 0, 0.95, 0, 0.04); rbox(body, 4.25, 0.25, 2.12, 0.04, MT.white, 0, 0.5, 0, 0.01);
+      const rear = grp(m, -3.3, 1.15, 0); rbox(rear, 0.9, 2.0, 2.15, 0.2, GD, -0.35, 1.0, 0, 0.03); rbox(rear, 0.5, 0.6, 1.8, 0.1, MT.dark, -0.7, 0.45, 0, 0.02);
+      const blade = grp(rear, -0.35, 1.7, 0); rbox(blade, 0.12, 1.0, 1.7, 0.03, MT.steel, 0, -0.5, 0, 0.01);
+      const lifter = grp(m, -4.0, 0.95, 0); rbox(lifter, 0.15, 0.5, 1.2, 0.04, MT.dark, 0, 0.25, 0, 0.01);
+      [0.85, -0.85].forEach((z) => { rbox(m, 0.06, 0.2, 0.18, 0.03, MT.tail, -4.1, 1.4, z, 0.01); });
+      beacon(st, m, -1.2, 3.1, 0.6); beacon(st, m, -1.2, 3.1, -0.6);
+      st.wheels = []; [1, -1].forEach((s) => { st.wheels.push(tire(m, 0.55, 0.4, 2.3, 0.55, s * 0.9, MT.grey)); [-1.2, -2.3].forEach((x) => st.wheels.push(tire(m, 0.55, 0.3, x, 0.55, s * 0.95, MT.grey, s))); });
+      // the bin on the sidewalk and the bin man
+      const binHome = new V3(-3.8, 0, 2.9);
+      const bin = grp(S, binHome.x, 0, binHome.z); rbox(bin, 0.7, 1.0, 0.7, 0.08, std(0x2f7f5a, 0.6, 0), 0, 0.55, 0, 0.02); const lid = grp(bin, -0.35, 1.06, 0); rbox(lid, 0.75, 0.06, 0.72, 0.02, std(0x2a6a4a, 0.6, 0), 0.35, 0, 0, 0.01); [0.25, -0.25].forEach((z) => cylZ(bin, 0.09, 0.06, MT.black, -0.3, 0.1, z, 10));
+      const man = walker(S, -1.8, 2.6, { vest: true, hat: std(0x3aa46a, 0.6, 0) }); man.rotation.y = Math.PI;
+      part(st, 'benne', 'la benne', anchor(body, 0, 2.1, 0.8), true);
+      part(st, 'leveur', 'le lève-conteneur', anchor(lifter, -0.1, 0.6, 0.7), false);
+      part(st, 'eboueur', "l'éboueur", anchor(man, 0, 1.5, 0), true);
+      part(st, 'poubelle', 'la poubelle', anchor(bin, 0, 1.3, 0), true);
+      part(st, 'pelle', 'la pelle qui tasse', anchor(rear, -0.4, 2.3, 0.6), false);
+      st.focusAt = anchor(m, -1.2, 1.2, 1.6); st.size = { w: 13, h: 7 }; st.tagAt = anchor(m, 0, 3.8, 0);
+      st.update = (dt) => roll(st, dt);
+      st.action = async function () {
+        if (st.done) { m.position.x = START; st.lastX = START; bin.position.copy(binHome); bin.rotation.set(0, 0, 0); man.position.set(-1.8, 0, 2.6); pop(m, 0.4); st.done = false; }
+        engineOn(55);
+        await Promise.all([step('Le camion-poubelle s’arrête devant la poubelle.', 'poubelle'), to(m.position, 'x', STOP, 3.6, (k) => 1 - Math.pow(1 - k, 2))]);
+        await Promise.all([step("L'éboueur roule la poubelle jusqu'à l'arrière du camion.", 'eboueur'),
+          tw(2, (k) => { bin.position.set(binHome.x + (-4.55 - binHome.x) * k, 0, binHome.z + (0.9 - binHome.z) * k); bin.rotation.y = k * 0.3; man.position.set(-1.8 - 1.2 * k, 0, 2.6 - 0.6 * k); man.userData.walk(k * 18); }, lin)]);
+        bin.rotation.y = 0; lifter.attach(bin);
+        const b0 = bin.position.clone();
+        await Promise.all([step('Le lève-conteneur la soulève, et la vide dans la benne.', 'leveur'),
+          tw(1.6, (k) => { bin.position.set(b0.x + 0.6 * k, b0.y + 1.8 * k, b0.z); bin.rotation.z = -k * 2.2; lid.rotation.z = k * 1.8; }, easeSine)]);
+        for (let i = 0; i < 10; i++) throwClod(wp(bin, 0.4), wp(rear, 1.2), rnd(0.1, 0.18), pick([0x6a8a5a, 0x8a7a6a, 0xd8d8e0, 0x5a7aaa]));
+        thud();
+        await Promise.all([step('Dedans, une grosse pelle tasse les déchets.', 'pelle'), tw(1.8, (k) => (blade.rotation.z = Math.sin(k * Math.PI) * 1.1), easeSine)]);
+        await tw(1.2, (k) => { bin.position.set(b0.x + 0.6 * (1 - k), b0.y + 1.8 * (1 - k), b0.z); bin.rotation.z = -(1 - k) * 2.2; lid.rotation.z = (1 - k) * 1.8; }, easeSine);
+        S.attach(bin);
+        await Promise.all([step("La poubelle est vide, on la remet à sa place. Au revoir !", 'eboueur'),
+          tw(1.6, (k) => { bin.position.lerpVectors(bin.position.clone(), binHome, k); man.position.set(-3 + 1.2 * k, 0, 2.0 + 0.6 * k); man.userData.walk(k * 14); }, lin)]);
+        bin.position.copy(binHome); bin.rotation.set(0, 0, 0);
+        await Promise.all([step('Le camion repart vers la poubelle suivante.', 'benne'), to(m.position, 'x', END, 2.6, easeIn)]);
+        st.done = true;
+      };
+    })();
+
+    /* ---- camion de pompiers ---- */
+    (function () {
+      const st = makeStation('pompiers'), S = st.g, START = -10, STOP = 0;
+      const R = std(0xd8302a, 0.35, 0.2);
+      const m = grp(S, START, 0, 0); st.m = m; st.lastX = START;
+      [0.42, -0.42].forEach((z) => rbox(m, 6.4, 0.3, 0.16, 0.03, MT.black, -0.3, 0.97, z));
+      truckCab(m, R, 1.45);
+      rbox(m, 4.4, 1.4, 2.2, 0.15, R, -1.0, 1.85, 0, 0.03); for (let x = -2.8; x <= 0.6; x += 0.9) [1, -1].forEach((s) => rbox(m, 0.8, 1.1, 0.04, 0.04, MT.steel, x, 1.85, s * 1.11, 0.01));
+      rbox(m, 4.4, 0.1, 0.08, 0.02, MT.white, -1.0, 1.3, 1.12, 0.01); rbox(m, 4.4, 0.1, 0.08, 0.02, MT.white, -1.0, 1.3, -1.12, 0.01);
+      const lights = []; [0.5, -0.5].forEach((z) => { const L = std(0x3a6aff, 0.3, 0, { emissive: 0x2a4aff, emissiveIntensity: 0.2 }); rbox(m, 0.3, 0.15, 0.3, 0.05, L, 2.7, 3.0, z, 0.02); lights.push(L); });
+      st.wheels = []; [1, -1].forEach((s) => { st.wheels.push(tire(m, 0.55, 0.4, 2.3, 0.55, s * 0.9, MT.grey)); [-1.2, -2.3].forEach((x) => st.wheels.push(tire(m, 0.55, 0.3, x, 0.55, s * 0.95, MT.grey, s))); });
+      const legs = [[0.8, 1], [0.8, -1], [-2.7, 1], [-2.7, -1]].map(([x, s]) => { const g = grp(m, x, 1.0, s * 1.0); const a = grp(g); rbox(a, 0.22, 0.22, 0.8, 0.03, MT.dark, 0, 0, s * 0.4); const f = grp(a, 0, 0, s * 0.8); rbox(f, 0.16, 0.9, 0.16, 0.03, MT.dark, 0, -0.45, 0); rbox(f, 0.4, 0.06, 0.4, 0.02, MT.dark, 0, -0.95, 0); a.scale.z = 0.3; f.position.y = 0.4; return { a, f }; });
+      // turntable, ladder in three parts, basket
+      const turn = grp(m, -2.4, 2.55, 0); cylY(turn, 0.6, 0.3, MT.dark, 0, 0, 0, 16);
+      const lift = grp(turn, 0, 0.45, 0);
+      const secs = [];
+      [[3.0, 0.62], [2.9, 0.5], [2.8, 0.4]].forEach(([L, w], i) => { const g = grp(i ? secs[i - 1] : lift, i ? 0.4 : 0, 0.06, 0); [w / 2, -w / 2].forEach((z) => rbox(g, L, 0.08, 0.06, 0.02, i % 2 ? MT.steel : MT.white, L / 2, 0, z, 0.01)); for (let x = 0.3; x < L; x += 0.35) rod(g, new V3(x, 0, w / 2), new V3(x, 0, -w / 2), 0.02, MT.steel, 4); secs.push(g); });
+      const basket = grp(secs[2], 2.8, 0, 0); const bk = grp(basket); rbox(bk, 0.8, 0.08, 1.0, 0.02, MT.dark, 0.3, -0.5, 0, 0.01); rail(bk, [[-0.1, -0.45, 0.5], [-0.1, 0.4, 0.5], [0.7, 0.4, 0.5], [0.7, -0.45, 0.5]], 0.03, MT.white); rail(bk, [[-0.1, 0.4, -0.5], [0.7, 0.4, -0.5]], 0.03, MT.white);
+      const ff = walker(bk, 0.3, 0, { top: 0x2a3550, bottom: 0x2a3550, hat: std(0xe8e8f0, 0.4, 0.3) }); ff.position.set(0.3, -0.45, 0); ff.scale.setScalar(0.85);
+      // the cat stuck up in the tree, and the little girl waiting for it
+      const treeP = new V3(-2.5, 0, 3.7); const tree = sakuraTree(S, treeP.x, treeP.z, 1.45);
+      const catHome = new V3(treeP.x + 0.3, 4.15, treeP.z - 0.4);
+      const cat = grp(S, catHome.x, catHome.y, catHome.z); const cm = std(0xf2a83a, 0.7, 0); sph(cat, 0.16, cm, 0, 0.12, 0).scale.set(0.22, 0.15, 0.16); sph(cat, 0.1, cm, 0.16, 0.24, 0);
+      [0.05, -0.05].forEach((z) => add(cat, new THREE.ConeGeometry(0.035, 0.08, 4), cm, 0.17, 0.33, z)); rod(cat, new V3(-0.18, 0.12, 0), new V3(-0.3, 0.32, 0), 0.025, cm, 4);
+      const girl = walker(S, -0.5, 3.3, { kid: true, top: 0xf07aa8 }); girl.rotation.y = Math.PI;
+      part(st, 'echelle', 'la grande échelle', anchor(secs[1], 2, 0.4, 0), true);
+      part(st, 'pompier', 'le pompier', anchor(ff, 0, 1.6, 0), false);
+      part(st, 'chat', 'le petit chat', anchor(cat, 0, 0.6, 0), true);
+      part(st, 'gyrophares', 'les gyrophares', anchor(m, 2.7, 3.3, 0.5), false);
+      part(st, 'bequilles', 'les béquilles', anchor(legs[0].f, 0, 0.1, 0), false);
+      st.focusAt = anchor(m, -1, 2.4, 1.6); st.size = { w: 13, h: 9 }; st.tagAt = anchor(m, 0, 4.6, 0);
+      let T = 0;
+      st.update = (dt) => { T += dt; roll(st, dt); lights.forEach((L, i) => (L.emissiveIntensity = st.siren && Math.sin(T * 12 + i * Math.PI) > 0 ? 2.2 : 0.2)); };
+      const setLadder = (yaw, pitch, ext) => { turn.rotation.y = yaw; lift.rotation.z = pitch; secs[1].position.x = 0.4 + ext * 2.4; secs[2].position.x = 0.4 + ext * 2.3; basket.rotation.z = -pitch; };
+      setLadder(0, 0, 0); let lad = [0, 0, 0];
+      const ladderTo = (y, p, e, d) => { const a = lad.slice(); lad = [y, p, e]; return tw(d, (k) => setLadder(a[0] + (y - a[0]) * k, a[1] + (p - a[1]) * k, a[2] + (e - a[2]) * k), easeSine); };
+      st.action = async function () {
+        if (st.done) { m.position.x = START; st.lastX = START; S.attach(cat); cat.position.copy(catHome); cat.rotation.set(0, 0, 0); pop(m, 0.4); st.done = false; }
+        engineOn(60); st.siren = true;
+        const siren = setInterval(() => { tone(740, 0, 0.32, 'triangle', 0.05); tone(587, 0.36, 0.32, 'triangle', 0.05); }, 760);
+        await Promise.all([step('Pin-pon ! Les pompiers arrivent. Un petit chat est coincé dans l’arbre !', 'chat'), to(m.position, 'x', STOP, 4, (k) => 1 - Math.pow(1 - k, 2))]);
+        clearInterval(siren); st.siren = false;
+        await Promise.all([step('Les béquilles se posent pour que le camion reste bien droit.', 'bequilles'), ...legs.map((l) => Promise.all([to(l.a.scale, 'z', 1, 1), to(l.f.position, 'y', 0, 1)]))]);
+        S.updateMatrixWorld(true);
+        const cw = cat.getWorldPosition(new V3()); const loc = turn.parent.worldToLocal(cw.clone()), tl = turn.position;
+        const dx = loc.x - tl.x, dz = loc.z - tl.z, yaw = Math.atan2(-dz, dx), R = Math.hypot(dx, dz) - 0.5, Hh = loc.y - tl.y - 0.45 + 0.2;
+        const pitch = Math.atan2(Hh, R), L = Math.hypot(R, Hh), ext = clamp((L - 3.6) / 4.7, 0, 1);
+        await Promise.all([step("La grande échelle tourne, se lève et s'allonge...", 'echelle'), ladderTo(yaw, pitch, ext, 4)]);
+        await Promise.all([step('Le pompier attrape le petit chat. Miaou !', 'pompier'), tw(0.8, (k) => (ff.userData.arms[0].rotation.z = k * 1.4))]);
+        bk.attach(cat); ding();
+        await Promise.all([step("On redescend tout doucement. Le chat est sauvé !", 'chat'), ladderTo(yaw, 0.12, 0, 3.4), to(ff.userData.arms[0].rotation, 'z', 0, 1)]);
+        S.attach(cat); const c0 = cat.position.clone(), c1 = new V3(-0.2, 0, 2.9);
+        await Promise.all([step('Il le rend à la petite fille. Merci les pompiers !', 'chat'), tw(1.2, (k) => cat.position.set(c0.x + (c1.x - c0.x) * k, c0.y + (c1.y - c0.y) * k + Math.sin(k * Math.PI) * 0.6, c0.z + (c1.z - c0.z) * k), easeSine)]);
+        await Promise.all([ladderTo(0, 0, 0, 2), ...legs.map((l) => Promise.all([to(l.a.scale, 'z', 0.3, 1), to(l.f.position, 'y', 0.4, 1)]))]);
+        chime(); st.done = true;
+      };
+    })();
+
+    /* ---- bateau-bus ---- */
+    (function () {
+      const st = makeStation('bateau'), S = st.g, START = -7, STOP = 2;
+      // the wooden pier on the north bank
+      const pier = grp(S, STOP, 0, -2.45); rbox(pier, 3.4, 0.14, 1.2, 0.03, std(0x8a5a3a, 0.8, 0), 0, 0.32, 0, 0.01); [-1.5, 0, 1.5].forEach((x) => cylY(pier, 0.08, 0.6, VM.woodD, x, 0.1, 0.5, 6)); lanternPost(pier, 1.5, -0.4);
+      const m = grp(S, START, 0.02, 0.2); st.m = m;
+      ext(m, [[-3.0, 0.0], [2.4, 0.0], [3.1, 0.35], [3.2, 0.62], [-3.1, 0.62]], [0.08, 0.15, 0.2, 0.08, 0.08], 1.8, VM.white, 0, 0, 0, 0.04);
+      rbox(m, 6.2, 0.12, 1.84, 0.04, VM.blue, -0.05, 0.3, 0, 0.01);
+      const cab = grp(m, -0.4, 0.62, 0); rbox(cab, 4.0, 0.1, 1.6, 0.03, VM.white, 0, 0.05, 0, 0.01); [[1.9, 0.75], [1.9, -0.75], [-1.9, 0.75], [-1.9, -0.75], [0, 0.75], [0, -0.75]].forEach(([x, z]) => rbox(cab, 0.07, 1.0, 0.07, 0.02, VM.white, x, 0.55, z, 0.01));
+      box(cab, 3.8, 0.7, 1.52, MT.glass, 0, 0.55, 0); rbox(cab, 4.2, 0.14, 1.75, 0.06, VM.blue, 0, 1.1, 0, 0.02);
+      const flag = grp(m, -3.0, 0.6, 0); rod(flag, new V3(0, 0, 0), new V3(0, 1.4, 0), 0.025, MT.dark); rbox(flag, 0.5, 0.32, 0.02, 0.01, VM.cab, 0.27, 1.22, 0, 0.005);
+      const capt = walker(cab, 1.3, 0, { top: 0xffffff, bottom: 0x2a3550 }); capt.position.set(1.3, 0.1, 0); capt.scale.setScalar(0.8);
+      const riders = [[1.2, -3.2], [2.0, -3.4], [2.8, -3.1]].map(([x, z], i) => { const p = walker(S, x, z, { kid: i === 1 }); p.position.y = 0.38; p.rotation.y = Math.PI / 2; return p; });
+      const rHome = riders.map((r) => r.position.clone());
+      part(st, 'bateau', 'le bateau-bus', anchor(m, 0, 2.2, 0), true);
+      part(st, 'ponton', 'le ponton', anchor(pier, 0, 0.9, -0.3), true);
+      part(st, 'passagers', 'les passagers', anchor(S, 2, 2.0, -3.3), false);
+      part(st, 'capitaine', 'le capitaine', anchor(cab, 1.3, 1.6, 0), false);
+      st.focusAt = anchor(m, 0, 1, -0.6); st.size = { w: 13, h: 6 }; st.tagAt = anchor(m, 0, 2.8, 0);
+      let wake = 0;
+      st.update = (dt) => { if (st.moving) { wake -= dt; if (wake <= 0) { wake = 0.08; const s = Math.cos(m.rotation.y) > 0 ? -3.1 : 3.1; fx.smoke(m.localToWorld(new V3(s, 0.1, rnd(-0.6, 0.6))), new V3(0, 0.2, 0), rnd(0.15, 0.3), 0xf4f8ff, 0.9); } m.position.y = 0.02 + Math.sin(performance.now() / 300) * 0.03; } };
+      st.action = async function () {
+        if (st.done) { m.position.x = START; m.rotation.y = 0; riders.forEach((r, i) => { r.position.copy(rHome[i]); r.visible = true; }); st.done = false; }
+        engineOn(70); st.moving = true;
+        await Promise.all([step('Le bateau-bus arrive en glissant sur la rivière.', 'bateau'), to(m.position, 'x', STOP, 5, (k) => 1 - Math.pow(1 - k, 2))]);
+        st.moving = false; ding();
+        await step('Il s’arrête au ponton. Les passagers montent à bord.', 'passagers');
+        for (let i = 0; i < riders.length; i++) { const r = riders[i], p0 = r.position.clone(); await tw(0.8, (k) => r.position.set(p0.x, 0.38 + Math.sin(k * Math.PI) * 0.15, p0.z + (-0.6 - p0.z) * k), lin); r.visible = false; }
+        await Promise.all([step('Le capitaine fait demi-tour...', 'capitaine'), to(m.rotation, 'y', Math.PI, 2.4, easeSine)]);
+        st.moving = true;
+        await Promise.all([step('...et le bateau repart sur l’eau. Au revoir !', 'bateau'), to(m.position, 'x', START, 5, easeIn)]);
+        st.moving = false; st.done = true;
+      };
+    })();
+
     buildLife(scene, onUpdate);
   }
 };
@@ -512,7 +668,7 @@ function buildTown(scene, onUpdate) {
   [[25.5, 20.5], [28.5, 20.5]].forEach(([h, d]) => lan(scene, h, d));
   // left side of town: houses along the side street, pines
   [-7, -3.5, 10, 13].forEach((d) => H(scene, -26.4, d, 'right'));
-  [[-32, -8], [-35, 10], [-30, 14], [-36, -2], [-33, 24], [-28, 27]].forEach(([h, d]) => { const [x, z] = Q(h, d); pine(scene, x, z, rnd(1, 1.4)); });
+  [[-35, 10], [-30, 14], [-36, -2], [-33, 24], [-28, 27]].forEach(([h, d]) => { const [x, z] = Q(h, d); pine(scene, x, z, rnd(1, 1.4)); });
   [[-30, 18, 'front'], [-26, 22.5, 'front'], [-34, 16, 'front']].forEach(([h, d, f]) => H(scene, h, d, f));
   [[-30, -14], [-36, -10], [-28, -20.5], [-34, -18]].forEach(([h, d]) => sak(scene, h, d, 1));
   // vending machines and lanterns here and there

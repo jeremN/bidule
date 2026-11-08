@@ -12,7 +12,7 @@ const worlds = [
   {
     to: '/chantier' as const,
     title: 'Le Chantier',
-    text: 'La pelleteuse, le camion-benne, le bulldozer, la grue, la toupie et le rouleau.',
+    text: 'Tout un quartier en construction : la pelleteuse, la grue, la pompe à béton, et toutes les machines qui font la route.',
     art: (
       <svg viewBox="0 0 240 150" aria-hidden="true">
         <defs>
@@ -58,7 +58,7 @@ const worlds = [
   {
     to: '/ferme' as const,
     title: 'La Ferme',
-    text: 'Le tracteur, le semoir, le pulvérisateur, la moissonneuse, la presse et le télescopique.',
+    text: 'Une grande ferme avec ses vaches : le tracteur, la moissonneuse, la faucheuse, la presse, l’enrubanneuse…',
     art: (
       <svg viewBox="0 0 240 150" aria-hidden="true">
         <defs>
@@ -101,7 +101,7 @@ const worlds = [
   {
     to: '/espace' as const,
     title: "L'Espace",
-    text: 'La fusée, la navette, la station spatiale, le transporteur, le rover sur Mars et le module sur la Lune.',
+    text: 'Une base spatiale : la fusée, la navette, le bus des astronautes, la station, la capsule, le rover…',
     art: (
       <svg viewBox="0 0 240 150" aria-hidden="true">
         <defs>
@@ -152,7 +152,7 @@ const worlds = [
   {
     to: '/ville' as const,
     title: 'La Ville',
-    text: 'La voiture, le car, le tramway, le métro, le Shinkansen et le téléphérique, dans une ville japonaise.',
+    text: 'Une ville japonaise : la voiture, le tramway, le métro, les pompiers, le bateau-bus, le Shinkansen…',
     art: (
       <svg viewBox="0 0 240 150" aria-hidden="true">
         <defs>

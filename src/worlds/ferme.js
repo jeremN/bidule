@@ -60,6 +60,9 @@ const DATA = {
   telescopique: { short: 'Le télescopique', full: 'Le chariot télescopique', verb: 'Empiler', horn: 'horn',
     use: 'Il soulève les balles de paille très haut.',
     how: "Son bras sort comme une longue-vue : c'est pour ça qu'on l'appelle télescopique." },
+  epandeur: { short: "L'épandeur", full: "L'épandeur à fumier", verb: 'Épandre', horn: 'horn',
+    use: 'Il étale le fumier des vaches sur les champs.',
+    how: 'Derrière, des rouleaux à pointes tournent et lancent le fumier. Ça nourrit la terre.' },
   faucheuse: { short: 'La faucheuse', full: 'La faucheuse', verb: 'Faucher', horn: 'horn',
     use: "Elle coupe l'herbe du pré pour faire du foin.",
     how: "Son bras se déplie sur le côté. Dessous, des petits disques tournent très vite et coupent l'herbe." },
@@ -70,7 +73,7 @@ const DATA = {
     use: 'Elle emballe les balles de foin dans du plastique.',
     how: "La balle tourne sur la table, et un bras l'enveloppe de film, comme un bonbon." }
 };
-const ORDER = ['tracteur', 'semoir', 'pulve', 'moissonneuse', 'faucheuse', 'andaineur', 'presse', 'enrubanneuse', 'telescopique'];
+const ORDER = ['epandeur', 'tracteur', 'semoir', 'pulve', 'moissonneuse', 'faucheuse', 'andaineur', 'presse', 'enrubanneuse', 'telescopique'];
 const GND = '<path class="gnd" d="M4 75H116"/>';
 const TRACTOR_SVG = (cls, dx = 0) => `<g transform="translate(${dx},0)">
   <rect class="${cls}" x="56" y="38" width="44" height="16" rx="3"/><rect class="k" x="98" y="40" width="5" height="12"/>
@@ -79,6 +82,8 @@ const TRACTOR_SVG = (cls, dx = 0) => `<g transform="translate(${dx},0)">
   <circle class="k" cx="50" cy="56" r="18"/><circle class="y" cx="50" cy="56" r="7"/>
   <circle class="k" cx="92" cy="65" r="10"/><circle class="y" cx="92" cy="65" r="4"/></g>`;
 const ICONS = {
+  epandeur: GND + `<rect x="4" y="30" width="44" height="26" rx="3" fill="#3f8f3a"/><path d="M8 30q10-10 18-2 10-8 18 2z" fill="#5a3a24"/><circle class="k" cx="6" cy="40" r="6"/><circle cx="2" cy="26" r="3" fill="#5a3a24"/><circle cx="-2" cy="34" r="2.5" fill="#5a3a24"/>
+    <circle class="k" cx="26" cy="62" r="10"/><rect class="k" x="46" y="50" width="12" height="4"/>` + TRACTOR_SVG('r', 18),
   faucheuse: GND + `<path class="ln" d="M4 60l4-10M10 60l3-12M16 60l4-11" style="stroke:#3f8f3a"/><rect class="r" x="4" y="58" width="40" height="8" rx="3"/><rect class="k" x="38" y="50" width="16" height="4"/>` + TRACTOR_SVG('gr', 8),
   andaineur: GND + `<path class="wt" d="M0 75q22-16 46 0z"/><ellipse class="tl" cx="24" cy="40" rx="22" ry="5"/><path class="ln" d="M8 42v18M16 44v18M24 45v18M32 44v18M40 42v18"/><rect class="k" x="40" y="48" width="18" height="4"/>` + TRACTOR_SVG('r', 14),
   enrubanneuse: GND + `<circle cx="28" cy="50" r="22" fill="#3f8f5a"/><path d="M10 42l36 18M10 56l36-16" stroke="#8ad09a" stroke-width="3"/><rect class="w" x="54" y="22" width="8" height="26" rx="3"/><path class="ln" d="M58 14v8M28 14h30M28 14v10"/>
@@ -106,7 +111,7 @@ const ICONS = {
 const Q = (h, d) => [(h + d) * S2, (d - h) * S2];
 const CF = (h, d, yaw = YAW) => { const [x, z] = Q(h, d); return { x, z, yaw }; };
 const CFG = {
-  tracteur: CF(20, 23), moissonneuse: CF(-20, 23), semoir: CF(-22, 1), pulve: CF(22, 1),
+  epandeur: CF(16, 30.5), tracteur: CF(20, 23), moissonneuse: CF(-20, 23), semoir: CF(-22, 1), pulve: CF(22, 1),
   faucheuse: CF(-22, -27), andaineur: CF(-22, -19), presse: CF(22, -27), enrubanneuse: CF(22, -18.5), telescopique: CF(1, -14)
 };
 
@@ -777,6 +782,57 @@ export default {
       };
     })();
 
+    /* ---- épandeur à fumier ---- */
+    (function () {
+      const st = makeStation('epandeur'), S = st.g, X0 = -8, X1 = 6, FW = 3.6, START = X0 + 6.2, END = X1 + 3.4;
+      const muck = growStrip(S, X0, FW, toonMat({ color: 0x5a3a24 }), 0.06);
+      const lumps = []; for (let i = 0; i < 220; i++) lumps.push({ x: rnd(X0, X1), y: 0.08, z: rnd(-FW / 2, FW / 2), sx: rnd(0.08, 0.16), sy: 0.06, sz: rnd(0.08, 0.16), ry: rnd(0, 3), k: 0, col: pick([0x4a2e1c, 0x6a4428, 0x3a2414]) });
+      const lim = fieldItems(S, ICO, lumps, [0x4a2e1c]);
+      const m = grp(S, START, 0, 0); st.m = m; st.lastX = START;
+      const T = tractor(st, m, FM.red, MT.grey); st.wheels = T.wheels; st.links = T.links;
+      beam(m, new V3(-1.0, 0.65, 0), new V3(-2.1, 0.95, 0), 0.12, MT.dark);
+      const sp = grp(m, -4.2, 0, 0);
+      rbox(sp, 3.8, 0.15, 1.9, 0.03, FM.green, 0, 1.0, 0); [0.98, -0.98].forEach((z) => rbox(sp, 3.8, 0.9, 0.08, 0.03, FM.green, 0, 1.5, z)); rbox(sp, 0.08, 0.9, 1.9, 0.03, FM.green, 1.86, 1.5, 0);
+      [1, -1].forEach((s) => { st.wheels.push(agriTire(sp, 0.62, 0.42, -0.2, 0.62, s * 1.22, MT.grey, s)); fender(sp, 0.72, 0.46, -0.2, 0.62, s * 1.22, FM.green, Math.PI * 0.55); });
+      const load = grp(sp, 0, 1.15, 0); rbox(load, 3.6, 0.7, 1.8, 0.2, toonMat({ color: 0x5a3a24 }), 0, 0.3, 0, 0.02);
+      [[-1, 0.7, 0.3], [0.4, 0.75, -0.4], [1.2, 0.68, 0.2]].forEach(([x, y, z]) => { const l = add(load, ICO, 0x4a2e1c, x, y, z); l.scale.set(0.5, 0.25, 0.5); });
+      // the beaters at the back
+      const beaters = [1.0, 1.9].map((y) => { const b = grp(sp, -2.0, y, 0); cylZ(b, 0.18, 1.9, MT.dark, 0, 0, 0, 12); for (let k = 0; k < 8; k++) { const a = (k / 8) * Math.PI * 2; for (let z = -0.8; z <= 0.81; z += 0.4) rod(b, new V3(0, 0, z), new V3(Math.cos(a) * 0.42, Math.sin(a) * 0.42, z + 0.1), 0.03, MT.steel, 4); } return b; });
+      [0.98, -0.98].forEach((z) => rbox(sp, 0.5, 1.6, 0.08, 0.03, FM.green, -1.95, 1.5, z));
+      part(st, 'epandeur', "l'épandeur", anchor(sp, 0.5, 2.3, 0.9), true);
+      part(st, 'fumier', 'le fumier', anchor(load, 0.4, 0.9, 0), true);
+      part(st, 'rouleaux', 'les rouleaux à pointes', anchor(beaters[1], -0.3, 0.4, 0.9), false);
+      part(st, 'terre', 'la terre', anchor(S, -1, 0.3, 1.2), false);
+      st.focusAt = anchor(m, -2.6, 1.3, 0); st.size = { w: 13, h: 6.5 }; st.tagAt = anchor(m, -1.5, 3.6, 0);
+      let ct = 0;
+      st.update = (dt) => {
+        roll(st, dt);
+        if (st.spreading) {
+          beaters.forEach((b) => (b.rotation.z += dt * 14));
+          const back = m.position.x - 6.4; muck.scale.x = clamp(back - X0, 0.001, X1 - X0);
+          let d = false; lumps.forEach((l) => { if (l.k === 0 && l.x < back && l.x > back - 1.5) { l.k = 1; d = true; } }); if (d) lim.write();
+          ct -= dt; if (ct <= 0) { ct = 0.05; const f = wp(beaters[0], 0.2); throwClod(f, m.localToWorld(new V3(-8.6, 0.1, rnd(-1.8, 1.8))), rnd(0.07, 0.13), pick([0x4a2e1c, 0x6a4428])); }
+        }
+      };
+      st.action = async function () {
+        if (st.done) {
+          engineOn(46); st.reversing = true; st.beepT = 0;
+          await Promise.all([step('On recharge du fumier pour un autre champ.', 'fumier'), to(m.position, 'x', START, 3.2),
+            tw(1.2, (k) => { muck.scale.x = Math.max(0.001, muck.scale.x * (1 - k)); lumps.forEach((l) => (l.k = 0)); lim.write(); load.scale.y = Math.max(0.05, k); })]);
+          load.scale.y = 1; st.reversing = false; st.done = false;
+        }
+        engineOn(46);
+        await Promise.all([step("Le tracteur tire l'épandeur, plein de fumier des vaches.", 'fumier'), sleep(1.2)]);
+        st.spreading = true;
+        await Promise.all([to(m.position, 'x', END, 7, easeSine), to(load.scale, 'y', 0.08, 7, lin), (async () => {
+          await step('Derrière, des rouleaux à pointes tournent très vite...', 'rouleaux'); await step('...et ils lancent le fumier partout. Ça sent fort !', 'epandeur');
+        })()]);
+        st.spreading = false;
+        await step('Le fumier nourrit la terre : les plantes pousseront mieux.', 'terre');
+        st.done = true;
+      };
+    })();
+
     buildLife(scene, onUpdate);
   }
 };
@@ -841,7 +897,7 @@ function buildFarm(scene) {
   crop(scene, 6, 37, -5.5, 7, 0.5, LEAF, [0x4caf3a, 0x5ac04a, 0x3f9a34], [0.8, 1.2], [[14, 31, -0.8, 2.8]]);
   const GRASS = new THREE.ConeGeometry(0.1, 0.7, 4); GRASS.translate(0, 0.35, 0);
   crop(scene, -36, -10, -31, -14.5, 0.55, GRASS, [0x5ab05a, 0x6ac06a, 0x4c9a4a], [0.7, 1.2], [[-31, -10.5, -28.6, -23], [-31, -9.5, -21.2, -16.8]]);
-  crop(scene, 6, 36, 16, 33, 0.7, GRASS, [0x8aa85a, 0x9ab86a, 0x7a9a4a], [0.3, 0.5], [[9, 31, 20.5, 25.6]]);
+  crop(scene, 6, 36, 16, 33, 0.7, GRASS, [0x8aa85a, 0x9ab86a, 0x7a9a4a], [0.3, 0.5], [[9, 31, 20.5, 25.6], [6, 33, 28, 33]]);
   // round bales lying in the dried meadow, a stack by the yard
   [[28, -31], [33, -22.5], [33, -15], [14, -33]].forEach(([h, d]) => { const [x, z] = Q(h, d); const b = newBale(scene, x, 0.85, z); b.rotation.y = rnd(0, 3); });
   return scene;
