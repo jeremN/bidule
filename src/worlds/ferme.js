@@ -4,8 +4,7 @@ import { V3, rad, clamp, rnd, pick } from '../kit/util.js';
 import { tw, to, sleep, pop, easeIn, easeSine, easeBack, lin } from '../kit/tween.js';
 import { engineOn, thud, ding, chime } from '../kit/audio.js';
 import {
-  C, MT, UB, ICO, dummy, tmpCol, std, add, box, grp, cylY, cylZ, cylX, rod, rail, sph, rbox, ext, arc, anchor, beam, wp, shadows
-} from '../kit/geo.js';
+  C, MT, UB, ICO, dummy, tmpCol, std, add, box, grp, cylY, cylZ, cylX, rod, rail, sph, rbox, ext, arc, anchor, beam, wp, shadows, toonMat } from '../kit/geo.js';
 import { tire, agriTire, fender, hydraulic, strut, beacon, worker, glassCab } from '../kit/parts.js';
 import { autumnTree, barn, silo, fence, farmhouse, pond, lamp } from '../kit/props.js';
 import { route, person as walker, miniCar, traffic } from '../kit/life.js';
@@ -38,7 +37,7 @@ const FM = {
   amber: std(0xf0a81e, 0.38, 0.2), cap: std(0x2f6f3a, 0.7, 0), grain: std(0xe9b52f, 0.75, 0), soil: std(0x7a4a2c, 0.95, 0)
 };
 const BALE_GEO = new THREE.CylinderGeometry(0.85, 0.85, 1.45, 28); BALE_GEO.rotateX(Math.PI / 2);
-const BALE_MATS = [new THREE.MeshStandardMaterial({ map: strawSide, roughness: 0.9 }), new THREE.MeshStandardMaterial({ map: strawEnd, roughness: 0.9 }), new THREE.MeshStandardMaterial({ map: strawEnd, roughness: 0.9 })];
+const BALE_MATS = [toonMat({ map: strawSide, roughness: 0.9 }), toonMat({ map: strawEnd, roughness: 0.9 }), toonMat({ map: strawEnd, roughness: 0.9 })];
 const newBale = (p, x, y, z) => { const b = new THREE.Mesh(BALE_GEO, BALE_MATS); b.position.set(x, y, z); b.castShadow = b.receiveShadow = true; p.add(b); return b; };
 
 /* ---------- content ---------- */
@@ -162,7 +161,7 @@ function tractor(st, parent, bodyM, rimM) {
 }
 /** Instanced field items with a per-item scale (0 = hidden). */
 function fieldItems(parent, geo, list, colors, matOpts) {
-  const im = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial(Object.assign({ color: 0xffffff }, matOpts || {})), list.length);
+  const im = new THREE.InstancedMesh(geo, toonMat(Object.assign({ color: 0xffffff }, matOpts || {})), list.length);
   im.castShadow = true; im.receiveShadow = true; im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); parent.add(im);
   list.forEach((it, i) => im.setColorAt(i, tmpCol.setHex(it.col || pick(colors))));
   im.write = () => {
@@ -202,7 +201,7 @@ export default {
     (function () {
       const st = makeStation('tracteur'), S = st.g, X0 = -7, X1 = 5, FW = 3.2, START = X0 + 1.8, END = X1 + 1.8;
       box(S, X1 - X0, 0.04, FW, 0x5f9a4a, (X0 + X1) / 2, 0.02, 0);
-      const plowed = growStrip(S, X0, FW, new THREE.MeshLambertMaterial({ map: furrowTex }));
+      const plowed = growStrip(S, X0, FW, toonMat({ map: furrowTex }));
       const grass = []; for (let i = 0; i < 230; i++) grass.push({ x: rnd(X0 + 0.1, X1 - 0.1), z: rnd(-FW / 2 + 0.1, FW / 2 - 0.1), sx: 1, sy: rnd(0.7, 1.4), sz: 1, ry: rnd(0, 3), k: 1 });
       const TU = new THREE.ConeGeometry(0.1, 0.5, 4); TU.translate(0, 0.25, 0);
       const gim = fieldItems(S, TU, grass, [0x4c9a4a, 0x3f8a3f, 0x5ab05a, 0x6ac06a]);
@@ -258,7 +257,7 @@ export default {
     /* ---- semoir ---- */
     (function () {
       const st = makeStation('semoir'), S = st.g, X0 = -7, X1 = 5, FW = 3.2, START = X0 + 1.7, END = X1 + 1.7;
-      const soil = add(S, new THREE.BoxGeometry(X1 - X0, 0.06, FW), new THREE.MeshLambertMaterial({ map: furrowTex }), (X0 + X1) / 2, 0.04, 0);
+      const soil = add(S, new THREE.BoxGeometry(X1 - X0, 0.06, FW), toonMat({ map: furrowTex }), (X0 + X1) / 2, 0.04, 0);
       const ROWS = [-1.25, -0.75, -0.25, 0.25, 0.75, 1.25], seeds = [], sprouts = [];
       ROWS.forEach((z) => { for (let x = X0 + 0.25; x < X1 - 0.1; x += 0.32) { seeds.push({ x, y: 0.08, z, sx: 0.05, sy: 0.04, sz: 0.05, k: 0, col: 0xd9a63a }); sprouts.push({ x, y: 0.06, z, sx: 0.09, sy: 0.32, sz: 0.09, ry: rnd(0, 3), rz: rnd(-0.2, 0.2), k: 0 }); } });
       const sim = fieldItems(S, new THREE.SphereGeometry(1, 6, 4), seeds, [0xd9a63a]);
@@ -393,8 +392,8 @@ export default {
       }
       const stemG = new THREE.CylinderGeometry(0.02, 0.028, 1, 4); stemG.translate(0, 0.5, 0);
       const earG = new THREE.CylinderGeometry(0.05, 0.032, 0.26, 5); earG.translate(0, 0.13, 0);
-      const stemM = new THREE.InstancedMesh(stemG, new THREE.MeshLambertMaterial({ color: 0xd9a838 }), stalks.length);
-      const earM = new THREE.InstancedMesh(earG, new THREE.MeshLambertMaterial({ color: 0xf0c048 }), stalks.length);
+      const stemM = new THREE.InstancedMesh(stemG, toonMat({ color: 0xd9a838 }), stalks.length);
+      const earM = new THREE.InstancedMesh(earG, toonMat({ color: 0xf0c048 }), stalks.length);
       [stemM, earM].forEach((im) => { im.castShadow = true; im.receiveShadow = true; im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); S.add(im); });
       function writeWheat(k) {
         stalks.forEach((s, i) => {
@@ -406,7 +405,7 @@ export default {
         stemM.instanceMatrix.needsUpdate = earM.instanceMatrix.needsUpdate = true;
       }
       writeWheat();
-      const straw = growStrip(S, X0, 1.6, new THREE.MeshLambertMaterial({ color: C.straw }), 0.07);
+      const straw = growStrip(S, X0, 1.6, toonMat({ color: C.straw }), 0.07);
       const m = grp(S, START, 0, 0); st.m = m; st.lastX = START;
       const G = FM.lime, GD = FM.limeD;
       [1, -1].forEach((s) => {

@@ -1,13 +1,14 @@
 // Particle effects: fire (additive), smoke and dust puffs. Call fx.update(dt) every frame.
 import * as THREE from 'three';
 import { V3, rnd } from './util.js';
+import { toonMat } from './geo.js';
 
 export function createFx(scene, n = 320) {
   const geo = new THREE.IcosahedronGeometry(1, 1);
   const fire = [0xfff4b0, 0xffc24a, 0xff7a2a].map((c) => new THREE.MeshBasicMaterial({ color: c, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
   const pool = [];
   for (let i = 0; i < n; i++) {
-    const m = new THREE.Mesh(geo, fire[0]); m.visible = false; m.frustumCulled = false; scene.add(m);
+    const m = new THREE.Mesh(geo, fire[0]); m.visible = false; m.frustumCulled = false; m.layers.set(1); scene.add(m); // layer 1: no ink outlines
     pool.push({ m, on: false, smokeMat: null });
   }
   let cursor = 0;
@@ -21,7 +22,7 @@ export function createFx(scene, n = 320) {
     p.m.position.copy(pos); p.m.visible = true; p.m.scale.setScalar(s0);
     if (kind === 'fire') p.m.material = fire[Math.floor(Math.random() * 3)];
     else {
-      if (!p.smokeMat) p.smokeMat = new THREE.MeshLambertMaterial({ transparent: true, depthWrite: false });
+      if (!p.smokeMat) p.smokeMat = toonMat({ transparent: true, depthWrite: false });
       p.smokeMat.color.setHex(color || 0xdfe2ec); p.smokeMat.opacity = 0.6; p.m.material = p.smokeMat;
     }
   }

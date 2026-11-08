@@ -11,20 +11,27 @@ export const C = {
 };
 
 export const UB = new THREE.BoxGeometry(1, 1, 1);
-export const ICO = new THREE.IcosahedronGeometry(1, 0);
+export const ICO = new THREE.IcosahedronGeometry(1, 1); // rounder blobs: trees, bushes, rocks look softer (cartoon)
 export const dummy = new THREE.Object3D();
 export const tmpCol = new THREE.Color();
 
+/* ---------- cartoon shading: three flat tones of light ---------- */
+const TOON = (() => { const d = new Uint8Array([112, 182, 228, 240]); const t = new THREE.DataTexture(d, 4, 1, THREE.LuminanceFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.generateMipmaps = false; t.needsUpdate = true; return t; })();
+/** All materials go through here: a toon material (PBR-only options are dropped). */
+export function toonMat(o = {}) {
+  const p = Object.assign({}, o); delete p.roughness; delete p.metalness; delete p.envMapIntensity;
+  return new THREE.MeshToonMaterial(Object.assign({ gradientMap: TOON }, p));
+}
 const MC = {};
 export function mat(c) {
   if (typeof c === 'object') return c;
-  if (!MC[c]) MC[c] = new THREE.MeshLambertMaterial({ color: c });
+  if (!MC[c]) MC[c] = toonMat({ color: c });
   return MC[c];
 }
 
 /* ---------- PBR materials (machines) ---------- */
 export function std(c, r, m, o) {
-  return new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: r, metalness: m * 0.45 }, o || {}));
+  return toonMat(Object.assign({ color: c }, o || {}));
 }
 function canvasTex(w, h, draw) {
   const c = document.createElement('canvas'); c.width = w; c.height = h;
@@ -64,9 +71,9 @@ export const MT = {
   refl: std(0xe8eef5, 0.25, 0.6), pants: std(0x2f4a8a, 0.8, 0), hat: std(0xffd23a, 0.4, 0.05),
   wood: std(0xb98345, 0.85, 0), brick: std(0xffffff, 0.85, 0, { map: brickTex }),
   stripes: std(0xffffff, 0.5, 0.1, { map: stripeTex }),
-  lamp: new THREE.MeshStandardMaterial({ color: 0xfff3c8, emissive: 0xffe6a0, emissiveIntensity: 1.2 }),
-  amber: new THREE.MeshStandardMaterial({ color: 0xffa53a, emissive: 0xff8a1a, emissiveIntensity: 0.8 }),
-  tail: new THREE.MeshStandardMaterial({ color: 0xff4a3a, emissive: 0xd8201a, emissiveIntensity: 0.8 })
+  lamp: toonMat({ color: 0xfff3c8, emissive: 0xffe6a0, emissiveIntensity: 1.2 }),
+  amber: toonMat({ color: 0xffa53a, emissive: 0xff8a1a, emissiveIntensity: 0.8 }),
+  tail: toonMat({ color: 0xff4a3a, emissive: 0xd8201a, emissiveIntensity: 0.8 })
 };
 
 /* ---------- primitives ---------- */
@@ -154,7 +161,7 @@ export function shadows(o) {
   o.traverse((n) => { if (n.isMesh) { n.castShadow = !(n.material && n.material.transparent); n.receiveShadow = true; } });
 }
 export function instanced(parent, geo, count, place) {
-  const m = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ color: 0xffffff }), count);
+  const m = new THREE.InstancedMesh(geo, toonMat({ color: 0xffffff }), count);
   for (let i = 0; i < count; i++) {
     const c = place(i, dummy); dummy.updateMatrix(); m.setMatrixAt(i, dummy.matrix); m.setColorAt(i, tmpCol.setHex(c));
   }

@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { V3, rad, clamp, rnd, pick } from '../kit/util.js';
 import { tw, to, sleep, pop, easeIn, easeSine, easeBack, lin } from '../kit/tween.js';
 import { engineOn, thud, ding } from '../kit/audio.js';
-import { C, MT, UB, ICO, dummy, tmpCol, mat, std, add, box, grp, cylGeo, cylY, cylZ, cylX, rod, rail, sph, rbox, ext, extY, arc, anchor, beam, pile, wp, shadows, instanced } from '../kit/geo.js';
+import { C, MT, UB, ICO, dummy, tmpCol, mat, std, add, box, grp, cylGeo, cylY, cylZ, cylX, rod, rail, sph, rbox, ext, extY, arc, anchor, beam, pile, wp, shadows, instanced, toonMat } from '../kit/geo.js';
 import { trackUnit, tire, fender, hydraulic, telescopic, strut, beacon, operator, worker, truckCab } from '../kit/parts.js';
 import { autumnTree, lamp, cone, barrier, office, pipes } from '../kit/props.js';
 import { route, person, miniCar, traffic } from '../kit/life.js';
@@ -475,7 +475,7 @@ export default {
   rbox(S,2.7,.6,.12,.02,MT.wood,FX,.3,1.2);rbox(S,2.7,.6,.12,.02,MT.wood,FX,.3,-1.2);rbox(S,.12,.6,2.4,.02,MT.wood,FX-1.29,.3,0);rbox(S,.12,.6,2.4,.02,MT.wood,FX+1.29,.3,0);
   [1.35,-1.35].forEach(z=>[-.9,.9].forEach(x=>{const st2=rod(S,new V3(FX+x,0,z*1.08),new V3(FX+x,.45,z),.03,MT.wood,5);}));
   const FG=new THREE.BoxGeometry(2.46,1,2.28);FG.translate(0,.5,0);
-  const fillMat=new THREE.MeshLambertMaterial({color:C.wet});const fill=add(S,FG,fillMat,FX,0,0);fill.scale.y=.01;
+  const fillMat=toonMat({color:C.wet});const fill=add(S,FG,fillMat,FX,0,0);fill.scale.y=.01;
   const SG=new THREE.CylinderGeometry(.15,.2,1,10);SG.translate(0,-.5,0);
   const stream=add(S,SG,C.wet,-4.72,.98,0);stream.visible=false;
   st.spin=1.2;st.fill=0;st.flow=0;
@@ -507,7 +507,7 @@ export default {
   const asphalt=add(S,AG,0x8a8478,X0,.07,0);asphalt.scale.x=.001;
   const dashes=[];for(let x=X0+.6;x<X1-.3;x+=1.3){const d=box(S,.7,.02,.14,0xf3efe2,x,.115,0);d.visible=false;dashes.push(d);}
   const N=240,stones=[];
-  const gm=new THREE.InstancedMesh(ICO,new THREE.MeshLambertMaterial({color:0xffffff}),N);gm.castShadow=true;gm.receiveShadow=true;S.add(gm);
+  const gm=new THREE.InstancedMesh(ICO,toonMat({color:0xffffff}),N);gm.castShadow=true;gm.receiveShadow=true;S.add(gm);
   for(let i=0;i<N;i++){const s={x:rnd(X0+.1,X1-.1),z:rnd(-RW/2+.1,RW/2-.1),s:rnd(.1,.2),r:[rnd(0,3),rnd(0,3),rnd(0,3)],flat:false};stones.push(s);gm.setColorAt(i,tmpCol.setHex(pick([0x9a8e80,0x7d7368,0xb3a796,0x6f655c,0xa39a8c])));}
   function writeStones(k){stones.forEach((s,i)=>{const sc=s.flat?.001:s.s*k;dummy.position.set(s.x,.09,s.z);dummy.rotation.set(s.r[0],s.r[1],s.r[2]);dummy.scale.set(sc,sc*.8,sc);dummy.updateMatrix();gm.setMatrixAt(i,dummy.matrix);});gm.instanceMatrix.needsUpdate=true;}
   writeStones(1);
@@ -757,7 +757,7 @@ export default {
   box(S,X1-X0,.05,RW,0x8a6a52,0,.025,0);
   const flat=add(S,(()=>{const g=new THREE.BoxGeometry(1,.1,RW);g.translate(.5,0,0);return g;})(),mat(0xa89a88),X0,.06,0);flat.scale.x=.001;
   const heaps=[];[-4.5,-1.5,1.5,4.5].forEach(cx=>{for(let i=0;i<34;i++){const a=rnd(0,6.28),r=Math.sqrt(Math.random())*1.1;heaps.push({x:cx+Math.cos(a)*r,y:.1+(1.1-r)*.35,z:Math.sin(a)*r*1.2,s:rnd(.16,.28),k:1});}});
-  const hm=new THREE.InstancedMesh(ICO,new THREE.MeshLambertMaterial({color:0xffffff}),heaps.length);hm.castShadow=hm.receiveShadow=true;S.add(hm);
+  const hm=new THREE.InstancedMesh(ICO,toonMat({color:0xffffff}),heaps.length);hm.castShadow=hm.receiveShadow=true;S.add(hm);
   heaps.forEach((h,i)=>hm.setColorAt(i,tmpCol.setHex(pick([0x9a8e80,0x7d7368,0xb3a796,0x8a8070]))));
   const writeH=()=>{heaps.forEach((h,i)=>{const s=h.s*Math.max(.001,h.k);dummy.position.set(h.x,h.y*h.k,h.z);dummy.rotation.set(h.x,h.z,0);dummy.scale.set(s,s*.8,s);dummy.updateMatrix();hm.setMatrixAt(i,dummy.matrix);});hm.instanceMatrix.needsUpdate=true;};writeH();
   const m=grp(S,START,0,0);st.m=m;st.lastX=START;
@@ -1038,7 +1038,7 @@ function heras(p,a,b,gaps=[]){
   for(let i=0;i<n;i++){const t=(i+.5)/n,h=a[0]+dh*t,d=a[1]+dd*t;if(gaps.some(([g0,g1])=>t>=g0&&t<=g1))continue;list.push([h,d]);}
   const ang=Math.atan2(dd,dh); // in layout space
   const plane=new THREE.PlaneGeometry(L-.05,1.9);plane.translate(0,1.1,0);
-  const pm=new THREE.InstancedMesh(plane,new THREE.MeshLambertMaterial({map:tex,transparent:true,alphaTest:.4,side:THREE.DoubleSide}),list.length);
+  const pm=new THREE.InstancedMesh(plane,toonMat({map:tex,transparent:true,alphaTest:.4,side:THREE.DoubleSide}),list.length);
   const fm=new THREE.InstancedMesh(UB,SM.feet,list.length*2);
   const ry=YAW-ang;
   list.forEach(([h,d],i)=>{const [x,z]=Q(h,d);dummy.position.set(x,0,z);dummy.rotation.set(0,ry,0);dummy.scale.set(1,1,1);dummy.updateMatrix();pm.setMatrixAt(i,dummy.matrix);

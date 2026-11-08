@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { V3, rad, clamp, rnd, pick } from '../kit/util.js';
 import { tw, to, sleep, pop, easeIn, easeSine, easeBack, lin } from '../kit/tween.js';
 import { engineOn, engineOff, thud, ding, chime, tone } from '../kit/audio.js';
-import { C, MT, UB, ICO, dummy, tmpCol, mat, std, add, box, grp, cylY, cylZ, cylX, rod, rail, sph, rbox, ext, extY, arc, anchor, beam, wp, shadows, instanced } from '../kit/geo.js';
+import { C, MT, UB, ICO, dummy, tmpCol, mat, std, add, box, grp, cylY, cylZ, cylX, rod, rail, sph, rbox, ext, extY, arc, anchor, beam, wp, shadows, instanced, toonMat } from '../kit/geo.js';
 import { trackUnit, hydraulic, beacon, tire, operator } from '../kit/parts.js';
 import { lamp } from '../kit/props.js';
 import { createFx } from '../kit/fx.js';
@@ -475,7 +475,7 @@ export default {
       const ascN = anchor(asc, 0, -0.1, 0), descN = anchor(desc, 0, -0.95, 0);
       const astro = astronaut(m, 1.1, 1.35, 0); astro.visible = false;
       const flag = grp(S, 3.4, 0, 1.4); rod(flag, new V3(0, 0, 0), new V3(0, 1.8, 0), 0.025, SM.silver); rod(flag, new V3(0, 1.78, 0), new V3(0, 1.78, 0.9), 0.015, SM.silver);
-      const fm = add(flag, new THREE.PlaneGeometry(0.9, 0.56), new THREE.MeshLambertMaterial({ map: flagTex(), side: THREE.DoubleSide }), 0, 1.5, 0.45); fm.rotation.y = Math.PI / 2; flag.visible = false;
+      const fm = add(flag, new THREE.PlaneGeometry(0.9, 0.56), toonMat({ map: flagTex(), side: THREE.DoubleSide }), 0, 1.5, 0.45); fm.rotation.y = Math.PI / 2; flag.visible = false;
       const saved = save([m, desc, asc, astro]);
       part(st, 'moteur', 'le moteur', anchor(desc, 0, -0.6, 1.1), false);
       part(st, 'pattes', 'les pattes', anchor(legs[0], 1.4, -0.5, 1.4), true);

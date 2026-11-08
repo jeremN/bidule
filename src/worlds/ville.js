@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { V3, rad, clamp, rnd, pick } from '../kit/util.js';
 import { tw, to, sleep, pop, easeIn, easeSine, easeBack, lin } from '../kit/tween.js';
 import { engineOn, engineOff, thud, ding, chime, tone } from '../kit/audio.js';
-import { C, MT, UB, ICO, dummy, tmpCol, mat, std, add, box, grp, cylY, cylZ, cylX, rod, rail, sph, rbox, ext, extY, arc, anchor, beam, wp, shadows, instanced } from '../kit/geo.js';
+import { C, MT, UB, ICO, dummy, tmpCol, mat, std, add, box, grp, cylY, cylZ, cylX, rod, rail, sph, rbox, ext, extY, arc, anchor, beam, wp, shadows, instanced, toonMat } from '../kit/geo.js';
 import { tire, operator, beacon } from '../kit/parts.js';
 import { createFx } from '../kit/fx.js';
 import { lamp } from '../kit/props.js';
@@ -20,7 +20,7 @@ const VM = {
   lantern: std(0xe8402a, 0.5, 0, { emissive: 0x9a1a10, emissiveIntensity: 0.9 }), paper: std(0xfff1d0, 0.6, 0, { emissive: 0xffc070, emissiveIntensity: 0.6 }),
   noren: std(0x23409a, 0.8, 0), sakura: std(0xf4b2cc, 0.8, 0), skin: MT.skin
 };
-const lampMat = (c) => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.15 });
+const lampMat = (c) => toonMat({ color: c, emissive: c, emissiveIntensity: 0.15 });
 
 function windowsTex() {
   const c = document.createElement('canvas'); c.width = 64; c.height = 128; const x = c.getContext('2d');
@@ -47,7 +47,7 @@ function house(p, x, z, ry, o = {}) {
 }
 function tower(p, x, z, ry, w, d, h) {
   const g = grp(p, x, 0, z); g.rotation.y = ry;
-  const m = new THREE.MeshStandardMaterial({ map: WIN[Math.floor(Math.random() * 3)].clone(), roughness: 0.6, emissive: 0x1a1408, emissiveMap: null });
+  const m = toonMat({ map: WIN[Math.floor(Math.random() * 3)].clone(), roughness: 0.6, emissive: 0x1a1408, emissiveMap: null });
   m.map.needsUpdate = true; m.map.repeat.set(w / 1.6, h / 2.4);
   box(g, w, h, d, m, 0, h / 2, 0); box(g, w + 0.15, 0.2, d + 0.15, VM.slate, 0, h, 0);
   rbox(g, w * 0.3, 0.6, w * 0.3, 0.05, VM.grey, w * 0.2, h + 0.4, 0, 0.02);

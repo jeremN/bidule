@@ -1,7 +1,7 @@
 // Scenery props shared between worlds.
 import * as THREE from 'three';
 import { rnd, pick } from './util.js';
-import { C, ICO, MT, add, box, grp, cylY, cylX, rbox, ext, shadows } from './geo.js';
+import { C, ICO, MT, add, box, grp, cylY, cylX, rbox, ext, shadows, toonMat } from './geo.js';
 
 const WARM = new THREE.MeshBasicMaterial({ color: 0xffc06a });
 
@@ -90,15 +90,15 @@ export function farmhouse(scene, x, z, ry) {
 export function roundBaleStack(scene, x, z, ry, n) {
   const g = grp(scene, x, 0, z); g.rotation.y = ry || 0;
   const geo = new THREE.CylinderGeometry(0.62, 0.62, 1.15, 20); geo.rotateX(Math.PI / 2);
-  const mats = [MT.straw || new THREE.MeshLambertMaterial({ color: 0xe2bd55 })];
+  const mats = [MT.straw || toonMat({ color: 0xe2bd55 })];
   for (let i = 0; i < (n || 3); i++) add(g, geo, mats[0], i * 1.25 - 1.25, 0.62, 0);
   if ((n || 3) >= 3) add(g, geo, mats[0], -0.62, 1.7, 0), add(g, geo, mats[0], 0.62, 1.7, 0);
   shadows(g); return g;
 }
 export function pond(scene, x, z, r) {
-  const m = new THREE.Mesh(new THREE.CircleGeometry(r, 28), new THREE.MeshLambertMaterial({ color: 0x3a6fd8 }));
+  const m = new THREE.Mesh(new THREE.CircleGeometry(r, 28), toonMat({ color: 0x3a6fd8 }));
   m.rotation.x = -Math.PI / 2; m.position.set(x, 0.03, z); m.scale.set(1.3, 1, 1); scene.add(m);
-  const rim = new THREE.Mesh(new THREE.RingGeometry(r, r + 0.35, 28), new THREE.MeshLambertMaterial({ color: 0x8a6a4a }));
+  const rim = new THREE.Mesh(new THREE.RingGeometry(r, r + 0.35, 28), toonMat({ color: 0x8a6a4a }));
   rim.rotation.x = -Math.PI / 2; rim.position.set(x, 0.025, z); rim.scale.set(1.3, 1, 1); scene.add(rim);
   return m;
 }

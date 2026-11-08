@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { V3, rad, clamp, rnd, pick, reduceMotion } from './util.js';
 import { updateTweens, clearTweens, tw, lin } from './tween.js';
 import { audio, say, stopVoice, initAudio, pickVoice, engineOff, hornSound, beep } from './audio.js';
-import { C, ICO, mat, add, grp, instanced, shadows } from './geo.js';
+import { C, ICO, mat, add, grp, instanced, shadows, toonMat } from './geo.js';
 
 const ICON_AGAIN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a8.5 8.5 0 0 1 0 12"/></svg>';
 const ICON_TAGS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v10H10l-4 4v-4H4z"/><path d="M8 9h8M8 12h5"/><path id="tagsX" d="M3 3l18 18" opacity="0"/></svg>';
@@ -43,10 +43,17 @@ function shell(world, root, homeHref) {
 </div>`;
 }
 
-const POST_FRAG = `precision highp float;uniform sampler2D tDiffuse;uniform float uDpr;uniform float uTime;varying vec2 vUv;
+const POST_FRAG = `precision highp float;uniform sampler2D tDiffuse;uniform sampler2D tNormal;uniform sampler2D tDepth;uniform vec2 uTexel;uniform float uInk;uniform float uDpr;uniform float uTime;varying vec2 vUv;
 float hash(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}
 void main(){
   vec3 c=texture2D(tDiffuse,vUv).rgb;
+  // cartoon ink lines: where the surface direction or the distance jumps
+  vec2 o=uTexel*max(1.6,uDpr*1.4);
+  vec3 n0=texture2D(tNormal,vUv).rgb;float d0=texture2D(tDepth,vUv).r;
+  float nd=0.,dd=0.;
+  for(int i=0;i<4;i++){vec2 off=i==0?vec2(o.x,0.):i==1?vec2(-o.x,0.):i==2?vec2(0.,o.y):vec2(0.,-o.y);
+    nd+=length(texture2D(tNormal,vUv+off).rgb-n0);dd=max(dd,abs(texture2D(tDepth,vUv+off).r-d0));}
+  float ink=max(smoothstep(.95,1.5,nd)*.8,smoothstep(.0025,.006,dd))*uInk;
   float l=dot(c,vec3(.299,.587,.114));
   c=mix(vec3(l),c,1.32);
   float sh=1.-smoothstep(.12,.55,l);
@@ -58,6 +65,7 @@ void main(){
   float dm=1.-smoothstep(r-.12,r+.12,length(g));
   c*=1.-dm*.22*sh;
   c+=(hash(gl_FragCoord.xy+fract(uTime)*91.)-.5)*.03;
+  c=mix(c,c*vec3(.22,.2,.32),min(ink,1.));
   vec2 q=vUv-.5;float v=length(q*vec2(1.15,1.));
   c=mix(c,vec3(.03,.045,.09),smoothstep(.42,.95,v)*.8);
   gl_FragColor=vec4(clamp(c,0.,1.),1.);
@@ -90,8 +98,12 @@ export function createStage(world, root, opts = {}) {
   const rt = renderer.capabilities.isWebGL2 && THREE.WebGLMultisampleRenderTarget
     ? new THREE.WebGLMultisampleRenderTarget(4, 4) : new THREE.WebGLRenderTarget(4, 4);
   const postScene = new THREE.Scene(), postCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  // second pass with surface normals + depth, for the cartoon outlines
+  const nrt = new THREE.WebGLRenderTarget(4, 4); nrt.depthTexture = new THREE.DepthTexture(4, 4); nrt.depthTexture.type = THREE.UnsignedIntType;
+  const normalMat = new THREE.MeshNormalMaterial();
+  const INK = !/[?&]noink/.test(location.search);
   const postMat = new THREE.ShaderMaterial({
-    uniforms: { tDiffuse: { value: rt.texture }, uDpr: { value: DPR }, uTime: { value: 0 } },
+    uniforms: { tDiffuse: { value: rt.texture }, tNormal: { value: nrt.texture }, tDepth: { value: nrt.depthTexture }, uTexel: { value: new THREE.Vector2(1, 1) }, uInk: { value: INK ? 1 : 0 }, uDpr: { value: DPR }, uTime: { value: 0 } },
     depthTest: false, depthWrite: false,
     vertexShader: 'varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}',
     fragmentShader: POST_FRAG
@@ -141,11 +153,11 @@ export function createStage(world, root, opts = {}) {
     }
     const t = new THREE.CanvasTexture(cv); t.anisotropy = renderer.capabilities.getMaxAnisotropy(); return t;
   })();
-  const ground = new THREE.Mesh(new THREE.CircleGeometry(RAD, 96), new THREE.MeshLambertMaterial({ map: gtex }));
+  const ground = new THREE.Mesh(new THREE.CircleGeometry(RAD, 96), toonMat({ map: gtex }));
   ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
   if (world.floating) {
     // a floating island: rocky underside, stars all around
-    const rim = new THREE.Mesh(new THREE.CylinderGeometry(RAD, RAD * 0.55, 6, 72, 3, true), new THREE.MeshLambertMaterial({ color: world.rimColor || 0x4a4560 }));
+    const rim = new THREE.Mesh(new THREE.CylinderGeometry(RAD, RAD * 0.55, 6, 72, 3, true), toonMat({ color: world.rimColor || 0x4a4560 }));
     rim.position.y = -3.02; scene.add(rim);
     const bottom = new THREE.Mesh(new THREE.ConeGeometry(RAD * 0.55, 9, 40), mat(world.rimColor || 0x4a4560)); bottom.rotation.x = Math.PI; bottom.position.y = -10.5; scene.add(bottom);
     const sp = new Float32Array(2400 * 3);
@@ -154,7 +166,7 @@ export function createStage(world, root, opts = {}) {
       sp.set([Math.cos(a) * q * r, u * r, Math.sin(a) * q * r], i * 3);
     }
     const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(sp, 3));
-    scene.add(new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xffffff, size: 1.6, sizeAttenuation: false })));
+    const stars = new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xffffff, size: 1.6, sizeAttenuation: false })); stars.layers.set(1); scene.add(stars);
   } else {
     const outer = new THREE.Mesh(new THREE.CircleGeometry(90 * SK, 48), mat(world.outerColor || 0x0e1d22));
     outer.rotation.x = -Math.PI / 2; outer.position.y = -0.04; outer.receiveShadow = true; scene.add(outer);
@@ -231,7 +243,7 @@ export function createStage(world, root, opts = {}) {
   stations.forEach((st) => shadows(st.g));
 
   /* ---------- camera ---------- */
-  const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 400);
+  const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 400); cam.layers.enable(1);
   const ELEV = rad(34);
   const OVAZ = (world.overview && world.overview.az) != null ? world.overview.az : Math.PI / 4;
   // the camera turns to see each machine from the side: azimuth = the station's yaw (or st.az)
@@ -260,7 +272,7 @@ export function createStage(world, root, opts = {}) {
   }
   function resize() {
     SW = stageEl.clientWidth; SH = stageEl.clientHeight; if (!SW || !SH) return;
-    renderer.setSize(SW, SH, false); rt.setSize(Math.round(SW * DPR), Math.round(SH * DPR)); computeView();
+    renderer.setSize(SW, SH, false); rt.setSize(Math.round(SW * DPR), Math.round(SH * DPR)); nrt.setSize(Math.round(SW * DPR), Math.round(SH * DPR)); postMat.uniforms.uTexel.value.set(1 / Math.round(SW * DPR), 1 / Math.round(SH * DPR)); computeView();
   }
   function updateCam(dt) {
     const k = 1 - Math.exp(-dt * 3.2);
@@ -383,6 +395,11 @@ export function createStage(world, root, opts = {}) {
     if (fc % (busy ? 6 : 20) === 0) computeView();
     updateCam(dt);
     postMat.uniforms.uTime.value = now / 1000;
+    if (INK) {
+      cam.layers.disable(1); const bg = scene.background; scene.background = null; scene.overrideMaterial = normalMat; renderer.shadowMap.autoUpdate = false;
+      renderer.setRenderTarget(nrt); renderer.render(scene, cam);
+      scene.overrideMaterial = null; scene.background = bg; cam.layers.enable(1); renderer.shadowMap.needsUpdate = true;
+    }
     renderer.setRenderTarget(rt); renderer.render(scene, cam); renderer.setRenderTarget(null); renderer.render(postScene, postCam);
     placeTags();
     if (alive) raf = requestAnimationFrame(frame);
@@ -401,7 +418,7 @@ export function createStage(world, root, opts = {}) {
       const ms = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
       ms.forEach((m) => { if (m.map) m.map.dispose(); m.dispose?.(); });
     });
-    rt.dispose(); postMat.dispose(); renderer.dispose(); renderer.forceContextLoss();
+    rt.dispose(); nrt.dispose(); normalMat.dispose(); postMat.dispose(); renderer.dispose(); renderer.forceContextLoss();
     root.innerHTML = '';
   };
 }
