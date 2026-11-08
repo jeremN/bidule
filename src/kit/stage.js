@@ -103,7 +103,7 @@ export function createStage(world, root, opts = {}) {
   // second pass with surface normals + depth, for the cartoon outlines
   const nrt = new THREE.WebGLRenderTarget(4, 4); nrt.depthTexture = new THREE.DepthTexture(4, 4); nrt.depthTexture.type = THREE.UnsignedIntType;
   const normalMat = new THREE.MeshNormalMaterial();
-  const INK = !/[?&]noink/.test(location.search);
+  const INK = /[?&]ink/.test(location.search); // cartoon outlines, off by default (the painterly look reads better)
   let shadowTick = false;
   const postMat = new THREE.ShaderMaterial({
     uniforms: { tDiffuse: { value: rt.texture }, tNormal: { value: nrt.texture }, tDepth: { value: nrt.depthTexture }, uTexel: { value: new THREE.Vector2(1, 1) }, uInk: { value: INK ? 1 : 0 }, uDpr: { value: DPR }, uTime: { value: 0 } },
@@ -447,8 +447,7 @@ export function createStage(world, root, opts = {}) {
     if (fc % (busy ? 6 : 20) === 0) computeView();
     updateCam(dt);
     postMat.uniforms.uTime.value = now / 1000;
-    // shadows are redrawn every other frame: plenty for slow machines, and a lot lighter for tablets
-    renderer.shadowMap.autoUpdate = false; shadowTick = !shadowTick; if (shadowTick) renderer.shadowMap.needsUpdate = true;
+    renderer.shadowMap.autoUpdate = false; renderer.shadowMap.needsUpdate = true; // every frame: moving shadows must not lag
     if (INK) {
       cam.layers.disable(1); const bg = scene.background; scene.background = null; scene.overrideMaterial = normalMat;
       renderer.setRenderTarget(nrt); renderer.render(scene, cam);

@@ -12,27 +12,27 @@ export const C = {
 };
 
 export const UB = new THREE.BoxGeometry(1, 1, 1);
-export const ICO = new THREE.IcosahedronGeometry(1, 1); // rounder blobs: trees, bushes, rocks look softer (cartoon)
+export const ICO = new THREE.IcosahedronGeometry(1, 0);
 export const dummy = new THREE.Object3D();
 export const tmpCol = new THREE.Color();
 
-/* ---------- cartoon shading: three flat tones of light ---------- */
-const TOON = (() => { const d = new Uint8Array([112, 182, 228, 240]); const t = new THREE.DataTexture(d, 4, 1, THREE.LuminanceFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.generateMipmaps = false; t.needsUpdate = true; return t; })();
-/** All materials go through here: a toon material (PBR-only options are dropped). */
+/** Generic material helper (kept under its old name): PBR when roughness/metalness are given, matte otherwise. */
 export function toonMat(o = {}) {
-  const p = Object.assign({}, o); delete p.roughness; delete p.metalness; delete p.envMapIntensity;
-  return new THREE.MeshToonMaterial(Object.assign({ gradientMap: TOON }, p));
+  const p = Object.assign({}, o);
+  if (p.roughness == null && p.metalness == null && !p.emissive && !p.map) return new THREE.MeshLambertMaterial(p);
+  if (p.roughness == null) p.roughness = 0.8;
+  return new THREE.MeshStandardMaterial(p);
 }
 const MC = {};
 export function mat(c) {
   if (typeof c === 'object') return c;
-  if (!MC[c]) MC[c] = toonMat({ color: c });
+  if (!MC[c]) MC[c] = new THREE.MeshLambertMaterial({ color: c });
   return MC[c];
 }
 
 /* ---------- PBR materials (machines) ---------- */
 export function std(c, r, m, o) {
-  return toonMat(Object.assign({ color: c }, o || {}));
+  return new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: r, metalness: m * 0.45 }, o || {}));
 }
 function canvasTex(w, h, draw) {
   const c = document.createElement('canvas'); c.width = w; c.height = h;
