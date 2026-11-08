@@ -22,6 +22,7 @@ import { Route as MontagneRouteImport } from './routes/montagne'
 import { Route as PortRouteImport } from './routes/port'
 import { Route as RecyclageRouteImport } from './routes/recyclage'
 import { Route as SecoursRouteImport } from './routes/secours'
+import { Route as TravauxRouteImport } from './routes/travaux'
 import { Route as UsineRouteImport } from './routes/usine'
 import { Route as VilleRouteImport } from './routes/ville'
 
@@ -90,6 +91,11 @@ const SecoursRoute = SecoursRouteImport.update({
   path: '/secours',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TravauxRoute = TravauxRouteImport.update({
+  id: '/travaux',
+  path: '/travaux',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UsineRoute = UsineRouteImport.update({
   id: '/usine',
   path: '/usine',
@@ -115,6 +121,7 @@ export interface FileRoutesByFullPath {
   '/port': typeof PortRoute
   '/recyclage': typeof RecyclageRoute
   '/secours': typeof SecoursRoute
+  '/travaux': typeof TravauxRoute
   '/usine': typeof UsineRoute
   '/ville': typeof VilleRoute
 }
@@ -132,6 +139,7 @@ export interface FileRoutesByTo {
   '/port': typeof PortRoute
   '/recyclage': typeof RecyclageRoute
   '/secours': typeof SecoursRoute
+  '/travaux': typeof TravauxRoute
   '/usine': typeof UsineRoute
   '/ville': typeof VilleRoute
 }
@@ -150,6 +158,7 @@ export interface FileRoutesById {
   '/port': typeof PortRoute
   '/recyclage': typeof RecyclageRoute
   '/secours': typeof SecoursRoute
+  '/travaux': typeof TravauxRoute
   '/usine': typeof UsineRoute
   '/ville': typeof VilleRoute
 }
@@ -169,6 +178,7 @@ export interface FileRouteTypes {
     | '/port'
     | '/recyclage'
     | '/secours'
+    | '/travaux'
     | '/usine'
     | '/ville'
   fileRoutesByTo: FileRoutesByTo
@@ -186,6 +196,7 @@ export interface FileRouteTypes {
     | '/port'
     | '/recyclage'
     | '/secours'
+    | '/travaux'
     | '/usine'
     | '/ville'
   id:
@@ -203,6 +214,7 @@ export interface FileRouteTypes {
     | '/port'
     | '/recyclage'
     | '/secours'
+    | '/travaux'
     | '/usine'
     | '/ville'
   fileRoutesById: FileRoutesById
@@ -221,6 +233,7 @@ export interface RootRouteChildren {
   PortRoute: typeof PortRoute
   RecyclageRoute: typeof RecyclageRoute
   SecoursRoute: typeof SecoursRoute
+  TravauxRoute: typeof TravauxRoute
   UsineRoute: typeof UsineRoute
   VilleRoute: typeof VilleRoute
 }
@@ -318,6 +331,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SecoursRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/travaux': {
+      id: '/travaux'
+      path: '/travaux'
+      fullPath: '/travaux'
+      preLoaderRoute: typeof TravauxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/usine': {
       id: '/usine'
       path: '/usine'
@@ -349,6 +369,7 @@ const rootRouteChildren: RootRouteChildren = {
   PortRoute: PortRoute,
   RecyclageRoute: RecyclageRoute,
   SecoursRoute: SecoursRoute,
+  TravauxRoute: TravauxRoute,
   UsineRoute: UsineRoute,
   VilleRoute: VilleRoute,
 }

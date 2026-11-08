@@ -20,7 +20,7 @@ const CF = (h, d, yaw = YAW) => { const [x, z] = Q(h, d); return { x, z, yaw }; 
 const FM = {
   yel: std(0xf2b51c, 0.38, 0.2), yelD: std(0xc98d12, 0.5, 0.25), yelDS: std(0xf2b51c, 0.4, 0.2, { side: THREE.DoubleSide }),
   green: std(0x3f8a32, 0.4, 0.15), greenD: std(0x2c6324, 0.5, 0.15), lime: std(0xd8d23a, 0.45, 0.1),
-  red: std(0xd8302a, 0.38, 0.2), redD: std(0x9e221c, 0.45, 0.2), orange: std(0xee6a26, 0.4, 0.18), orangeD: std(0xb84c18, 0.5, 0.2),
+  red: std(0xd8302a, 0.38, 0.2), redD: std(0x9e221c, 0.45, 0.2), orange: std(0xee6a26, 0.4, 0.18), orangeDS: std(0xee6a26, 0.4, 0.18, { side: THREE.DoubleSide }), orangeD: std(0xb84c18, 0.5, 0.2),
   blue: std(0x2f5fb8, 0.38, 0.2), blueD: std(0x22468a, 0.45, 0.2), white: std(0xf1f2f5, 0.35, 0.1), grey: std(0x8f96a6, 0.5, 0.35),
   bark: std(0x6e4b32, 0.95, 0), barkD: std(0x553826, 0.95, 0), birch: std(0xeee8dc, 0.8, 0), wood: std(0xe2b878, 0.8, 0), woodD: std(0xb98345, 0.85, 0),
   plank: std(0xeccb92, 0.75, 0), timber: std(0xa8743e, 0.85, 0), needle: std(0x2f6b3a, 0.85, 0), needleL: std(0x3f8a44, 0.85, 0), leaf: std(0x5aa040, 0.85, 0),
@@ -93,6 +93,7 @@ const TRAIL = [[4, 30], [14, 35], [30, 33], [38, 22], [36, 14], [28, 18], [14, 2
 const HOUSE = [26, 29], GLADE = [9, -14];
 const HZONES = [[...HOUSE, 7], [...GLADE, 4.5], [-20.5, 28, 3.5]], HSEGS = [];
 Object.keys(CLEAR).forEach((k) => { const [h, d] = POS[k], [x0, x1, z, r] = CLEAR[k]; HSEGS.push([h + x0, d + z, h + x1, d + z, r], [h, d, h, d + 11, 6]); });
+{ const [h, d] = POS.scierie; HSEGS.push([h + 1, d + 1, h + 9, d + 12, 6.5]); } // the sawmill is seen from the outfeed side: keep that view free of trees
 [ROAD, ROAD2, SPUR].forEach((pl) => { for (let i = 0; i < pl.length - 1; i++) HSEGS.push([...pl[i], ...pl[i + 1], 2.6]); });
 for (let i = 0; i < TRAIL.length; i++) HSEGS.push([...TRAIL[i], ...TRAIL[(i + 1) % TRAIL.length], 1.4]);
 const ZONES = HZONES.map(([h, d, r]) => [...Q(h, d), r]);
@@ -259,15 +260,15 @@ export default {
       const st = makeStation('grumier'), S = st.g;
       const LT = logTruck(st, S), m = LT.g, cr = LT.crane, gr = LT.grapple; st.m = m; st.wheels = LT.wheels; st.links = cr.links;
       const X0 = -9, REST = new V3(-0.2, 3.6, 0); m.position.x = X0; st.lastX = X0; cr.solve(REST);
-      // the roadside pile: a big still pile, and the two bundles the crane will take
-      const sp = grp(S); logStack(sp, -1.4, -5.3, 4, 4.6, 0.2); bake(sp);
+      // the two bundles the crane will take (no other logs behind: the truck's load stays easy to see)
+      const sp = grp(S); [[-6.5, -4.2], [4.5, -5.0], [8.5, -3.6]].forEach(([x, z]) => stump(sp, x, z, 0.26)); branchPile(sp, -6.2, -5.6); bake(sp);
       const home = [new V3(-1.4, 0.21, -3.4), new V3(-1.4, 0.21, -2.6)];
       const bundles = home.map((p) => { const b = logBundle(S, 4.6, 0.2, [FM.bark, FM.barkD]); b.position.copy(p); return b; });
       const slots = [new V3(-1.8, 1.57, 0), new V3(-1.8, 2.12, 0)];
       part(st, 'grue', 'la grue', anchor(cr.boom, 1.5, 0.3, 0.2), true);
       part(st, 'chauffeur', 'le chauffeur, tout en haut', anchor(cr.sl, -0.15, 2.3, 0.5), false);
       part(st, 'bequilles', 'les béquilles', anchor(LT.legs[0].foot, 0, 0.3, 0.2), false);
-      part(st, 'bois', 'le tas de bois', anchor(S, -1.4, 1.6, -4.2), true);
+      part(st, 'bois', 'le tas de bois', anchor(S, -1.4, 0.9, -3.0), true);
       st.focusAt = anchor(m, -0.5, 1.8, -1.4); st.size = { w: 17, h: 10 }; st.tagAt = anchor(m, 0, 4.6, 0);
       st.update = (dt) => { roll(st, dt); gr.rot.rotation.y = -cr.sl.rotation.y; if (st.moving && Math.random() < 0.3) exhaust(m, 3.0, 3.1, 0.9); };
       const legs = (k) => LT.legs.forEach((L) => { L.beam.position.z = L.s * (0.55 + 0.9 * Math.min(1, k * 2)); L.foot.position.y = -0.95 * Math.max(0, k * 2 - 1); });
@@ -300,14 +301,19 @@ export default {
       const R = 0.32, L = 3.0, Z1 = -0.14, Y1 = 1.03, slotP = (i) => { const z = -1.35 - i * 0.68; return new V3(-5, 1.4 + (-z - 0.95) * 0.196, z); };
       const deck = [0, 1, 2].map((i) => { const l = sawLog(SM.all, L, R, R); l.position.copy(slotP(i)); return l; });
       let onC = null; const junk = []; let stackH = SM.stackTop, slabN = 0;
-      part(st, 'scie', 'la scie à ruban', anchor(SM.saw, 0, 3.1, 0.7), true);
+      part(st, 'scie', 'la scie à ruban', SM.bladeAt, true);
       part(st, 'chariot', 'le chariot', anchor(C, 0.6, 0.8, -0.8), true);
       part(st, 'planches', 'les planches', anchor(S, 8.8, 1.3, 2.6), false);
       part(st, 'tronc', 'le tronc', anchor(S, -5, 1.4, -2.0), false);
-      st.focus = new V3(1.5, 1.4, 0.3); st.size = { w: 17, h: 8 }; st.tagAt = anchor(S, 0, 5.6, -1);
+      // seen a little from the outfeed side, so the big wheels of the band saw show their face
+      st.focusAt = anchor(S, -0.6, 1.9, 0.2); st.size = { w: 12.5, h: 7.2 }; st.el = 0.5; st.az = CFG.scierie.yaw + 0.5; st.tagAt = anchor(S, 0, 5.6, -1);
+      let puff = 0;
       st.update = (dt) => {
         if (st.saw) SM.wheels.forEach((w) => (w.rotation.x -= dt * 22));
-        if (st.cut && onC && Math.abs(C.position.x) < 1.6 + L / 2) for (let i = 0; i < 2; i++) throwClod(S.localToWorld(new V3(0.05, 0.9, 0.15)), S.localToWorld(new V3(rnd(-0.3, 1.2), 0, rnd(1.2, 2.4))), rnd(0.05, 0.09), 0xeed29c);
+        if (st.cut && onC && Math.abs(C.position.x) < 1.6 + L / 2) {
+          for (let i = 0; i < 2; i++) throwClod(S.localToWorld(new V3(0.05, 0.9, 0.15)), S.localToWorld(new V3(rnd(-0.3, 1.2), 0, rnd(1.2, 2.4))), rnd(0.05, 0.09), 0xeed29c);
+          puff -= dt; if (puff <= 0) { puff = 0.05; fx.smoke(S.localToWorld(new V3(0.2, rnd(0.8, 1.3), 0.3)), S.localToWorld(new V3(rnd(0.3, 1.2), rnd(0.5, 1.1), rnd(0.5, 1.2))).sub(S.localToWorld(new V3())), rnd(0.4, 0.7), 0xfff0cc, 1.2); }
+        }
       };
       const pass = async (text, key, d) => {
         st.cut = true;
@@ -436,10 +442,10 @@ export default {
       const ducks = [0, 1].map(() => duck(S)); let T = 0;
       const wetM = add(S, new THREE.CircleGeometry(1, 24), FM.wet, -1.5, 0.03, -5.4); wetM.rotation.x = -Math.PI / 2; wetM.scale.set(0.01, 0.01, 1); wetM.visible = false;
       const hose = tube(S, 0.07, FM.hose); hose.g.visible = false;
-      part(st, 'citerne', "la citerne d'eau", anchor(m, -1.0, 2.9, 1.2), true);
+      part(st, 'citerne', "la citerne d'eau", anchor(m, -0.5, 2.3, 1.2), true);
       part(st, 'canon', 'le canon à eau', anchor(FT.barrel, 0.8, 0.25, 0), true);
       part(st, 'tuyau', 'le tuyau', anchor(S, PX - 2.2, 0.6, PZ + 1.8), false);
-      part(st, 'gyrophares', 'les gyrophares', anchor(m, 2.6, 3.3, 0.5), false);
+      part(st, 'gyrophares', 'les gyrophares', anchor(m, 3.25, 3.45, 0.6), false);
       st.focusAt = anchor(m, 0.5, 1.6, -1.8); st.size = { w: 17, h: 9 }; st.tagAt = anchor(m, 0, 4.4, 0);
       let spray = 0; const A = new V3(), B = new V3();
       st.update = (dt) => {
@@ -454,7 +460,7 @@ export default {
         await Promise.all([step('Pin-pon ! Le camion des pompiers fait sa tournée dans la forêt.', 'citerne'), to(m.position, 'x', X1, 5, easeSine)]);
         clearInterval(siren); st.moving = false; engineOn(40);
         // the suction hose goes into the pond, the tank fills up
-        S.updateMatrixWorld(true); S.worldToLocal(m.localToWorld(A.set(-1.6, 0.8, -1.15))); B.set(PX - 2.1, 0.1, PZ + 1.0); hose.g.visible = true;
+        S.updateMatrixWorld(true); S.worldToLocal(m.localToWorld(A.set(-0.8, 1.05, -1.12))); B.set(PX - 2.1, 0.1, PZ + 1.0); hose.g.visible = true;
         await Promise.all([step("Il s'arrête près de la mare, et pompe de l'eau pour remplir sa citerne.", 'tuyau'), tw(1.2, (k) => hose.set(A, A.clone().lerp(B, k)), easeSine)]);
         await Promise.all([tw(2.6, (k) => (FT.level.scale.y = 0.05 + 0.95 * k), lin), tone(110, 0, 2.4, 'sine', 0.05, 130)]);
         await tw(0.8, (k) => hose.set(A, B.clone().lerp(A, k)), easeSine); hose.g.visible = false;
@@ -731,14 +737,34 @@ function sawmill(st, S) {
   // log deck: inclined skids from the back down to the carriage
   [-6.3, -5, -3.7].forEach((x) => { rod(d, new V3(x, 0.92, -0.95), new V3(x, 1.4, -3.4), 0.08, K, 6); cylY(d, 0.06, 1.4, K, x, 0.7, -3.4, 6); cylY(d, 0.06, 0.9, K, x, 0.45, -1.6, 6); });
   logStack(d, -5, -5.0, 4, 3.0, 0.3);
-  // band saw: two big wheels in a frame, the blade, guides, motor
-  const saw = grp(all, 0, 0, 0), sw = grp(saw);
-  rbox(sw, 0.3, 3.9, 0.5, 0.05, FM.grey, -0.45, 1.95, 0.75, 0.02); rbox(sw, 0.9, 0.5, 1.6, 0.06, FM.grey, -0.4, 0.25, 0.75, 0.02);
-  box(sw, 0.12, 2.8, 0.025, MT.chrome, 0, 1.7, 0.1); box(sw, 0.12, 2.8, 0.025, MT.chrome, 0, 1.7, 1.3);
-  rbox(sw, 0.34, 0.5, 0.2, 0.04, K, 0, 1.75, 0.18, 0.01); rbox(sw, 0.3, 0.3, 0.2, 0.04, K, 0, 0.75, 0.18, 0.01);
-  add(sw, GUARD, FM.yelDS, 0.1, 3.1, 0.7).rotation.set(0, 0, Math.PI / 2);
-  rbox(sw, 0.8, 0.6, 0.7, 0.08, FM.blue, -1.1, 0.4, 1.5, 0.02); cylX(sw, 0.2, 0.2, K, -0.6, 0.4, 1.5, 12);
-  const wheels = [3.1, 0.3].map((y) => { const w = grp(saw, 0, y, 0.7); cylX(w, 0.62, 0.14, FM.grey, 0, 0, 0, 24); cylX(w, 0.64, 0.1, MT.black, 0, 0, 0, 24); cylX(w, 0.14, 0.2, K, 0, 0, 0, 12); for (let i = 0; i < 4; i++) { const b = box(w, 0.16, 1.1, 0.08, K, 0, 0, 0); b.rotation.x = (i * Math.PI) / 4; } cylX(saw, 0.06, 0.45, MT.steel, -0.22, y, 0.7, 8); return w; });
+  // band saw headrig: a big orange C-frame, two large wheels (top one under a guard, bottom one in its pit housing),
+  // the steel band running round them (the cutting strand faces the log at z = 0.1), the blade guides and the motor
+  const saw = grp(all, 0, 0, 0), sw = grp(saw), O = FM.orange, WR = 0.78, WZ = 0.1 + WR, WY = [3.25, 0.35];
+  rbox(sw, 0.34, 4.0, 1.3, 0.12, O, -0.5, 2.0, WZ + 0.25, 0.04); // the column (on the infeed side, behind the wheels)
+  rbox(sw, 0.5, 0.36, 1.5, 0.08, O, -0.42, WY[0], WZ, 0.03); // arm to the top axle
+  rbox(sw, 1.3, 0.3, 1.9, 0.08, K, -0.25, 0.15, WZ + 0.1, 0.03); // base plate
+  rbox(sw, 0.7, 0.62, 1.9, 0.12, O, 0, 0.31, WZ + 0.05, 0.04); // pit housing of the bottom wheel
+  rbox(sw, 0.72, 0.1, 1.92, 0.03, MT.stripes, 0.01, 0.6, WZ + 0.05, 0.01);
+  add(sw, GUARD, FM.orangeDS, 0.02, WY[0], WZ).rotation.set(0, 0, Math.PI / 2); // top guard (half shell)
+  add(sw, GUARDP, FM.orangeDS, -0.25, WY[0], WZ).rotation.set(0, Math.PI / 2, 0); // its back plate
+  // the band: two straight strands + the bands over the wheel rims
+  [0.1, WZ + WR].forEach((z) => { box(sw, 0.24, WY[0] - WY[1], 0.03, MT.chrome, 0, (WY[0] + WY[1]) / 2, z); });
+  box(sw, 0.04, WY[0] - WY[1], 0.035, MT.black, -0.12, (WY[0] + WY[1]) / 2, 0.1); // the teeth
+  // blade guides above and below the log, the tension handwheel, the motor and its belt
+  rbox(sw, 0.4, 0.5, 0.36, 0.05, MT.dark, 0, 1.9, 0.12, 0.01); rbox(sw, 0.3, 0.16, 1.1, 0.04, O, -0.05, 2.05, 0.65, 0.01); cylY(sw, 0.06, 0.4, MT.steel, 0, 2.3, 0.65, 8);
+  rbox(sw, 0.3, 0.2, 0.2, 0.04, MT.dark, 0, 0.62, 0.2, 0.01);
+  cylX(sw, 0.2, 0.06, MT.dark, -0.72, WY[0] + 0.45, WZ + 0.5, 14); cylX(sw, 0.04, 0.16, MT.steel, -0.66, WY[0] + 0.45, WZ + 0.5, 8);
+  rbox(sw, 0.9, 0.7, 0.8, 0.08, FM.blue, -1.25, 0.45, WZ + 0.6, 0.02); cylX(sw, 0.24, 0.2, K, -0.7, 0.45, WZ + 0.6, 12); for (let i = 0; i < 4; i++) box(sw, 0.86, 0.03, 0.03, FM.blueD, -1.25, 0.25 + i * 0.13, WZ + 1.01);
+  rbox(sw, 0.5, 0.8, 0.1, 0.03, MT.dark, -0.5, 1.05, WZ + 1.01, 0.01); // belt cover
+  rbox(sw, 0.06, 0.28, 0.5, 0.02, FM.yel, -0.68, 2.6, WZ + 0.25, 0.01); // the little sign
+  const wheels = WY.map((y) => {
+    cylX(saw, 0.11, 0.62, MT.steel, -0.28, y, WZ, 10); cylX(saw, 0.16, 0.12, MT.dark, 0.18, y, WZ, 12); // axle and hub cap
+    const w = grp(saw, 0, y, WZ); cylX(w, WR - 0.02, 0.16, FM.white, 0, 0, 0, 32); add(w, BAND, MT.chrome).scale.set(0.24, WR, WR);
+    cylX(w, WR * 0.72, 0.18, MT.dark, 0, 0, 0, 28); cylX(w, WR * 0.62, 0.2, FM.white, 0, 0, 0, 28);
+    for (let i = 0; i < 3; i++) { const b = box(w, 0.22, WR * 1.5, 0.2, FM.red, 0, 0, 0); b.rotation.x = (i * Math.PI) / 3; }
+    cylX(w, 0.17, 0.26, MT.dark, 0, 0, 0, 14); return w;
+  });
+  const bladeAt = anchor(saw, 0, 2.4, 0.1);
   // carriage with knees and dogs
   const carriage = grp(all, -5, 0, 0), cS = grp(carriage);
   rbox(cS, 3.4, 0.18, 1.25, 0.05, FM.red, 0, 0.62, -0.62, 0.02); rbox(cS, 3.2, 0.3, 1.0, 0.04, K, 0, 0.36, -0.62, 0.02);
@@ -763,9 +789,11 @@ function sawmill(st, S) {
   let y = 0.26; for (let row = 0; row < 4; row++) { for (let i = 0; i < 4; i++) rbox(stack, 3.0, 0.1, 0.42, 0.02, FM.plank, rnd(-0.05, 0.05), y, -0.75 + i * 0.5, 0.01); y += 0.08; [-1.1, 0, 1.1].forEach((x) => box(stack, 0.06, 0.05, 2.1, FM.woodD, x, y, 0)); y += 0.08; }
   [[11.6, 1.6, 0], [11.4, -1.8, 0.2]].forEach(([x, z, r]) => { const s2 = grp(d, x, 0, z); s2.rotation.y = r; let yy = 0.1; for (let row = 0; row < 6; row++) { for (let i = 0; i < 4; i++) rbox(s2, 3.0, 0.1, 0.42, 0.02, FM.plank, 0, yy, -0.75 + i * 0.5, 0.01); yy += 0.18; } });
   bake(d); bake(sw); bake(cS);
-  return { all, carriage, saw, wheels, stackTop: y + 0.02 };
+  return { all, carriage, saw, wheels, bladeAt, stackTop: y + 0.02 };
 }
-const GUARD = new THREE.CylinderGeometry(0.7, 0.7, 0.24, 20, 1, true, 0, Math.PI);
+const GUARD = new THREE.CylinderGeometry(0.9, 0.9, 0.56, 24, 1, true, 0, Math.PI);
+const GUARDP = new THREE.CircleGeometry(0.9, 24, 0, Math.PI);
+const BAND = new THREE.CylinderGeometry(1, 1, 1, 36, 1, true); BAND.rotateZ(Math.PI / 2);
 /** A sawable log: a circle cut by the plane z = c (keeps z ≤ c), lying along x. */
 function cutLogGeo(r, c, L) {
   const s = new THREE.Shape();
@@ -851,34 +879,88 @@ function planter(st, S) {
   shadows(g); return { g, wheels };
 }
 
-/** Forest fire tanker (CCF): crew cab with its protective cage, tank body with lockers, roof cannon, hose reels, blue lights. */
+/** Forest fire tanker (CCF, "camion citerne feux de forêt"): a high 4x4 with a red crew cab under its protective roll cage,
+ *  a rounded tank body with roller-shutter lockers, a white band, the roof cannon, a rear hose reel, blue lights and big off-road tyres. */
 function fireTruck(st, S) {
-  const g = grp(S), d = grp(g), R = FM.red, K = MT.dark;
-  [0.45, -0.45].forEach((z) => rbox(d, 6.4, 0.3, 0.16, 0.03, MT.black, -0.2, 1.0, z));
-  truckCab(d, R, 1.9);
-  rbox(d, 0.9, 1.8, 2.2, 0.08, R, 1.45, 2.02, 0, 0.02); [1, -1].forEach((s) => rbox(d, 0.55, 0.55, 0.03, 0.05, MT.glassD, 1.45, 2.45, s * 1.1, 0.01));
-  [[1.05, 1.12], [1.05, -1.12], [3.55, 1.12], [3.55, -1.12]].forEach(([x, z]) => box(d, 0.07, 0.35, 0.07, K, x, 3.08, z));
-  rail(d, [[1.05, 3.25, 1.12], [3.55, 3.25, 1.12], [3.55, 3.25, -1.12], [1.05, 3.25, -1.12], [1.05, 3.25, 1.12]], 0.035, K); rail(d, [[2.3, 3.25, 1.12], [2.3, 3.25, -1.12]], 0.03, K);
-  rbox(d, 4.0, 1.5, 2.3, 0.1, R, -1.0, 2.0, 0, 0.03); rbox(d, 4.02, 0.16, 2.32, 0.03, FM.white, -1.0, 1.55, 0, 0.01); rbox(d, 3.8, 0.1, 2.0, 0.02, K, -1.0, 2.8, 0, 0.01);
-  [1, -1].forEach((s) => { [0.2, -1.1].forEach((x) => { rbox(d, 1.1, 0.75, 0.03, 0.04, FM.grey, x, 2.2, s * 1.16, 0.01); for (let y = 1.9; y < 2.55; y += 0.1) box(d, 1.04, 0.015, 0.04, MT.steel, x, y, s * 1.17); });
-    rbox(d, 0.9, 0.06, 0.3, 0.02, MT.black, 2.5, 0.9, s * 1.05, 0.01); });
-  rbox(d, 0.6, 1.05, 0.04, 0.03, FM.white, -2.45, 2.15, 1.17, 0.01); // the water gauge
-  // rear: two hose reels, ladder, lights
-  [0.5, -0.5].forEach((z) => { cylX(d, 0.32, 0.36, MT.dark, -3.15, 1.9, z, 16); cylX(d, 0.36, 0.3, FM.redD, -3.15, 1.9, z, 16); });
-  rail(d, [[-3.05, 0.9, 0.95], [-3.05, 2.8, 0.95]], 0.025, MT.steel); rail(d, [[-3.05, 0.9, 1.15], [-3.05, 2.8, 1.15]], 0.025, MT.steel); for (let y = 1.1; y < 2.8; y += 0.28) rod(d, new V3(-3.05, y, 0.95), new V3(-3.05, y, 1.15), 0.018, MT.steel);
-  [1, -1].forEach((s) => rbox(d, 0.06, 0.16, 0.22, 0.02, MT.tail, -3.03, 1.25, s * 0.8, 0.01));
-  rbox(d, 0.35, 0.35, 2.3, 0.06, K, 3.75, 0.85, 0, 0.02); cylZ(d, 0.13, 0.5, MT.steel, 3.85, 0.95, 0, 12); // bumper and winch
-  rail(d, [[3.7, 0.7, 1.0], [4.05, 1.0, 1.0], [4.05, 1.0, -1.0], [3.7, 0.7, -1.0]], 0.035, K);
-  cylX(d, 0.12, 1.8, FM.hose, 0.0, 1.2, -1.2, 10); // the suction hose stored on the side
-  decalOn(d, 'POMPIERS', 2.0, 0.34, '#ffffff', -1.0, 2.55, 1.17);
+  const g = grp(S), d = grp(g), R = FM.red, K = MT.dark, FX = 2.85, RX = -1.55, WR = 0.62;
+  // chassis, axles with their differentials and springs: lots of space under the truck
+  [0.48, -0.48].forEach((z) => rbox(d, 7.0, 0.28, 0.16, 0.03, MT.black, 0.3, 1.12, z));
+  [FX, RX].forEach((x) => { cylZ(d, 0.09, 1.7, K, x, WR, 0, 10); sph(d, 0.24, K, x, WR, 0).scale.set(0.24, 0.22, 0.28); rod(d, new V3(x, WR + 0.1, 0), new V3(x + (x > 0 ? -0.9 : 0.9), 1.0, 0), 0.06, K, 8); // propshaft
+    [1, -1].forEach((s) => { rbox(d, 1.3, 0.1, 0.14, 0.03, MT.black, x, 0.88, s * 0.5, 0.01); rod(d, new V3(x + 0.3, WR + 0.05, s * 0.65), new V3(x + 0.45, 1.05, s * 0.55), 0.04, MT.steel, 6); }); });
+  // the crew cab (two rows of doors)
+  const c = grp(d, 1.45, 1.3, 0);
+  ext(c, [[0, 0], [2.45, 0], [2.52, 0.6], [2.42, 0.95], [2.22, 1.8], [2.02, 1.92], [0, 1.92]], [0.04, 0.1, 0.12, 0.12, 0.2, 0.18, 0.08], 2.3, R, 0, 0, 0, 0.05);
+  box(c, 0.03, 0.88, 2.06, MT.glassD, 2.33, 1.38, 0).rotation.z = 0.23; // windscreen
+  box(c, 0.05, 0.05, 2.1, MT.black, 2.4, 0.97, 0); rod(c, new V3(2.39, 1.0, 0.25), new V3(2.3, 1.45, 0.05), 0.012, MT.black, 4); rod(c, new V3(2.39, 1.0, -0.6), new V3(2.3, 1.45, -0.8), 0.012, MT.black, 4);
+  [1, -1].forEach((s) => {
+    rbox(c, 0.78, 0.6, 0.03, 0.06, MT.glassD, 1.72, 1.42, s * 1.15, 0.01); rbox(c, 0.72, 0.6, 0.03, 0.06, MT.glassD, 0.82, 1.42, s * 1.15, 0.01); rbox(c, 0.3, 0.5, 0.03, 0.05, MT.glassD, 0.2, 1.45, s * 1.15, 0.01);
+    [2.2, 1.27, 0.38].forEach((x) => box(c, 0.025, 1.78, 0.02, MT.black, x, 0.92, s * 1.16)); box(c, 1.85, 0.02, 0.02, MT.black, 1.29, 0.04, s * 1.16);
+    [1.4, 0.5].forEach((x) => rbox(c, 0.14, 0.04, 0.03, 0.01, MT.chrome, x, 1.0, s * 1.17, 0.008));
+    rail(c, [[1.32, 0.35, s * 1.19], [1.32, 1.1, s * 1.19]], 0.018, MT.chrome);
+    // steps in two levels, between the front wheel and the back of the cab
+    [[-0.2, 0.5], [-0.55, 0.48]].forEach(([y, w]) => rbox(c, w, 0.05, 0.28, 0.02, MT.black, 0.3, y, s * 1.02, 0.01)); box(c, 0.04, 0.6, 0.04, MT.black, 0.06, -0.3, s * 1.12); box(c, 0.04, 0.6, 0.04, MT.black, 0.54, -0.3, s * 1.12);
+    // big mirrors on arms
+    rod(c, new V3(2.25, 1.55, s * 1.12), new V3(2.55, 1.62, s * 1.42), 0.022, MT.black, 6); rbox(c, 0.08, 0.46, 0.2, 0.03, MT.black, 2.58, 1.4, s * 1.45, 0.01); rbox(c, 0.02, 0.4, 0.15, 0.02, MT.glassD, 2.63, 1.4, s * 1.45, 0.005);
+    rbox(c, 0.06, 0.16, 0.14, 0.03, MT.black, 2.55, 1.08, s * 1.36, 0.01);
+    // headlights, indicators, white band
+    rbox(c, 0.06, 0.18, 0.36, 0.05, MT.lamp, 2.52, 0.38, s * 0.78, 0.01); rbox(c, 0.06, 0.1, 0.14, 0.03, MT.amber, 2.52, 0.38, s * 1.04, 0.01);
+    rbox(c, 2.42, 0.22, 0.03, 0.01, FM.white, 1.2, 0.18, s * 1.16, 0.01);
+  });
+  rbox(c, 0.06, 0.42, 1.25, 0.04, MT.black, 2.53, 0.62, 0); for (let i = 0; i < 4; i++) box(c, 0.02, 0.03, 1.15, MT.chrome, 2.57, 0.48 + i * 0.09, 0);
+  rbox(c, 0.03, 0.22, 2.3, 0.01, FM.white, 2.5, 0.18, 0, 0.01);
+  // roof: blue light bar, antenna
+  rbox(c, 0.36, 0.1, 1.7, 0.04, K, 1.8, 1.97, 0, 0.01);
+  const blues = [0.6, -0.6].map((z) => { const L = std(0x3a6aff, 0.3, 0, { emissive: 0x2a4aff, emissiveIntensity: 0.35 }); rbox(c, 0.3, 0.17, 0.4, 0.07, L, 1.8, 2.1, z, 0.02); return L; });
+  rbox(c, 0.12, 0.1, 0.5, 0.03, MT.lamp, 1.8, 2.06, 0, 0.01); rod(c, new V3(0.4, 1.92, -0.6), new V3(0.4, 2.6, -0.6), 0.012, MT.black, 4);
+  // bumper, bull bar and winch at the front
+  rbox(d, 0.32, 0.3, 2.36, 0.06, K, 4.02, 1.18, 0, 0.02); cylZ(d, 0.13, 0.55, MT.steel, 4.12, 1.22, 0, 12); rbox(d, 0.1, 0.06, 0.14, 0.02, FM.red, 4.25, 1.22, 0, 0.01);
+  rail(d, [[4.0, 1.0, 1.05], [4.3, 1.25, 1.05], [4.3, 1.95, 0.9], [4.3, 1.95, -0.9], [4.3, 1.25, -1.05], [4.0, 1.0, -1.05]], 0.04, K); [0.4, -0.4].forEach((z) => rail(d, [[4.3, 1.25, z], [4.3, 1.95, z]], 0.035, K));
+  // the protective roll cage over the cab
+  const CG = MT.steel;
+  [1, -1].forEach((s) => { rail(d, [[4.12, 1.32, s * 1.2], [4.0, 2.25, s * 1.22], [3.68, 3.42, s * 1.12], [1.5, 3.42, s * 1.12], [1.38, 3.2, s * 1.12]], 0.05, CG); rail(d, [[2.4, 3.42, s * 1.12], [2.4, 3.22, s * 1.12]], 0.04, CG); });
+  [3.68, 2.4, 1.5].forEach((x) => rail(d, [[x, 3.42, 1.12], [x, 3.42, -1.12]], 0.045, CG)); rail(d, [[2.4, 3.42, 1.12], [1.5, 3.42, -1.12]], 0.035, CG); rail(d, [[2.4, 3.42, -1.12], [1.5, 3.42, 1.12]], 0.035, CG);
+  // the tank body: rounded, red, with a white band low down and roller-shutter lockers
+  rbox(d, 4.5, 1.9, 2.3, 0.24, R, -0.95, 2.25, 0, 0.08);
+  [1, -1].forEach((s) => {
+    rbox(d, 4.46, 0.22, 0.03, 0.01, FM.white, -0.95, 1.48, s * 1.155, 0.01);
+    [0.68, -0.47, -1.62].forEach((x) => {
+      rbox(d, 1.05, 1.22, 0.04, 0.03, MT.steel, x, 2.28, s * 1.15, 0.01);
+      for (let y = 1.76; y < 2.86; y += 0.085) box(d, 0.97, 0.014, 0.02, FM.grey, x, y, s * 1.17);
+      rbox(d, 0.6, 0.05, 0.04, 0.02, MT.chrome, x, 1.74, s * 1.18, 0.01);
+    });
+    [1.24, 0.105, -1.045, -2.2].forEach((x) => box(d, 0.025, 1.85, 0.02, K, x, 2.25, s * 1.16)); // panel lines
+    rbox(d, 0.08, 0.06, 0.04, 0.02, MT.amber, -3.0, 1.48, s * 1.17, 0.01); rbox(d, 0.08, 0.06, 0.04, 0.02, MT.amber, 1.1, 1.36, s * 1.17, 0.01);
+    // auto-protection pipe with its little sprinklers under the body
+    cylX(d, 0.03, 4.3, MT.steel, -0.95, 1.25, s * 1.12, 6); for (let x = -3.0; x < 1.2; x += 0.7) cylY(d, 0.035, 0.08, MT.dark, x, 1.2, s * 1.12, 6);
+  });
+  rbox(d, 0.5, 1.05, 0.04, 0.03, FM.white, -2.65, 2.22, 1.15, 0.01); for (let i = 0; i < 5; i++) box(d, 0.12, 0.015, 0.02, K, -2.48, 1.8 + i * 0.22, 1.17); // the water gauge
+  // the top: anti-slip deck, hand rails, hose basket
+  rbox(d, 4.2, 0.05, 2.0, 0.02, MT.steel, -0.95, 3.2, 0, 0.01);
+  [1, -1].forEach((s) => { rail(d, [[1.1, 3.22, s * 1.02], [1.1, 3.55, s * 1.02], [-3.0, 3.55, s * 1.02], [-3.0, 3.22, s * 1.02]], 0.025, FM.white); [-0.3, -1.6].forEach((x) => rail(d, [[x, 3.22, s * 1.02], [x, 3.55, s * 1.02]], 0.02, FM.white)); });
+  rbox(d, 1.0, 0.25, 0.8, 0.04, K, -2.2, 3.35, 0, 0.01); for (let i = 0; i < 3; i++) cylY(d, 0.3, 0.07, FM.hose, -2.2, 3.28 + i * 0.07, 0, 14);
+  // the rear: a big hose reel, the ladder, lights and the bumper
+  cylZ(d, 0.18, 1.8, K, -3.55, 2.15, 0, 12); cylZ(d, 0.42, 1.5, FM.hose, -3.55, 2.15, 0, 20); for (let z = -0.6; z <= 0.61; z += 0.3) cylZ(d, 0.425, 0.03, std(0xa89e88, 0.8, 0), -3.55, 2.15, z, 20);
+  [0.82, -0.82].forEach((z) => { cylZ(d, 0.55, 0.06, FM.redD, -3.55, 2.15, z, 24); cylZ(d, 0.12, 0.12, MT.chrome, -3.55, 2.15, z * 1.08, 10); rbox(d, 0.4, 0.9, 0.08, 0.03, K, -3.35, 1.75, z * 1.1, 0.01); });
+  rail(d, [[-3.24, 1.0, 1.0], [-3.24, 3.2, 1.0]], 0.025, MT.steel); rail(d, [[-3.24, 1.0, 1.16], [-3.24, 3.55, 1.16]], 0.025, MT.steel); for (let y = 1.2; y < 3.2; y += 0.28) rod(d, new V3(-3.24, y, 1.0), new V3(-3.24, y, 1.16), 0.018, MT.steel);
+  [1, -1].forEach((s) => { rbox(d, 0.06, 0.2, 0.24, 0.02, MT.tail, -3.22, 1.45, s * 0.75, 0.01); rbox(d, 0.06, 0.1, 0.12, 0.02, MT.amber, -3.22, 1.6, s * 0.75, 0.01); });
+  rbox(d, 0.25, 0.22, 2.3, 0.04, K, -3.3, 1.12, 0, 0.02); rbox(d, 0.04, 0.14, 2.0, 0.01, MT.stripes, -3.43, 1.12, 0, 0.005);
+  // tool box (+z) and the suction hose stored on the other side (−z), between the wheels
+  rbox(d, 1.7, 0.42, 0.34, 0.05, K, 0.15, 1.05, 1.0, 0.02); rbox(d, 1.6, 0.03, 0.02, 0.01, MT.chrome, 0.15, 1.18, 1.18, 0.005);
+  cylX(d, 0.12, 1.9, FM.hose, 0.15, 1.05, -1.12, 12); [-0.6, 0.9].forEach((x) => cylX(d, 0.13, 0.06, K, x, 1.05, -1.12, 12));
+  // mud flaps behind each wheel
+  [FX, RX].forEach((x) => [1, -1].forEach((s) => rbox(d, 0.04, 0.5, 0.5, 0.02, MT.black, x - 0.78, 0.62, s * 1.0, 0.01)));
+  decalOn(d, 'POMPIERS', 2.2, 0.24, '#ffffff', -0.5, 3.02, 1.17);
   bake(d);
-  const level = grp(g, -2.45, 1.7, 1.2); rbox(level, 0.4, 0.9, 0.03, 0.02, FM.water, 0, 0.45, 0, 0.01); level.scale.y = 0.05;
-  const blues = [0.6, -0.6].map((z) => { const L = std(0x3a6aff, 0.3, 0, { emissive: 0x2a4aff, emissiveIntensity: 0.35 }); rbox(g, 0.28, 0.16, 0.36, 0.06, L, 2.8, 3.0, z, 0.02); return L; });
+  // blue lights at the back too (they blink with the ones on the cab)
+  [0.85, -0.85].forEach((z, i) => rbox(g, 0.16, 0.14, 0.22, 0.05, blues[i], -3.05, 3.32, z, 0.02));
+  const level = grp(g, -2.8, 1.75, 1.18); rbox(level, 0.16, 0.92, 0.03, 0.02, FM.water, 0, 0.46, 0, 0.01); level.scale.y = 0.05;
   st.beacons = blues;
-  const mon = grp(g, 0.6, 2.85, 0); cylY(mon, 0.18, 0.3, K, 0, 0.15, 0, 12); const barrel = grp(mon, 0, 0.35, 0); cylX(barrel, 0.09, 1.0, FM.grey, 0.45, 0, 0, 10); cylX(barrel, 0.12, 0.2, K, 0.95, 0, 0, 10);
-  const nozzle = anchor(barrel, 1.1, 0, 0);
+  const mon = grp(g, -0.2, 3.22, 0); cylY(mon, 0.2, 0.2, K, 0, 0.1, 0, 12); cylY(mon, 0.07, 0.3, FM.grey, 0, 0.3, 0, 8);
+  const barrel = grp(mon, 0, 0.42, 0); sph(barrel, 0.11, FM.grey, 0, 0, 0); cylX(barrel, 0.08, 0.9, FM.grey, 0.45, 0, 0, 10); cylX(barrel, 0.12, 0.22, FM.red, 0.95, 0, 0, 12); cylX(barrel, 0.09, 0.06, MT.dark, 1.08, 0, 0, 12);
+  rod(barrel, new V3(-0.05, 0.08, 0), new V3(-0.3, 0.15, 0), 0.025, MT.black, 6);
+  const nozzle = anchor(barrel, 1.12, 0, 0);
   const wheels = [];
-  [1, -1].forEach((s) => [2.25, -1.75].forEach((x) => { wheels.push(tire(g, 0.56, 0.46, x, 0.56, s * 0.98, FM.white, s)); fender(g, 0.68, 0.5, x, 0.56, s * 0.98, MT.dark, Math.PI * 0.55); }));
+  [1, -1].forEach((s) => [FX, RX].forEach((x) => { wheels.push(agriTire(g, WR, 0.5, x, WR, s * 1.0, FM.white, s)); fender(g, WR + 0.12, 0.6, x, WR, s * 1.0, MT.black, Math.PI * 0.62); }));
   shadows(g); return { g, wheels, mon, barrel, nozzle, level };
 }
 /** A painted word on a vehicle's +z side, kept in its own little group so freeze() leaves its texture alone. */
@@ -948,7 +1030,7 @@ function buildForest(scene) {
   [[-46, -3], [20, -6.5], [-11, -1.5]].forEach(([h, d], i) => { const g = at(scene, h, d); cylY(g, 0.06, 1.6, FM.timber, 0, 0.8, 0, 6); rbox(g, 1.1, 0.5, 0.06, 0.02, FM.wood, 0, 1.55, 0.04, 0.01); decal(g, ['FORÊT', 'SCIERIE', 'CHANTIER'][i], 1.0, 0.36, '#4a2a14', 0, 1.55, 0.075); });
   [[10, 24], [32, 30], [-2, 31]].forEach(([h, d]) => { const g = at(scene, h, d, YAW + 0.4); logY(g, 1.8, 0.22, 0, 0.22, 0).rotation.z = Math.PI / 2; });
   // roadside log piles along the track (still)
-  [[-20, -8], [10, -8.5], [36, -6]].forEach(([h, d]) => { const g = at(scene, h, d); logStack(g, 0, 0, 4, 3.6, 0.18); });
+  [[-20, -8], [36, -6]].forEach(([h, d]) => { const g = at(scene, h, d); logStack(g, 0, 0, 4, 3.6, 0.18); });
   return scene;
 }
 

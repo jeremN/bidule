@@ -626,6 +626,58 @@ const worlds = [
           </g>
         </svg>
       )
+    },
+  {
+      to: '/travaux' as const,
+      title: 'La Route',
+      text: 'On refait la rue du village : la raboteuse, la balayeuse, le finisseur tout chaud, les compacteurs, la traceuse… et le signaleur qui fait passer les voitures.',
+      art: (
+        <svg viewBox="0 0 240 150" aria-hidden="true">
+          <defs>
+            <linearGradient id="tr-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#bfe3ff" /><stop offset="1" stopColor="#fdf3dc" /></linearGradient>
+          </defs>
+          <rect width="240" height="150" fill="url(#tr-sky)" />
+          <circle cx="206" cy="28" r="15" fill="#fff4d2" />
+          <g fill="#fff" opacity=".9"><ellipse cx="60" cy="24" rx="18" ry="6" /><ellipse cx="74" cy="19" rx="11" ry="7" /></g>
+          {/* the village behind the road */}
+          <g {...ol}>
+            <rect x="8" y="58" width="34" height="36" fill="#f1e6d2" /><path d="M4 60L25 40L46 60Z" fill="#c0583a" />
+            <rect x="16" y="66" width="8" height="10" fill="#2c3e5a" /><rect x="28" y="78" width="8" height="16" fill="#6b3b2a" />
+            <rect x="150" y="62" width="30" height="32" fill="#e9d6b4" /><path d="M146 64L165 46L184 64Z" fill="#5a6070" />
+            <rect x="157" y="70" width="7" height="9" fill="#2c3e5a" /><rect x="168" y="70" width="7" height="9" fill="#2c3e5a" />
+            <rect x="196" y="40" width="16" height="54" fill="#d8ccb0" /><path d="M192 42L204 14L216 42Z" fill="#5a6070" />
+          </g>
+          <path d="M0 96H240V150H0Z" fill="#8fb56a" />
+          {/* the road: old and cracked on the right, new and black with white lines on the left */}
+          <path d="M0 104H240V134H0Z" fill="#8a8a92" />
+          <path d="M0 104H112V134H0Z" fill="#33343c" />
+          <g stroke="#55565e" strokeWidth="1.6" fill="none" strokeLinecap="round"><path d="M150 112l8 4 4 8M190 108l-6 6 6 6 -4 8M214 122l10-4" /></g>
+          <g stroke="#fff" strokeWidth="3"><path d="M6 119h14M32 119h14M58 119h14M84 119h14" /></g>
+          <path d="M0 104H240M0 134H240" stroke={INK} strokeWidth="2.5" />
+          {/* cones */}
+          <g {...ol} fill="#f06a2a"><path d="M128 102l4-14 4 14z" /><path d="M224 102l4-14 4 14z" /></g>
+          <g fill="#fff"><rect x="129.5" y="93" width="5" height="3" /><rect x="225.5" y="93" width="5" height="3" /></g>
+          {/* the flagger with his K10 paddle */}
+          <g {...ol}>
+            <path d="M210 82v22" /><circle cx="210" cy="78" r="7" fill="#e5452c" />
+            <rect x="194" y="84" width="10" height="18" rx="3" fill="#ff8f1f" /><circle cx="199" cy="78" r="5" fill="#f0c39a" />
+            <path d="M193 77a6 5 0 0 1 12 0z" fill="#ffd23a" />
+          </g>
+          {/* the paver, laying hot asphalt */}
+          <g className="bob">
+            <g fill="#fff" opacity=".85"><circle cx="40" cy="98" r="4" /><circle cx="50" cy="92" r="5" /><circle cx="44" cy="84" r="4" /></g>
+            <g {...ol}>
+              <rect x="56" y="104" width="22" height="12" rx="2" fill="#f6c419" />
+              <rect x="70" y="86" width="58" height="20" rx="4" fill="#f6c419" />
+              <path d="M126 88l26-12v28h-26z" fill="#cf9a10" />
+              <path d="M80 86V60M118 86V60" /><rect x="74" y="56" width="50" height="6" rx="2" fill="#f4f5f8" />
+              <rect x="74" y="106" width="56" height="16" rx="8" fill="#2e323e" />
+              <g fill="#aab2be"><circle cx="84" cy="114" r="4" /><circle cx="102" cy="114" r="4" /><circle cx="120" cy="114" r="4" /></g>
+              <circle cx="98" cy="74" r="6" fill="#f0c39a" /><path d="M92 73a6 5 0 0 1 12 0z" fill="#ffd23a" />
+            </g>
+          </g>
+        </svg>
+      )
     }
 ];
 function Home() {
