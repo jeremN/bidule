@@ -254,7 +254,42 @@ const worlds = [
         <g {...ol}><rect x="16" y="54" width="4" height="58" fill="#f4f5f8" /><rect x="20" y="56" width="10" height="16" fill="#2f4fa8" /><rect x="30" y="56" width="10" height="16" fill="#f4f5f8" /><rect x="40" y="56" width="10" height="16" fill="#d8302a" /></g>
       </svg>
     )
-  }
+  },
+  {
+      to: '/usine' as const,
+      title: "L'Usine",
+      text: "La presse, les robots soudeurs, la peinture, la chaîne de montage, le chariot élévateur, le camion porte-voitures…",
+      art: (
+        <svg viewBox="0 0 240 150" aria-hidden="true">
+          <defs>
+            <linearGradient id="us-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#a8d8ff" /><stop offset="1" stopColor="#eaf6ff" /></linearGradient>
+          </defs>
+          <rect width="240" height="150" fill="url(#us-sky)" />
+          <g fill="#fff"><ellipse cx="46" cy="24" rx="18" ry="6" /><ellipse cx="60" cy="19" rx="11" ry="7" /></g>
+          <g {...ol}>
+            <path d="M120 112V58l20-14v14l20-14v14l20-14v14l20-14v68z" fill="#eee6d4" />
+            <rect x="206" y="22" width="12" height="90" fill="#c9ced8" />
+            <rect x="128" y="76" width="18" height="12" fill="#8cc4ec" /><rect x="154" y="76" width="18" height="12" fill="#8cc4ec" /><rect x="180" y="76" width="18" height="12" fill="#8cc4ec" />
+          </g>
+          <path d="M0 112H240V150H0Z" fill="#c7cad3" />
+          <path d="M0 124H240" stroke="#f2c21c" strokeWidth="3" strokeDasharray="12 8" />
+          <g className="bob">
+            <g {...ol}>
+              <rect x="26" y="104" width="30" height="10" rx="2" fill="#2a2f40" />
+              <rect x="32" y="94" width="18" height="12" rx="4" fill="#f26a1a" />
+              <path d="M41 96L52 58L96 48" fill="none" stroke={INK} strokeWidth="15" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M41 96L52 58L96 48" fill="none" stroke="#f26a1a" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" />
+              <circle cx="52" cy="58" r="7" fill="#3f4452" />
+              <path d="M96 48l10 16" stroke={INK} strokeWidth="7" strokeLinecap="round" />
+              <path d="M84 116V102q2-8 12-8h16l12-13h24q10 0 13 13v22z" fill="#e5302a" />
+              <path d="M118 92l9-9h18q6 0 8 9z" fill="#8cc4ec" />
+              <circle cx="102" cy="116" r="8" fill="#3a3550" /><circle cx="148" cy="116" r="8" fill="#3a3550" />
+            </g>
+            <g fill="#ffc24a"><circle cx="110" cy="70" r="3" /><circle cx="118" cy="64" r="2" /><circle cx="104" cy="66" r="2" /><circle cx="116" cy="74" r="1.8" /></g>
+          </g>
+        </svg>
+      )
+    }
 ];
 function Home() {
   return (
