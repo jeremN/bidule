@@ -376,6 +376,61 @@ const worlds = [
           </g>
         </svg>
       )
+    },
+  {
+      to: '/port' as const,
+      title: 'Le Port',
+      text: 'Un grand port au bord de la mer : le porte-conteneurs, les remorqueurs, le portique géant, le cavalier, le camion, le train…',
+      art: (
+        <svg viewBox="0 0 240 150" aria-hidden="true">
+          <defs>
+            <linearGradient id="po-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#9fd8ff" /><stop offset="1" stopColor="#e8f6ff" /></linearGradient>
+            <linearGradient id="po-sea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#4a9ae8" /><stop offset="1" stopColor="#2f72c8" /></linearGradient>
+          </defs>
+          <rect width="240" height="150" fill="url(#po-sky)" />
+          <circle cx="34" cy="28" r="14" fill="#ffd65a" />
+          <g fill="#fff"><ellipse cx="96" cy="22" rx="18" ry="6" /><ellipse cx="108" cy="17" rx="11" ry="7" /></g>
+          {/* gulls */}
+          <g fill="none" stroke={INK} strokeWidth="2" strokeLinecap="round"><path d="M60 40q4-4 8 0q4-4 8 0" /><path d="M134 30q3-3 6 0q3-3 6 0" /></g>
+          {/* the gantry crane on the quay */}
+          <g {...ol}>
+            <path d="M176 112V44M206 112V44" fill="none" stroke="#2f6fe0" strokeWidth="5" />
+            <rect x="120" y="36" width="116" height="9" fill="#2f6fe0" />
+            <path d="M186 36L194 14L202 36M194 14L128 36M194 14L232 36" fill="none" stroke="#2f6fe0" strokeWidth="3" />
+            <rect x="214" y="24" width="20" height="12" rx="2" fill="#f4f5f8" />
+            <rect x="140" y="45" width="12" height="8" rx="2" fill="#f2b21c" />
+          </g>
+          <path d="M146 53v18" stroke={INK} strokeWidth="2" />
+          <rect {...ol} x="134" y="71" width="24" height="12" fill="#ee7a26" />
+          <path d="M0 106Q60 100 120 106T240 104V150H0Z" fill="url(#po-sea)" />
+          <rect x="164" y="104" width="76" height="46" fill="#b4b6c2" />
+          <path d="M164 104H240" stroke="#f2b21c" strokeWidth="3" />
+          <g fill="#fff" opacity=".7"><path d="M10 124h16M40 132h20M80 122h14M110 136h18" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" /></g>
+          <g className="bob">
+            <g {...ol}>
+              <path d="M8 96H160L150 118H18Z" fill="#1d3a7a" />
+              <path d="M18 118H150L152 112H16Z" fill="#c0302a" />
+              <rect x="14" y="62" width="22" height="34" fill="#f4f5f8" />
+              <rect x="18" y="52" width="10" height="10" fill="#e5452c" />
+              <rect x="44" y="82" width="22" height="14" fill="#d8402a" />
+              <rect x="66" y="82" width="22" height="14" fill="#2f6fe0" />
+              <rect x="88" y="82" width="22" height="14" fill="#f2b21c" />
+              <rect x="110" y="82" width="22" height="14" fill="#3aa46a" />
+              <rect x="44" y="68" width="22" height="14" fill="#1f9aa8" />
+              <rect x="66" y="68" width="22" height="14" fill="#ee7a26" />
+              <rect x="88" y="68" width="22" height="14" fill="#d8402a" />
+            </g>
+            <rect x="17" y="66" width="16" height="6" fill="#7fcdee" />
+            <path d="M18 104h12M134 104h10" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
+          </g>
+          {/* a little tug pushing */}
+          <g {...ol}>
+            <path d="M2 124H34L30 134H6Z" fill="#d8302a" />
+            <rect x="12" y="114" width="12" height="10" rx="2" fill="#f4f5f8" />
+            <circle cx="34" cy="126" r="4" fill="#3a3550" />
+          </g>
+        </svg>
+      )
     }
 ];
 function Home() {
