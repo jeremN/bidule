@@ -573,6 +573,59 @@ const worlds = [
           </g>
         </svg>
       )
+    },
+  {
+      to: '/secours' as const,
+      title: 'Les Secours',
+      text: 'La caserne, la police et l’hôpital : la grande échelle, le fourgon pompe, les ambulances, la moto, l’hélicoptère Dragon, le bateau…',
+      art: (
+        <svg viewBox="0 0 240 150" aria-hidden="true">
+          <defs>
+            <linearGradient id="se-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#9fd4ff" /><stop offset="1" stopColor="#e8f5ff" /></linearGradient>
+          </defs>
+          <rect width="240" height="150" fill="url(#se-sky)" />
+          <g fill="#fff"><ellipse cx="48" cy="24" rx="18" ry="7" /><ellipse cx="62" cy="19" rx="11" ry="7" /></g>
+          {/* the fire station: training tower, brick hall with its big red doors */}
+          <g {...ol}>
+            <rect x="206" y="22" width="22" height="86" fill="#d8302a" />
+            <rect x="212" y="32" width="10" height="10" fill="#2a2f40" /><rect x="212" y="54" width="10" height="10" fill="#2a2f40" /><rect x="212" y="76" width="10" height="10" fill="#2a2f40" />
+            <rect x="128" y="50" width="80" height="58" fill="#c4583a" />
+            <rect x="124" y="46" width="88" height="8" fill="#e9dcc4" />
+            <rect x="136" y="72" width="28" height="36" fill="#d8302a" /><rect x="172" y="72" width="28" height="36" fill="#d8302a" />
+            <path d="M136 82h28M136 92h28M172 82h28M172 92h28" strokeWidth="1.5" />
+            <rect x="144" y="58" width="48" height="9" rx="2" fill="#fff" />
+          </g>
+          <path d="M150 62.5h36" stroke="#d8302a" strokeWidth="3" strokeLinecap="round" />
+          <g {...ol}>
+            <rect x="14" y="40" width="7" height="68" fill="#8a5a3a" />
+            <circle cx="17" cy="32" r="19" fill="#5aa85a" />
+            <circle cx="94" cy="44" r="13" fill="#4a9a4a" />
+            <rect x="91" y="56" width="6" height="52" fill="#8a5a3a" />
+          </g>
+          <path d="M0 108H240V150H0Z" fill="#8a8ea0" />
+          <path d="M0 124H240" stroke="#f3efe2" strokeWidth="3" strokeDasharray="14 10" />
+          <path d="M0 106Q60 100 120 106V112H0Z" fill="#8cc46a" />
+          <g className="bob">
+            <g {...ol}>
+              {/* ladder raised towards a little cat */}
+              <path d="M62 92L50 46" fill="none" stroke={INK} strokeWidth="13" strokeLinecap="round" />
+              <path d="M62 92L50 46" fill="none" stroke="#dfe3ea" strokeWidth="8" strokeLinecap="round" />
+              <ellipse cx="40" cy="38" rx="6" ry="4.5" fill="#f0922a" />
+              <circle cx="45" cy="33" r="4" fill="#f0922a" />
+              <rect x="30" y="38" width="24" height="12" rx="2" fill="#d8302a" />
+              <rect x="22" y="96" width="92" height="24" rx="4" fill="#d8302a" />
+              <rect x="114" y="82" width="38" height="38" rx="6" fill="#d8302a" />
+              <rect x="126" y="88" width="20" height="14" rx="3" fill="#9fe0ff" />
+              <rect x="122" y="76" width="22" height="6" rx="2" fill="#3a6aff" />
+              <rect x="30" y="102" width="20" height="12" rx="2" fill="#c9ced8" /><rect x="56" y="102" width="20" height="12" rx="2" fill="#c9ced8" /><rect x="82" y="102" width="20" height="12" rx="2" fill="#c9ced8" />
+              <circle cx="50" cy="124" r="11" fill="#3a3550" /><circle cx="132" cy="124" r="11" fill="#3a3550" />
+              <circle cx="50" cy="124" r="4" fill="#c9ced8" /><circle cx="132" cy="124" r="4" fill="#c9ced8" />
+              <circle cx="62" cy="92" r="7" fill="#8e141c" />
+            </g>
+            <path d="M22 116H152" stroke="#f2d21c" strokeWidth="3" />
+          </g>
+        </svg>
+      )
     }
 ];
 function Home() {
