@@ -16,6 +16,7 @@ Chaque « monde » est un petit diorama vivant en 3D, dans un style de dessin an
 | **La Carrière** | foreuse, brise-roche, grosse pelle, tombereau, concasseur, crible, chargeuse, arroseuse (de la roche au gravier qui part pour le chantier) |
 | **Le Recyclage** | camion-poubelle, camion grue du verre, centre de tri, aimant géant, presse à balles, chariot élévateur, grue à grappin, broyeur de branches (ce que deviennent nos poubelles) |
 | **Le Port** | porte-conteneurs, bateau-pilote, remorqueur, portique, cavalier, chariot porte-conteneurs, camion, train (un conteneur voyage du bateau jusqu'au train) |
+| **La Forêt** | abatteuse, porteur, grumier, scierie, broyeuse, planteuse, camion de pompiers forestiers (de l'arbre à la planche, et on replante) |
 
 L'idée de départ vient de [os-taxonomy de Marble](https://github.com/withmarbleapp/os-taxonomy), un graphe des notions du primaire avec leurs prérequis. À terme, chaque monde pourra être rattaché aux notions du programme français (maternelle → lycée).
 
@@ -31,7 +32,7 @@ npm run build    # site statique prérendu dans dist/client
 npm run check    # eslint + TypeScript
 ```
 
-L'app est construite avec [TanStack Start](https://tanstack.com/start) (React) en **prérendu statique** : chaque page (`/`, `/chantier`, `/ferme`, `/ville`, `/espace`, `/aeroport`, `/militaire`, `/usine`, `/carriere`, `/recyclage`, `/port`) est générée en HTML au build, puis la navigation se fait côté client.
+L'app est construite avec [TanStack Start](https://tanstack.com/start) (React) en **prérendu statique** : chaque page (`/`, `/chantier`, `/ferme`, `/ville`, `/espace`, `/aeroport`, `/militaire`, `/usine`, `/carriere`, `/recyclage`, `/port`, `/foret`) est générée en HTML au build, puis la navigation se fait côté client.
 Le moteur 3D est chargé uniquement dans le navigateur (import dynamique dans `WorldStage`), il ne tourne jamais pendant le prérendu.
 
 Pour tester vite dans un navigateur lent (rendu logiciel, CI), ajoute `?fast` à l'URL d'un monde : les animations avancent par grands pas. `?noink` coupe les contours, `?debug` expose `window.__bidule` (renderer, scène) pour mesurer.
@@ -73,6 +74,7 @@ src/
     carriere.js       la carrière
     recyclage.js      le recyclage
     port.js           le port
+    foret.js          la forêt
 ```
 
 ## Ajouter un monde

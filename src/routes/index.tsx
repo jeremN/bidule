@@ -431,6 +431,54 @@ const worlds = [
           </g>
         </svg>
       )
+    },
+  {
+      to: '/foret' as const,
+      title: 'La Forêt',
+      text: 'L’abatteuse, le porteur, le grumier, la scierie, la broyeuse… et la planteuse qui replante les arbres.',
+      art: (
+        <svg viewBox="0 0 240 150" aria-hidden="true">
+          <defs>
+            <linearGradient id="fo-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#b8e6c8" /><stop offset="1" stopColor="#f0f8e0" /></linearGradient>
+          </defs>
+          <rect width="240" height="150" fill="url(#fo-sky)" />
+          <circle cx="200" cy="28" r="14" fill="#ffd65a" />
+          <g fill="#fff"><ellipse cx="60" cy="24" rx="18" ry="7" /><ellipse cx="74" cy="19" rx="11" ry="8" /></g>
+          {/* pines in the back */}
+          <g {...ol} fill="#3a7a44">
+            <path d="M150 104L166 52L182 104Z" /><path d="M176 104L194 40L212 104Z" /><path d="M204 104L220 58L236 104Z" />
+            <path d="M8 98L22 56L36 98Z" />
+          </g>
+          <g fill="#2f6b3a"><path d="M194 52L186 78H202Z" /><path d="M166 64L160 84H172Z" /></g>
+          <path d="M0 104Q60 92 130 100T240 98V150H0Z" fill="#9ccb6a" />
+          <path d="M0 124Q90 114 170 122T240 120V150H0Z" fill="#7aa84e" />
+          {/* stacked logs */}
+          <g {...ol} fill="#e8c48a" strokeWidth="2">
+            <circle cx="166" cy="116" r="7" /><circle cx="180" cy="116" r="7" /><circle cx="194" cy="116" r="7" /><circle cx="173" cy="104" r="7" /><circle cx="187" cy="104" r="7" />
+          </g>
+          <g fill="#b98345"><circle cx="166" cy="116" r="2" /><circle cx="180" cy="116" r="2" /><circle cx="194" cy="116" r="2" /><circle cx="173" cy="104" r="2" /><circle cx="187" cy="104" r="2" /></g>
+          {/* a young tree */}
+          <g {...ol}><path d="M218 132l7-20 7 20z" fill="#5aa040" /><path d="M225 132v6" /></g>
+          <g className="bob">
+            {/* the harvester: crane holding a log */}
+            <path d="M62 84L84 44L126 58" fill="none" stroke={INK} strokeWidth="13" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M62 84L84 44L126 58" fill="none" stroke="#f2b51c" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" />
+            <g {...ol}>
+              <rect x="118" y="58" width="16" height="22" rx="4" fill="#f2b51c" />
+              <rect x="104" y="78" width="54" height="10" rx="5" fill="#8a5a3a" />
+              <circle cx="158" cy="83" r="5" fill="#e8c48a" />
+              <rect x="22" y="94" width="96" height="20" rx="6" fill="#f2b51c" />
+              <rect x="74" y="62" width="34" height="34" rx="5" fill="#f2b51c" />
+              <rect x="80" y="67" width="22" height="20" rx="3" fill="#9fe0ff" />
+              <rect x="26" y="84" width="40" height="12" rx="4" fill="#e0a010" />
+              <circle cx="38" cy="118" r="11" fill="#3a3550" /><circle cx="80" cy="120" r="9" fill="#3a3550" /><circle cx="102" cy="120" r="9" fill="#3a3550" />
+            </g>
+            <path d="M84 72l12 12" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
+            <g fill="#9b96b8"><circle cx="38" cy="118" r="4" /><circle cx="80" cy="120" r="3" /><circle cx="102" cy="120" r="3" /></g>
+            <rect x="88" y="56" width="8" height="5" rx="2" fill="#ffa53a" />
+          </g>
+        </svg>
+      )
     }
 ];
 function Home() {
