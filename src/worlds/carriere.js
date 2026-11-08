@@ -276,9 +276,11 @@ export default {
       const rampY = (x) => (x <= R.x0 ? 0 : x >= R.x1 ? R.H : (R.H * (x - R.x0)) / (R.x1 - R.x0));
       const settle = () => { const x = m.position.x, yF = rampY(x - 2.3), yR = rampY(x + 1.7); m.position.y = yR + ((yF - yR) * 1.7) / 4.0; m.rotation.z = Math.atan2(yF - yR, 4.0); };
       const spin = spinner(m, H.wheels), lip = anchor(H.bed, -1.7, 0.9, 0);
-      let level = 0; const setLoad = (v) => { level = clamp(v, 0, 1); H.load.visible = level > 0.02; H.load.scale.set(1, Math.max(0.05, level), 1); };
+      let level = 0; const setLoad = (v) => { level = clamp(v, 0, 1); H.load.visible = level > 0.02; H.load.scale.y = Math.max(0.05, level); };
+      // while the body tips, the heap slides back: its front edge recedes towards the tailgate, it stays inside the body
+      const slide = (k) => { const x0 = -0.8, x1 = 4.7 - 5.0 * k, w = (x1 - x0) / 2; H.load.position.x = x0 + w; H.load.scale.x = w / 2.8; H.load.scale.z = 1 - 0.35 * k; };
       SH.truckLoad = (dv) => { const v0 = level; return tw(0.8, (k) => setLoad(v0 + dv * k)); };
-      SH.truckReset = async () => { if (!st.done) return; m.position.set(0, 0, 0); m.rotation.set(0, 0, 0); H.bed.rotation.z = 0; setLoad(0); spin(); await pop(m, 0.6); st.done = false; };
+      SH.truckReset = async () => { if (!st.done) return; m.position.set(0, 0, 0); m.rotation.set(0, 0, 0); H.bed.rotation.z = 0; slide(0); setLoad(0); spin(); await pop(m, 0.6); st.done = false; };
       part(st, 'roues', 'les roues géantes', anchor(m, 2.3, 1.4, 2.6), true);
       part(st, 'cabine', 'la cabine', anchor(m, 2.85, 4.95, -1.45), true);
       part(st, 'escalier', "l'escalier", anchor(m, 4.3, 2.2, -1.2), false);
@@ -299,8 +301,8 @@ export default {
         const into = wp(SH.hopper, 0.3);
         let sent = 0;
         await Promise.all([step('Sa benne se lève : les cailloux tombent dans la trémie !', 'verins'), to(H.bed.rotation, 'z', XL, 3.2, easeSine),
-          sleep(1.2).then(() => { thud(); if (SH.hopperFill) SH.hopperFill(1); return tw(2, (k) => { setLoad(1 - k); H.load.position.x = 1.7 - 1.6 * k; const want = Math.floor(k * 22); while (sent < want) { throwClod(wp(lip), into, rnd(0.18, 0.34), sent % 2 ? STONE : STONE2); sent++; } }); })]);
-        H.load.position.x = 1.7; setLoad(0);
+          sleep(1.2).then(() => { thud(); if (SH.hopperFill) SH.hopperFill(1); return tw(2, (k) => { setLoad(1 - k); slide(k); const want = Math.floor(k * 22); while (sent < want) { throwClod(wp(lip), into, rnd(0.18, 0.34), sent % 2 ? STONE : STONE2); sent++; } }); })]);
+        slide(0); setLoad(0);
         await Promise.all([step('La benne redescend. Le tombereau repart chercher d’autres cailloux.', 'benne'), to(H.bed.rotation, 'z', 0, 2.4, easeSine)]);
         st.moving = true;
         await tw(3.6, (k) => { m.position.x = XO - (XO - 3) * k; settle(); }, easeSine);

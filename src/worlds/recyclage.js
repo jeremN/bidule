@@ -34,6 +34,9 @@ const RM = {
   cream: std(0xf3e6cc, 0.85, 0), peach: std(0xf2c09a, 0.85, 0), wallW: std(0xf4f1ea, 0.85, 0), wallY: std(0xf4dc9a, 0.85, 0),
   shutB: std(0x4a8ad8, 0.7, 0), shutG: std(0x5aa86a, 0.7, 0), shutR: std(0xc85a4a, 0.7, 0), door: std(0x6a3f2a, 0.7, 0),
   clad: std(0x2f8a50, 0.6, 0.2), cladW: std(0xe8ecf0, 0.5, 0.2), mud: std(0x7a5a3a, 0.95, 0), chips: std(0xc8945a, 0.95, 0), soil: std(0x5a4030, 0.95, 0),
+  chuteB: std(0x2f6fe0, 0.4, 0.15, { side: THREE.DoubleSide }), chuteY: std(0xf4c21c, 0.4, 0.15, { side: THREE.DoubleSide }),
+  hiVis: std(0xd8ff2a, 0.45, 0, { emissive: 0x3a4a00 }), hiOr: std(0xff7a1a, 0.45, 0, { emissive: 0x4a1800 }), helmet: std(0xffd21c, 0.35, 0.05),
+  canShine: [0xe8402a, 0x2f7de0, 0xf4c21c, 0x3ab85a, 0xf07aa8].map((c) => std(c, 0.22, 0.55)), lid: std(0xe8ecf2, 0.18, 1.2),
   scrap: std(0x6e6874, 0.8, 0.3), leaf: std(0x5aa84a, 0.85, 0), bark: std(0x7a5232, 0.85, 0)
 };
 const bake = (g) => { shadows(g); freeze(g); return g; };
@@ -74,6 +77,9 @@ const IG = {
   paper: (() => { const g = new THREE.BoxGeometry(0.34, 0.03, 0.25); g.translate(0, 0.015, 0); return g; })(),
   carton: (() => { const a = new THREE.BoxGeometry(0.13, 0.22, 0.13); a.translate(0, 0.11, 0); const b = new THREE.BoxGeometry(0.13, 0.04, 0.02); b.translate(0, 0.24, 0); return merge([a, b]); })()
 };
+/** A big food can (lying, along +x) for the magnet station, with silver lids as a second mesh. */
+const BIGCAN = lying(cg(0.12, 0.12, 0.26, 0.13, 16), 0.26, 0.12);
+const BIGLID = lying(merge([cg(0.122, 0.122, 0.025, 0.012, 16), cg(0.122, 0.122, 0.025, 0.248, 16)]), 0.26, 0.12);
 const IM = { bottle: [RM.pBlue, RM.pClear, RM.pGreen], glass: [RM.gGreen, RM.gWhite, RM.gBrown], can: [RM.can, RM.canR, RM.canY], paper: [RM.paper, RM.paperB, RM.card], carton: [RM.carton, RM.cartonB] };
 const IC = { bottle: [0x7ac0f4, 0xe2f2fa, 0x5ac080], glass: [0x4caf5a, 0xd8eef2, 0xb0702e], can: [0xc0c8d4, 0xd8402a, 0xf2c21c], paper: [0xf2ecd8, 0x9cc8f0, 0xc89a5a], carton: [0xf4f6fa, 0x3a7ae0] };
 function item(p, k) { const m = add(p, IG[k], pick(IM[k])); m.scale.setScalar(1.5); m.rotation.y = rnd(0, 6.3); m.visible = false; m.castShadow = true; return m; }
@@ -623,11 +629,24 @@ export default {
       const CX = 6.7, CY = 3.0, CL = 7.4;
       rbox(B, CL, 0.2, 3.4, 0.03, RM.greyD, CX, CY, 0, 0.01);
       [3.1, 6.7, 10.3].forEach((x) => [1.6, -1.6].forEach((z) => box(B, 0.22, CY, 0.22, RM.green, x, CY / 2, z)));
-      rbox(B, CL, 2.6, 0.12, 0.02, RM.cladW, CX, CY + 1.4, -1.65, 0.01); [3.0, 10.4].forEach((x) => rbox(B, 0.12, 2.6, 3.4, 0.02, RM.cladW, x, CY + 1.4, 0, 0.01));
-      rbox(B, CL, 0.7, 0.1, 0.02, RM.cladW, CX, CY + 0.45, 1.66, 0.01); rbox(B, CL + 0.04, 0.14, 0.14, 0.02, RM.green, CX, CY + 0.82, 1.68, 0.01);
-      box(B, CL - 0.2, 1.5, 0.04, MT.glass, CX, CY + 1.65, 1.66); for (let x = 3.05; x <= 10.4; x += 1.22) box(B, 0.08, 1.6, 0.1, RM.greyD, x, CY + 1.65, 1.68); box(B, CL, 0.12, 0.12, RM.greyD, CX, CY + 2.45, 1.68);
-      rbox(B, CL + 0.4, 0.25, 3.8, 0.04, RM.green, CX, CY + 2.75, 0, 0.02); rbox(B, 1.6, 0.5, 1.0, 0.06, RM.greyL, 8.6, CY + 3.1, -0.6, 0.02);
-      { const D = grp(B, CX, 0, 0); decal(D, 'CABINE DE TRI', 3.4, 0.4, '#ffffff', 0, CY + 2.75, 1.92, null); }
+      // tall walls at the back and the ends; the front is wide open (just a low wall and a hi-vis rail) so we see inside
+      const WH = 3.3;
+      rbox(B, CL, WH, 0.12, 0.02, RM.cladW, CX, CY + WH / 2, -1.65, 0.01); [3.0, 10.4].forEach((x) => rbox(B, 0.12, WH, 3.4, 0.02, RM.cladW, x, CY + WH / 2, 0, 0.01));
+      [3.0, 10.4].forEach((x) => box(B, 0.14, 1.3, 2.2, MT.glass, x, CY + 1.9, 0)); // side windows
+      box(B, CL - 0.3, 0.9, 0.04, RM.green, CX, CY + 1.2, -1.58); box(B, CL - 0.3, 0.05, 0.05, RM.yel, CX, CY + 1.68, -1.57);
+      rbox(B, CL, 0.42, 0.1, 0.02, RM.cladW, CX, CY + 0.3, 1.66, 0.01); box(B, CL, 0.08, 0.12, RM.yel, CX, CY + 0.52, 1.67);
+      rail(B, [[3.1, CY + 0.5, 1.68], [3.1, CY + 1.05, 1.68], [10.3, CY + 1.05, 1.68], [10.3, CY + 0.5, 1.68]], 0.04, RM.yel);
+      [5.45, 7.85].forEach((x) => rod(B, new V3(x, CY + 0.5, 1.68), new V3(x, CY + 1.05, 1.68), 0.035, RM.yel));
+      [3.07, 10.33].forEach((x) => box(B, 0.16, WH, 0.16, RM.greyD, x, CY + WH / 2, 1.68)); box(B, CL + 0.1, 0.16, 0.16, RM.greyD, CX, CY + WH - 0.05, 1.68);
+      rbox(B, CL + 0.4, 0.25, 3.8, 0.04, RM.green, CX, CY + WH + 0.15, 0, 0.02); rbox(B, 1.6, 0.5, 1.0, 0.06, RM.greyL, 8.6, CY + WH + 0.5, -0.6, 0.02);
+      [4.6, 6.7, 8.8].forEach((x) => box(B, 1.2, 0.06, 0.25, MT.lamp, x, CY + WH - 0.02, 0)); // ceiling lights
+      { const D = grp(B, CX, 0, 0); decal(D, 'CABINE DE TRI', 3.4, 0.4, '#ffffff', 0, CY + WH + 0.15, 1.92, null); }
+      // a chute in front of each sorter: what they pick falls through it into the bay under the floor
+      const CHZ = 0.95, chutes = [[4.4, RM.chuteB], [6.8, RM.chuteY]];
+      chutes.forEach(([x, cm]) => {
+        add(B, new THREE.CylinderGeometry(0.42, 0.24, 0.5, 4, 1, true).rotateY(PI / 4), cm, x, CY + 0.35, CHZ);
+        [0.33, -0.33].forEach((dx) => box(B, 0.06, 0.06, 0.62, MT.dark, x + dx, CY + 0.62, CHZ)); [0.33, -0.33].forEach((dz) => box(B, 0.62, 0.06, 0.06, MT.dark, x, CY + 0.62, CHZ + dz));
+      });
       [[5.4], [7.8]].forEach(([x]) => rbox(B, 0.2, 2.4, 3.0, 0.03, RM.concrete, x, 1.2, -0.1, 0.01)); rbox(B, CL, 2.4, 0.2, 0.03, RM.concrete, CX, 1.2, -1.5, 0.01);
       const sign = (x, k, col) => { const g = grp(B, x, 2.3, 1.62); rbox(g, 1.2, 0.8, 0.08, 0.06, col, 0, 0, 0, 0.02); const it = add(g, IG[k], IM[k][0], -0.35, -0.1, 0.1); it.scale.setScalar(2.2); };
       sign(4.25, 'bottle', RM.yel); sign(6.6, 'paper', RM.blue);
@@ -637,8 +656,13 @@ export default {
       rbox(B, 0.8, 0.06, 1.0, 0.02, MT.steel, 11.3, 3.3, 0, 0.01).rotation.z = -0.5;
       bake(B);
       // the sorters
-      const wk = [[4.4, 0x2f7de0], [6.8, 0xe5452c], [9.1, 0x3aa46a]].map(([x, c]) => { const p = walker(S, x, -0.85, { vest: true, bottom: c }); p.position.y = CY + 0.1; p.rotation.y = -PI / 2; p.userData.armT = 0; return p; });
-      const bays = [[4.2, RM.pBlue], [6.6, RM.paper]].map(([x, mm]) => { const c = add(S, new THREE.ConeGeometry(1, 1, 10).translate(0, 0.5, 0), mm, x, 0, -0.2); c.scale.set(1.0, 0.3, 0.8); return c; });
+      const wk = [[4.4, RM.hiVis, 0x2f7de0], [6.8, RM.hiOr, 0x2f4a8a], [9.1, RM.hiVis, 0xe5452c]].map(([x, vm, c]) => {
+        const p = walker(S, x, -0.95, { vest: true, bottom: c, hat: RM.helmet }); p.position.y = CY + 0.1; p.rotation.y = -PI / 2; p.scale.setScalar(1.22); p.userData.armT = 0;
+        p.traverse((o) => { if (o.material === MT.vest) o.material = vm; });
+        p.userData.arms.forEach((a) => sph(a, 0.075, RM.chuteB, 0, -0.38, 0)); // blue gloves
+        return p;
+      });
+      const bays = [[4.3, RM.pBlue], [6.6, RM.paper]].map(([x, mm]) => { const c = add(S, new THREE.ConeGeometry(1, 1, 10).translate(0, 0.5, 0), mm, x, 0, 0.5); c.scale.set(1.0, 0.3, 0.8); return c; });
       const pool = itemPool(S, ['bottle', 'paper', 'can'], 12);
       const P = [C1.at(0.4, 0.1), C1.at(C1.L - 0.15, 0.1), new V3(3.6, 3.62, 0), new V3(10.9, 3.62, 0)];
       const segs = []; for (let i = 0; i < P.length - 1; i++) segs.push({ a: P[i], b: P[i + 1], L: P[i].distanceTo(P[i + 1]) });
@@ -647,9 +671,12 @@ export default {
       const PICK = { bottle: [4.4, 0, bays[0]], paper: [6.8, 1, bays[1]] };
       part(st, 'tas', 'le gros tas', anchor(S, -7.2, 2.0, 1.5), false);
       part(st, 'tapis', 'le tapis roulant', anchor(B, 0, 2.4, 0.8), true);
-      part(st, 'trieurs', 'les trieurs', anchor(S, 5.6, 4.7, 1.5), true);
+      part(st, 'trieurs', 'les trieurs', anchor(S, 5.6, 5.2, 0.6), true);
       part(st, 'cases', 'les cases', anchor(S, 5.4, 1.3, 1.6), false);
-      st.focus = new V3(0.5, 2.8, 0.5); st.size = { w: 21, h: 8.5 }; st.tagAt = anchor(S, 6.7, 6.6, 0);
+      st.tagAt = anchor(S, 6.7, 7.3, 0); st.el = 0.42; // a lower camera, to see under the cabin roof
+      // wide view of the whole line, and a close view into the cabin while the sorters work
+      const view = (close) => { if (close) { st.focus = new V3(6.8, CY + 0.5, 0.4); st.size = { w: 9.5, h: 6.6 }; } else { st.focus = new V3(0.8, 3.0, 0.5); st.size = { w: 21, h: 9 }; } };
+      view(false);
       let spawnT = 0;
       st.update = (dt) => {
         if (st.run) { C1.tex.offset.x -= dt * 1.6 / 0.6; C2.tex.offset.x -= dt * 1.6 / 0.6; }
@@ -658,22 +685,28 @@ export default {
           if (!it.on || it.state !== 'belt') return;
           if (st.run) it.s += dt * 1.6; pathAt(it.s, it.m.position); it.m.position.z += it.z;
           const pk = PICK[it.k];
-          if (pk && it.m.position.x >= pk[0] - 0.15) { const w = wk[pk[1]]; w.userData.armT = 0.5; pool.drop(it, new V3(pk[0] + rnd(-0.4, 0.4), 0.25 + pk[2].scale.y * 0.6, rnd(-0.6, 0.3)), 0.75, 0.3, () => { pool.free(it); pk[2].scale.y = Math.min(1.5, pk[2].scale.y + 0.03); }); }
+          if (pk && it.m.position.x >= pk[0] - 0.15) {
+            // the sorter grabs it, lifts it over the belt edge and drops it in the chute; it lands in the bay under the floor
+            const w = wk[pk[1]]; w.userData.armT = 0.5;
+            pool.drop(it, new V3(pk[0], CY + 0.75, CHZ), 0.45, 0.5, () => pool.drop(it, new V3(pk[2].position.x + rnd(-0.4, 0.4), 0.25 + pk[2].scale.y * 0.6, pk[2].position.z + rnd(-0.4, 0.3)), 0.45, 0, () => { pool.free(it); pk[2].scale.y = Math.min(1.5, pk[2].scale.y + 0.03); }));
+          }
           else if (it.s >= PL) pool.drop(it, new V3(11.8, 2.6, it.m.position.z), 0.35, 0.1, () => pool.free(it));
         });
         pool.update(dt);
         wk.forEach((w) => { if (w.userData.armT > 0) { w.userData.armT -= dt; const a = Math.sin((0.5 - w.userData.armT) * PI * 2) * 1.2 + 0.4; w.userData.arms[0].rotation.z = a; } else w.userData.arms[0].rotation.z = 0.3; });
       };
       st.action = async function () {
+        view(false);
         if (st.done) { pool.reset(); bays.forEach((b) => (b.scale.y = 0.3)); st.done = false; }
         await Promise.all([step('Voici le centre de tri. Les camions-poubelles vident ici tout ce qu’ils ont ramassé.', 'tas'), sleep(1.5)]);
         st.run = true; st.feed = true; engineOn(90);
         await Promise.all([step('Le grand tapis roulant monte tout ça jusqu’à la cabine de tri.', 'tapis'), sleep(4)]);
-        await Promise.all([step('Dans la cabine, les trieurs attrapent les bouteilles en plastique...', 'trieurs'), sleep(3)]);
-        await Promise.all([step('...et les papiers. Chaque chose tombe dans sa case, en dessous.', 'cases'), sleep(3)]);
+        view(true);
+        await Promise.all([step('Dans la cabine, les trieurs attrapent les bouteilles en plastique...', 'trieurs'), sleep(3.5)]);
+        await Promise.all([step('...et les papiers. Chaque chose tombe dans sa case, en dessous.', 'cases'), sleep(3.5)]);
         st.feed = false;
         await Promise.all([step('Les boîtes de conserve restent sur le tapis : elles vont voir l’aimant géant !', 'tapis'), sleep(5)]);
-        st.run = false; engineOff(); chime(); st.done = true;
+        view(false); st.run = false; engineOff(); chime(); st.done = true;
       };
     })();
 
@@ -690,7 +723,7 @@ export default {
       [-0.75, 2.65].forEach((z) => cylX(B, 0.3, 1.45, RM.grey, 0, 3.55, z, 16));
       const tex = beltTex('v'); tex.repeat.set(1, 3.4 / 0.6); const bm = std(0xffffff, 0.85, 0, { map: tex });
       box(B, 1.36, 0.04, 3.4, bm, 0, 3.24, 0.95); box(B, 1.36, 0.04, 3.4, bm, 0, 3.86, 0.95);
-      [0.76, -0.76].forEach((x) => rbox(B, 0.06, 0.8, 4.0, 0.02, RM.yel, x, 3.55, 0.95, 0.01));
+      [0.76, -0.76].forEach((x) => rbox(B, 0.06, 0.5, 4.0, 0.02, RM.yel, x, 3.66, 0.95, 0.01)); // side plates kept above the belt: the stuck cans show underneath
       [[-0.6, -0.3], [0.6, -0.3], [-0.6, 2.2], [0.6, 2.2]].forEach(([x, z]) => rod(B, new V3(x, 3.95, z), new V3(x * 1.85, 4.7, z), 0.03, MT.black, 4));
       rbox(B, 0.5, 0.6, 0.5, 0.05, RM.dark, -0.95, 3.55, 2.65, 0.02);
       // the big red horseshoe on top, so everyone knows it's a magnet
@@ -702,14 +735,24 @@ export default {
       const CG = grp(B, 5.5, 0, 0); rbox(CG, 1.8, 0.08, 1.8, 0.02, RM.greyD, 0, 0.04, 0, 0.01); [[0.9, 0.9], [0.9, -0.9], [-0.9, 0.9], [-0.9, -0.9]].forEach(([x, z]) => box(CG, 0.06, 1.4, 0.06, RM.greyD, x, 0.7, z));
       for (let y = 0.35; y <= 1.4; y += 0.35) { [0.9, -0.9].forEach((z) => box(CG, 1.8, 0.03, 0.03, RM.greyD, 0, y, z)); box(CG, 0.03, 0.03, 1.8, RM.greyD, 0.9, y, 0); }
       bake(B);
-      const canHeap = add(S, new THREE.SphereGeometry(1, 14, 7, 0, PI * 2, 0, PI / 2), RM.can, 0, 0.1, 3.4); canHeap.scale.set(1.0, 0.1, 0.7);
+      const canHeap = add(S, new THREE.SphereGeometry(1, 14, 7, 0, PI * 2, 0, PI / 2), BM.can, 0, 0.1, 3.4); canHeap.scale.set(1.0, 0.1, 0.7);
       const cartHeap = add(S, new THREE.SphereGeometry(1, 14, 7, 0, PI * 2, 0, PI / 2), RM.carton, 5.5, 0.08, 0); cartHeap.scale.set(0.8, 0.1, 0.8);
       const pool = itemPool(S, ['can', 'carton'], 12);
+      // big, shiny, colourful cans with silver lids (easy to see under the magnet), bigger milk cartons
+      let ci = 0;
+      pool.all.forEach((it) => {
+        if (it.k === 'can') { it.m.geometry = BIGCAN; it.m.material = RM.canShine[ci++ % RM.canShine.length]; it.m.scale.setScalar(1.6); const l = add(it.m, BIGLID, RM.lid); l.castShadow = true; }
+        else it.m.scale.setScalar(1.7);
+      });
+      const CANH = 0.24 * 1.6, OBY = 3.22 - CANH; // can height lying, and its y when stuck under the magnet belt
       part(st, 'aimant', "l'aimant géant", anchor(U, 0, 1.3, 0.2), true);
       part(st, 'tapis', 'le tapis', anchor(B, -2.4, 2.4, 0.7), true);
       part(st, 'conserves', 'les boîtes de conserve', anchor(S, 0, 3.0, 1.2), false);
       part(st, 'benne', 'la benne à métal', anchor(SKP, 0, 1.4, 0.8), false);
-      st.focus = new V3(0.5, 2.6, 1.3); st.size = { w: 14, h: 9 }; st.tagAt = anchor(S, 0, 6.4, 1);
+      st.tagAt = anchor(S, 0, 6.4, 1); st.az = CFG.aimant.yaw + 0.45; // a little from the side, to see both belts move
+      // wide view of the station, and a close view on the magnet while the cans jump up
+      const view = (close) => { if (close) { st.focus = new V3(0.2, 2.6, 1.5); st.size = { w: 7.5, h: 6.0 }; } else { st.focus = new V3(0.6, 2.6, 1.3); st.size = { w: 14, h: 9 }; } };
+      view(false);
       let spawnT = 0;
       st.update = (dt) => {
         if (st.run) { C.tex.offset.x -= dt * 1.4 / 0.6; tex.offset.y -= dt * 1.6 / 0.6; }
@@ -721,7 +764,7 @@ export default {
             if (it.k === 'can' && p.x > -0.7) { it.state = 'jump'; it.t = 0; it.a = p.clone(); tone(1500, 0, 0.08, 'square', 0.02); }
             else if (p.x > 4.4) pool.drop(it, new V3(5.5 + rnd(-0.5, 0.5), 0.15 + cartHeap.scale.y * 0.5, rnd(-0.5, 0.5)), 0.5, 0.2, () => { pool.free(it); cartHeap.scale.y = Math.min(0.9, cartHeap.scale.y + 0.04); });
           } else if (it.state === 'jump') {
-            it.t += dt; const k = Math.min(1, it.t / 0.25); p.set(it.a.x + (0 - it.a.x) * k, it.a.y + (3.02 - it.a.y) * k, it.a.z); if (k >= 1) it.state = 'ob';
+            it.t += dt; const k = Math.min(1, it.t / 0.25); p.set(it.a.x + (-0.2 - it.a.x) * k, it.a.y + (OBY - it.a.y) * k, it.a.z * (1 - k) + 0.15 * k); it.m.rotation.y += dt * 9; if (k >= 1) { it.state = 'ob'; it.m.rotation.y = rnd(-0.3, 0.3); }
           } else if (it.state === 'ob') {
             if (st.run) p.z += dt * 1.6; if (p.z > 2.75) pool.drop(it, new V3(rnd(-0.8, 0.8), 0.2 + canHeap.scale.y * 0.6, 3.4 + rnd(-0.4, 0.4)), 0.5, 0.1, () => { pool.free(it); canHeap.scale.y = Math.min(0.9, canHeap.scale.y + 0.04); clink(); });
           }
@@ -729,13 +772,16 @@ export default {
         pool.update(dt);
       };
       st.action = async function () {
+        view(false);
         if (st.done) { pool.reset(); canHeap.scale.y = 0.1; cartHeap.scale.y = 0.1; st.done = false; }
         st.run = true; st.feed = true; engineOn(80);
         await Promise.all([step('Sur ce tapis, il y a des boîtes de conserve et des briques de lait.', 'tapis'), sleep(2.5)]);
+        view(true);
         await Promise.all([step('Au-dessus, un aimant géant ! Il attire le fer, très fort.', 'aimant'), sleep(2.5)]);
         await Promise.all([step('Hop ! Les boîtes de conserve sautent et se collent à l’aimant.', 'conserves'), sleep(3)]);
         st.feed = false;
         await Promise.all([step('Le petit tapis les emmène sur le côté, et elles tombent dans la benne.', 'benne'), sleep(3)]);
+        view(false);
         await Promise.all([step('Les briques de lait ne sont pas attirées : elles continuent tout droit.', 'tapis'), sleep(3)]);
         st.run = false; engineOff(); chime(); st.done = true;
       };

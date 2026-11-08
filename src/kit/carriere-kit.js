@@ -222,7 +222,8 @@ export function haulTruck(p, o = {}) {
   cylZ(bd, 0.16, 2.0, MT.dark, 0, 0, 0, 12);
   [1, -1].forEach((s) => { const n = decal(bd, '12', 0.9, 0.75, '#1d1f26', 2.4, 1.4, s * (BW / 2 + 0.16)); if (s < 0) n.rotation.y = Math.PI; });
   bake(bd);
-  const load = rockHeap(bed, 1.7, 0.3, 0, 2.9, 1.25, 2.3, QM.stone, 10); load.visible = false;
+  // the load fits inside the body: floor from x -0.85 to the headboard (4.77), sides at ±2.58, sides 2.2 high
+  const load = rockHeap(bed, 1.9, 0.3, 0, 2.4, 1.2, 2.0, QM.stone, 10); load.visible = false;
   const links = [1, -1].map((s) => telescopic(g, anchor(g, 1.0, 1.3, s * 1.0), anchor(bed, 3.3, 0.25, s * 1.0), { n: 4, stage: 1.2, r: 0.17 }));
   const wheels = [];
   [1, -1].forEach((s) => {
